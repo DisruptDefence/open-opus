@@ -17,7 +17,8 @@ first change. Where it and another document disagree, this file wins and the oth
 
 Open OPUS is a browser game engine and SDK for tactical training: a first-person game in real places, where
 the trainee completes objectives with a real TAK client on an in-game phone. This repository is the open side:
-engine, world API, scene format, tools, sample scenes, a reference host. Read, in this order:
+engine (`engine/`), world API, scene format, the scene builder (`tools/build-scene.py`), scenes (`scenes/`), and
+later a reference host. Read, in this order:
 
 1. `README.md`
 2. `docs/ARCHITECTURE.md` — the three rules and the direction of imports
@@ -51,8 +52,11 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
 7. **Nothing private.** This repository is public. No code, file or detail from a private repository, no
    credentials, no internal host names, no real operational data, no real units or named people. If your task
    brief came from a private repository, bring over only what you write yourself.
-8. **Only code we may publish.** Every file is our own work or carries a licence that allows redistribution,
-   kept beside it (as `engine/vendor/three.LICENSE` is). Code with no licence does not go in, in any form.
+8. **Only code we may publish.** Every new file is our own work or carries a licence that allows
+   redistribution, kept beside it (as `engine/vendor/three.LICENSE` is). The modules `render`, `materials`, `fx`,
+   `audio`, `input`, `player`, `combat`, `weapons` and `shared/lifted.js` were cut out of the stand-in game's
+   bundle by `engine/tools/lift.cjs`; they are to be rewritten as ours, and their licensing is handled by the
+   maintainer. Do not add more lifted code.
 9. **Few dependencies.** three.js at run time and nothing else. Write the small thing yourself before adding a
    package; say why in the commit if you add one. Exceptions: security primitives and parsers of hostile input.
 10. **No build step you do not need.** Plain ES modules that a browser loads directly.

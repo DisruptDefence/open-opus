@@ -1,0 +1,120 @@
+[
+ {
+  "id": "a-start",
+  "kind": "player_start",
+  "x": 20,
+  "y": 30,
+  "z": 26,
+  "yaw": 0,
+  "radius": 1,
+  "zone": "High town"
+ },
+ {
+  "id": "a-g1",
+  "kind": "threat_ground",
+  "x": 60,
+  "y": 30,
+  "z": -80,
+  "yaw": 180,
+  "radius": 3,
+  "zone": "High town",
+  "route": [
+   [
+    60,
+    -80
+   ],
+   [
+    20,
+    -80
+   ],
+   [
+    20,
+    -40
+   ],
+   [
+    60,
+    -40
+   ]
+  ]
+ },
+ {
+  "id": "a-g2",
+  "kind": "threat_ground",
+  "x": 140,
+  "y": 30,
+  "z": 80,
+  "yaw": 270,
+  "radius": 3,
+  "zone": "High town",
+  "route": [
+   [
+    140,
+    80
+   ],
+   [
+    100,
+    80
+   ],
+   [
+    100,
+    30
+   ],
+   [
+    100,
+    80
+   ]
+  ]
+ },
+ {
+  "id": "a-a1",
+  "kind": "threat_air",
+  "x": 100,
+  "y": 58,
+  "z": -60,
+  "yaw": 0,
+  "radius": 5,
+  "zone": "High town",
+  "route": [
+   [
+    100,
+    -60
+   ],
+   [
+    20,
+    -70
+   ],
+   [
+    -40,
+    0
+   ],
+   [
+    20,
+    70
+   ],
+   [
+    100,
+    40
+   ]
+  ]
+ },
+ {
+  "id": "a-cliff",
+  "kind": "observation",
+  "x": -110,
+  "y": 30,
+  "z": 0,
+  "yaw": 90,
+  "radius": 2,
+  "zone": "High town"
+ },
+ {
+  "id": "a-hill",
+  "kind": "observation",
+  "x": 330,
+  "y": 67.31,
+  "z": -260,
+  "yaw": 0,
+  "radius": 2,
+  "zone": "High town"
+ }
+]

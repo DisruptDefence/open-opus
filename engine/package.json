@@ -1,0 +1,10 @@
+{
+  "name": "opus-engine",
+  "private": true,
+  "type": "module",
+  "description": "The OPUS game engine: browser-side, plain ES modules, no dependencies but the vendored three.js.",
+  "scripts": {
+    "test": "node --test",
+    "scene": "node tools/make-test-scene.mjs"
+  }
+}

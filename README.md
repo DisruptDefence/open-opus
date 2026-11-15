@@ -7,9 +7,16 @@ phone to complete objectives.
 Open OPUS is the open side of the project: the engine, the world API, the scene format and the tools a
 community needs to contribute places (scenes) and missions (scenarios).
 
-**Status, 2026-11-15: early.** This repository holds the architecture, the two contracts and the instructions
-for contributors and coding agents. The engine is being built and lands here once it plays a mission on the
-architecture described in `docs/ARCHITECTURE.md`.
+**Status, 2026-11-15: early.** What is here:
+
+- `engine/` — the engine as plain ES modules, with three.js r180 vendored in `engine/vendor/` (its only library).
+  Georeference, terrain, physics, navigation and the scene container are ours and unit-tested
+  (`cd engine && node --test`). Render, materials, effects, audio, input, player, combat and weapon are lifted
+  from a stand-in game and not yet wired into a playable page.
+- `scenes/old-quebec.json` — the first map: Old Quebec in real UTM metres, from OpenStreetMap (ODbL,
+  © OpenStreetMap contributors) and Natural Resources Canada's HRDEM terrain (Open Government Licence – Canada).
+- `tools/build-scene.py` — the builder that produced it; standard library only.
+- The engine does not yet play a mission. That is the current work.
 
 | Read | For |
 |---|---|
