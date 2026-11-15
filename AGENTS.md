@@ -45,8 +45,9 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
    metres-per-degree approximation. Conversions are tested against the scene's check points.
 5. **Open data only, with its licence.** Every source used by a scene is listed in its `attribution.json` with
    what it allows. No source that forbids redistribution or commercial use.
-6. **Nothing from ATAK.** No file, image, string or code from an ATAK or plugin APK. ATAK is run by the player,
-   never included, never taken apart.
+6. **ATAK is run, never taken apart.** No file, image, string or code extracted from an ATAK or plugin APK
+   enters the git tree. The unmodified ATAK-CIV and plugin APKs the phone needs are attached to the
+   `atak-5.8.0-civ` release of this repository as downloads; never commit an APK (`*.apk` is ignored).
 7. **Nothing private.** This repository is public. No code, file or detail from a private repository, no
    credentials, no internal host names, no real operational data, no real units or named people. If your task
    brief came from a private repository, bring over only what you write yourself.

@@ -23,4 +23,6 @@ architecture described in `docs/ARCHITECTURE.md`.
 Not chosen yet. Until a licence file is added, all rights are reserved and outside contributions cannot be
 merged. Map data used by scenes keeps its own licence and attribution (see the scene format, section 6).
 
-ATAK is not part of this project and is never included: a player brings their own ATAK from tak.gov.
+ATAK is not part of this project's code. The unmodified ATAK-CIV 5.8.0 and plugin APKs used by the in-game
+phone are attached to the `atak-5.8.0-civ` release as downloads; they remain the work of their authors
+(TAK Product Center, tak.gov, and the plugin vendors) under their own terms.
