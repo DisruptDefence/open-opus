@@ -282,3 +282,11 @@ Known gaps:
 
 The contract test is `engine/test/world-api.test.js`: it runs the real simulation under Node without a screen.
 The phone host and its screens are tested the same way, on the same world, in `phone/test/`.
+
+## Load progress
+
+`openWorld({ onProgress })` is called `onProgress(label, k)` as each engine step begins (`renderer`, `materials`, `scene`, `terrain and buildings`,
+`effects`, `audio`, `weapon`, `first light`, then `ready`); `k` is the old fixed fraction and still works. A third argument is added
+(additive): `{ phase, done, total }`, sent when work inside a step has real numbers. Any engine module calls `G.progress(phase, done, total)`
+(for example `G.progress('textures', loaded, count)` while images load; `terrain and buildings` is reported by the engine itself from the chunks
+fetched and meshed). The shared loading screen (`engine/host/boot.js`, `createBoot`) turns these into one weighted bar.

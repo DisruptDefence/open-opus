@@ -10,3 +10,4 @@ export { packageSource, jsonSource } from './src/scene/source.js';
 export { createDevHud } from './src/hud/dev-hud.js';
 export { createNullHud } from './src/hud/hooks.js';
 export { createHud } from './src/hud/hud.js'; // the complete HUD, fed by the engine's events and the content pack (hud.words, hud.elements)
+export { createBoot, fetchJsonProgress } from './host/boot.js'; // the loading screen every host shares (host/boot.js): openWorld's onProgress goes to boot.onProgress

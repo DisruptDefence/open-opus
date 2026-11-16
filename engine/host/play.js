@@ -4,7 +4,7 @@
 //
 // For checks it also takes ?mission=<id> (skip the menu), ?q=<quality> and ?noaudio=1, and publishes
 // window.__OPUS_WORLD, window.__mission, window.__errors, window.__fatal.
-import { openWorld, packageSource, jsonSource, createDevHud } from '../index.js';
+import { openWorld, packageSource, jsonSource, createHud, createBoot, DEFAULT_PACK } from '../index.js';
 import { runMission } from './mission.js';
 
 const params = Object.fromEntries(new URLSearchParams(location.search));
@@ -24,10 +24,11 @@ const CONTROLS = `<table>
   <tr><td>C</td><td>crouch</td><td>R</td><td>reload</td></tr>
   <tr><td>Esc</td><td>pause, and free the mouse</td><td></td><td></td></tr></table>`;
 
-async function openScene(spec) {
-  if (spec === 'test') return packageSource(here('../scenes/test/'));
+async function openScene(spec, boot) {
+  if (spec === 'test') { boot.skip('download'); return packageSource(here('../scenes/test/')); }
   const url = here('../' + spec); // scenario files name their scene relative to the engine folder
-  return url.endsWith('.json') ? jsonSource(await getJson(url)) : packageSource(url.endsWith('/') ? url : url + '/');
+  if (url.endsWith('.json')) return jsonSource(await boot.fetchJson(url)); // bytes shown as the download phase
+  boot.skip('download'); return packageSource(url.endsWith('/') ? url : url + '/');
 }
 
 async function menu() {
@@ -42,14 +43,18 @@ async function menu() {
 
 async function play(m) {
   const sc = m.scenario;
-  show(`<p>Loading <b>${esc(m.place)}</b>… <span id="step" class="dim"></span></p><div id="bar"><div id="fill"></div></div>`);
-  const world = openWorld({ source: openScene(sc.scene), modules: { hud: createDevHud },
+  panel.hidden = true;
+  const boot = createBoot({ parent: document.getElementById('app'), words: DEFAULT_PACK.loader, brand: 'Open OPUS', title: m.place, subtitle: sc.name,
+    onRetry: () => { location.href = location.pathname + '?mission=' + encodeURIComponent(m.id) + (params.q ? '&q=' + encodeURIComponent(params.q) : ''); } });
+  window.__boot = boot;
+  const world = openWorld({ source: openScene(sc.scene, boot), modules: { hud: createHud },
     params: { x: sc.start.x, z: sc.start.z, ...(params.q ? { q: params.q } : {}), ...(params.noaudio ? { noaudio: 1 } : {}) },
-    onProgress: (label, k) => { const s = document.getElementById('step'), f = document.getElementById('fill'); if (s) s.textContent = label; if (f) f.style.width = Math.round(k * 100) + '%'; } });
+    onProgress: boot.onProgress });
   window.__OPUS_WORLD = world; // the contract. Everything below uses only this.
   const mission = runMission(world, sc);
   window.__mission = mission.record;
-  await world.ready();
+  try { await world.ready(); } catch (e) { window.__fatal = String((e && e.stack) || e); console.error('[fatal] ' + window.__fatal); boot.fail(e); return; }
+  await boot.done();
 
   const deploy = () => { panel.hidden = true; mission.start(); };
   const offer = (title, text, label) => {

@@ -43,6 +43,9 @@ Neither argument is modified.
   deep-merged, so a changed sentry is written out in full.
 - `threatTuning`, `player`, `hud.words`: merged by key.
 - `hud.elements`, `loadout`: replaced when `extra` has them.
+- `loader`: any other top-level key is copied whole. It holds the loading screen's words (`host/boot.js`): `{ en: {...}, fr: {...} }`, each
+  with `title, error, retry, slow, tip, ready`, `phases` (one phrase per phase id: download, renderer, materials, textures, scene, terrain,
+  effects, audio, weapon, light, phone) and `tips` (lines that rotate under the bar). A host reads `DEFAULT_PACK.loader` (or its own pack's).
 
 <!-- weapon: item D -->
 ## Weapons
