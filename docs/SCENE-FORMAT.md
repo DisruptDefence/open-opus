@@ -12,7 +12,7 @@ This document is the format. Three things write or read it today:
 
 | | Matches | Differs |
 |---|---|---|
-| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks`; `packaging`; `play`, `extent`; the layers | Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. The file was not rebuilt for 2.2: only its georeference block was rewritten (`build-scene.py --georef-only`) |
+| `tools/build-scene.py --place places/<id>.json` → `scenes/<id>.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks` (zone, band and convergence computed from the place's anchor); `packaging`; `play`, `extent`; the layers; `formatMinor: 1` with the manifest keys of 3.3 (`style`, `season`, `ambience`, `sources` with licence URLs and layers) | Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. Layers carry none of the additions of `docs/plans/SCENE-DETAIL.md` section 3 yet except the manifest's |
 | `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The georeference of 2.2, `play`, `extent`; chunks on the absolute grid of 3.1 (the anchor is deliberately off a chunk corner); the container (3.2), raster layers, hashed names, `anchors.json` | Vector layers are JSON in the chunk header, not binary records |
 | The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads 2.2 exactly as written and refuses a block without `vertical.geoid_undulation`; numbers chunks as 3.1 (`engine/src/scene/grid.js`); both tested against the check points of both scenes | Cuts a single file into chunks itself and burns its roads into a surface raster (the format gives that to the pipeline). Each tile of a single file keeps the file's own terrain samples, so it starts up to one cell before the chunk corner |
 
@@ -156,6 +156,20 @@ keys: it is what `tools/build-scene.py` writes today and what an author edits an
 diffs. `"packaging": "chunked"` is the package above, produced from the same records by the same builder.
 Georeference, axes, units and the meaning of every field are identical; a reader that lacks the container
 reads only `single`. A missing `packaging` means `single`.
+
+### 3.3 Manifest additions (`formatMinor: 1`)
+
+Additive: a reader of `formatMinor: 0` ignores all of them. Written by the builder from the place file and the
+style pack (`docs/plans/SCENE-DETAIL.md` section 2).
+
+| Key | Meaning |
+|---|---|
+| `formatMinor` | `1` |
+| `style` | the client part of the style pack, verbatim: colour palettes, window and ground-floor proportions, cornice, dormers, chimneys, kerb. Optional; the reader has neutral defaults |
+| `season` | `"summer" \| "autumn" \| "winter" \| "spring"`, from the place file |
+| `ambience` | `{ tod, day, haze, cloud, wet }`: the light the place is best seen in. A host's own switches win |
+| `sources[]` | one entry per source: `name`, `licence`, `licenceUrl`, `attribution`, `layers` it fed (and, for OpenStreetMap, `extract` and `bbox`) |
+| `rules` | one sentence for every value the builder had to invent |
 
 ## 4. Layers
 

@@ -61,7 +61,8 @@ phone/                  the in-game phone, outside the engine (phone/README.md)
   local/                run.sh, gateway.py, android/: the local Android + ATAK + gateway stack (Python, adb)
   test/, tools/         node --test "phone/test/*.test.js"; a headless check of the demo page
 scenes/                 published scenes (old-quebec.json)
-tools/build-scene.py    the scene builder, standard library only
+tools/build-scene.py    the scene builder's command; tools/scene_builder/ its modules, standard library only
+places/, styles/        a place (anchor, box, sources, style) and a style pack (what a region looks like): data the builder reads
 docs/
 ```
 
