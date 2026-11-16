@@ -55,7 +55,7 @@ Not violations: `engine/host/**` (a throwaway host and its scenarios), `engine/s
 6. Commits are small, in plain sentences, with no co-author line.
 7. Numbers in an item are the specification. Do not retune. If a number cannot work, report it.
 
-**Status, 2026-11-16.** C is written on branch `gameplay` and not yet merged; A is being executed there. Nothing else has started. J is decided (lift the two machine rigs; last section) and is executed by the planning model once C and A are merged.
+**Status, 2026-11-16, evening.** Merged to `main`: C, A, D, E. Being executed: B (branch `gp-hud`), F (branch `gp-input`). Not started: G, H, I. J is decided (lift the two machine rigs; last section) and is executed by the planning model now that C and A are merged.
 
 ## Order and dependencies
 

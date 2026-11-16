@@ -8,7 +8,7 @@ repository and is safe as long as these rules hold.
 |---|---|---|---|---|
 | World API | `world.version === 1` | `WORLD-API.md` | `engine/test/world-api.test.js` | Built |
 | Scene format | `"format": "opus-scene/1"`, `formatMinor` | `SCENE-FORMAT.md` | `engine/test/scene.test.js`, the builder's tests | Built (single file); chunked packaging read, not written by the builder |
-| Content pack | `"format": "opus-content/1"` | `CONTENT-PACK.md` (arrives with `plans/GAMEPLAY-PARITY.md` item C) | `engine/test/content.test.js` | In progress |
+| Content pack | `"format": "opus-content/1"` | `CONTENT-PACK.md` | `engine/test/content.test.js` | Built (threats, the weapon's numbers, threat sounds) |
 | Session protocol | `"protocol": "opus-session/1"` | `SESSION-PROTOCOL.md` | The conformance vectors of `SCENARIO-FORMAT.md` 8, once a host here speaks it | Draft; spoken by a private host, by nothing in this repository yet |
 | Scenario format | `"format": "opus-scenario/1"` | `SCENARIO-FORMAT.md` | Conformance vectors (`plans/PLATFORM.md` item PL-3) | Draft, decided 2026-11-16; not built here |
 | Phone gateway | the message kinds of `phone/README.md`, "What flows" | `phone/README.md` | `phone/local/test_gateway.py`, `phone/test/stream-screen.test.js` | Built; additions planned (`plans/PLATFORM.md` PL-2) |

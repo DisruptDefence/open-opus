@@ -131,7 +131,8 @@ frame over the held game. Out of the box its glass shows the placeholder screen.
 `phone/local/run.sh` gets an Android device (a virtual one, or later one on USB) with their own copy of ATAK, and a
 gateway on `ws://127.0.0.1:9741`; the page finds it by itself and the glass shows that ATAK, live. What the trainee
 shares in ATAK reaches the gateway as Cursor-on-Target (ATAK's TAK server is the gateway) and the page's mission
-host as the `phone` event. In the in-page stand-in the browser relays that report; a hardened session host takes
+host as the `phone` event. The page must be served from this machine (`http://127.0.0.1` or `localhost`): Chrome
+asks the user's permission before a page from any other origin may open a connection to a loopback address. In the in-page stand-in the browser relays that report; a hardened session host takes
 it from the phone side itself (`SESSION-PROTOCOL.md` 4, rule 5).
 
 ## Scale: what is proven where
