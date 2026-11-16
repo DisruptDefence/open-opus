@@ -644,7 +644,8 @@ tests as todo.
 | near cells, `q=high` (R = 140 m) | 28 | 24 | 24 | 28 | 25 | 17 |
 
 Frame time at `q=low`, 960 × 540, mean of the five street views, old and new code run in turn three times with
-40 frames a view: before 252, 245, 241 ms; after 244, 242, 239 ms (no slower). Load to ready at `q=low`: 3.9 to
+40 frames a view: before 252, 245, 241 ms; after 244, 242, 239 ms (no slower). At `q=high`, 1280 × 720, one pair
+with 24 frames a view: 1064 ms before, 1075 ms after (within what two runs of the same code differ by here). Load to ready at `q=low`: 3.9 to
 6.1 s before, 3.9 to 6.2 s after (the spread is the machine's). `node --test`: 96 pass, 35 todo (the items' own
 tests), 2 s. The densest near cell of the scene (1 768 triangles with the placeholders) builds in under 3 ms. The extra draw
 calls are the near groups (a group per cell and material, drawn again in each shadow pass); with the
