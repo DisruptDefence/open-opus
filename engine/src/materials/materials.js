@@ -1583,6 +1583,28 @@ float slN3(vec3 x){
   vec4 sampledDiffuseColor = texture2D(map, slUv);
   slORM = texture2D(roughnessMap, slUv);
 #endif
+#ifdef SL_LIVE
+  {
+    #ifdef USE_COLOR
+      vec3 slLvTint = vColor.rgb;
+    #else
+      vec3 slLvTint = vec3(1.0);
+    #endif
+    // the baked tile is detail only (grain, pits, hairline cracks); a second look at it at another scale, so no 3 m tile shows twice
+    #ifdef SL_TRIPLANAR
+      { vec3 slQ2 = vSlPos * (uSlUv.z * 0.617) + vec3(0.37, 0.71, 0.13);
+        vec4 slD2 = texture2D(map, slQ2.zy) * slTw.x + texture2D(map, slQ2.xz) * slTw.y + texture2D(map, slQ2.xy) * slTw.z;
+        vec4 slO2 = texture2D(roughnessMap, slQ2.zy) * slTw.x + texture2D(roughnessMap, slQ2.xz) * slTw.y + texture2D(roughnessMap, slQ2.xy) * slTw.z;
+        sampledDiffuseColor.rgb *= slD2.rgb * 4.0; slORM.r *= slO2.r; slORM.g = 0.5 * (slORM.g + slO2.g); }
+      slLiveApply(sampledDiffuseColor, slORM, slLvTint, vSlPos, vSlONrm, true);
+    #else
+      { vec2 slUv2 = slUv * 0.617 + vec2(0.29, 0.53);
+        sampledDiffuseColor.rgb *= texture2D(map, slUv2).rgb * 4.0; vec4 slO2 = texture2D(roughnessMap, slUv2); slORM.r *= slO2.r; slORM.g = 0.5 * (slORM.g + slO2.g); }
+      slLiveApply(sampledDiffuseColor, slORM, slLvTint, vSlPos, vec3(vMapUv * uSlLive.yz, 0.0), false);
+    #endif
+    totalEmissiveRadiance += slLiveEm;
+  }
+#endif
 #ifdef SL_FX
   {
     #ifdef FLAT_SHADED
@@ -1693,8 +1715,22 @@ float metalnessFactor = metalness * slORM.b;
     mapN.xy *= normalScale * (1.0 - 0.45 * slWetK * slUp);
     normal = normalize(tbn * mapN); }
 #endif
+#ifdef SL_LIVE
+  { vec3 slSx = dFdx(-vViewPosition), slSy = dFdy(-vViewPosition);
+    vec3 slR1 = cross(slSy, normal), slR2 = cross(normal, slSx); float slDet = dot(slSx, slR1) * faceDirection;
+    vec3 slGr = sign(slDet) * (dFdx(slLiveH) * slR1 + dFdy(slLiveH) * slR2);
+    normal = normalize(abs(slDet) * normal - slGr); }
+#endif
 `,
   bA = ShaderChunk.aomap_fragment.replace('texture2D( aoMap, vAoMapUv ).r', 'slORM.r');
+/**
+ * A material may carry live per-pixel code on top of its baked texture (a def with `live: <mode>`): the wall shader of
+ * materials/facades.js draws masonry courses, windows and weathering by building, bay and storey, which no tile can.
+ * That module fills this record: `decl` (GLSL after the common chunk: uniforms, helpers, slLiveApply), `uniforms` (shared
+ * objects every live material points to). The patch calls slLiveApply() after the baked sample and bends the normal by
+ * the height it left in slLiveH.
+ */
+export const LIVE = { decl: '', uniforms: {} };
 export function applyMaterialPatch(i, e) {
   (Object.assign(i.uniforms, e),
     (i.vertexShader = i.vertexShader
@@ -1712,7 +1748,7 @@ export function applyMaterialPatch(i, e) {
       .replace(
         '#include <common>',
         `#include <common>
-` + mA,
+` + mA + (e.uSlLive ? LIVE.decl : ''),
       )
       .replace('#include <map_fragment>', gA)
       .replace('#include <roughnessmap_fragment>', vA)
@@ -1904,12 +1940,16 @@ export async function createMaterials(i) {
       uSlUv: { value: new Vector3(1, 1, G ? (q.scale || 1) / C.tile[0] : C.size) },
       uSlX: { value: new Vector2(q.interior ? 0.12 : 1, 0) },
     };
+    if (D.live !== void 0) {
+      ((N.uSlLive = { value: new Vector4(D.live, ...(Array.isArray(C.tile) ? C.tile : [C.tile, C.tile]), 0) }), Object.assign(N, LIVE.uniforms));
+      T.defines.SL_LIVE = '';
+    }
     ((T.userData.sl = N),
       (T.userData.set = C.key),
       (T.userData.tile = C.tile),
       q.interior && (T.userData.interior = !0),
       (T.onBeforeCompile = (K) => applyMaterialPatch(K, N)));
-    let Q = 'sl2|' + D.tint + (G ? 't' : '') + (j ? 'f' : '') + (D.alphaCut ? 'a' : '');
+    let Q = 'sl2|' + D.tint + (G ? 't' : '') + (j ? 'f' : '') + (D.alphaCut ? 'a' : '') + (D.live !== void 0 ? 'L' : '');
     return ((T.customProgramCacheKey = () => Q), M.set(U, T), T);
   }
   function S(O = 16777215, q = 4) {

@@ -4,8 +4,7 @@
 // once on the GPU into albedo / ORM / normal sets. Importing this module registers them; nothing else changes.
 //
 //   ground    cobble, paving, grass, rock, dirt, gravel, sand
-//   walls     stone (coursed ashlar), stucco, and a façade bay of each with a window (one bay = 3.0 x 3.2 m,
-//             so "windows are in the material, not the mesh", SCENE-FORMAT.md 8)
+//   walls     stone (coursed ashlar) and stucco for trim, plinths and kerbs; the WALLS of buildings are materials/facades.js
 //   roofs     standing-seam metal (zinc grey, and copper gone green), membrane
 //   plants    leaves
 
@@ -114,45 +113,6 @@ void surf(vec2 uv){
   emit(col, 1.0, 0.5 + fine * 0.25 + mid * 0.1 - crack * 0.3, 1.0 - crack * 0.4, 0.92, 0.0);
 }`;
 
-// One façade bay, 3.0 m wide by 3.2 m high, with a window. uP.x: 0 = stucco wall, 1 = stone wall.
-GENERATORS.facade = `
-void surf(vec2 uv){
-  float fine = fbm(uv, vec2(150.0), 3, 71.0), mid = fbm(uv, vec2(16.0), 4, 72.0);
-  // wall
-  vec3 wall; float wh, wr = 0.92;
-  if (uP.x < 0.5){
-    float streak = fbm(uv * vec2(20.0, 1.0), vec2(20.0, 2.0), 3, 73.0);
-    wall = L(0.80, 0.77, 0.70) * (0.86 + 0.2 * mid) * (1.0 - smoothstep(0.5, 0.85, streak) * 0.16);
-    wh = 0.5 + fine * 0.2;
-  } else {
-    float rows = 8.0; float row = floor(uv.y * rows);
-    float off = h3(vec2(row, 0.0), vec2(rows, 1.0), 74.0).x;
-    vec2 g = vec2(uv.x * 5.0 + off, uv.y * rows); vec2 id = floor(g); vec2 f = g - id;
-    vec3 r = h3(vec2(mod(id.x, 5.0), id.y), vec2(5.0, rows), 75.0);
-    float j = min(min(f.x, 1.0 - f.x) * 2.0, min(f.y, 1.0 - f.y)); float block = smoothstep(0.03, 0.09, j);
-    wall = mix(L(0.46, 0.45, 0.43), L(0.62, 0.60, 0.56), r.x) * (0.72 + 0.5 * fine) * (0.85 + 0.25 * mid);
-    wall = mix(L(0.20, 0.19, 0.17), wall, block);
-    wh = 0.45 + block * 0.25; wr = mix(0.95, 0.84, block);
-  }
-  // window: centred, 1.1 m wide, 1.7 m high, sill 0.75 m above the floor
-  vec2 c = vec2(0.5, 0.5); vec2 hw = vec2(0.185, 0.265);
-  vec2 d = abs(uv - c) - hw;
-  float inside = step(max(d.x, d.y), 0.0);
-  float frame = step(max(d.x, d.y), 0.0) * step(-0.018, max(d.x, d.y));
-  float surround = step(max(d.x - 0.03, d.y - 0.03), 0.0) * (1.0 - inside);
-  float mull = inside * max(step(abs(uv.x - c.x), 0.006), step(abs(uv.y - (c.y + 0.07)), 0.005));
-  float sill = step(abs(uv.x - c.x), hw.x + 0.05) * step(abs(uv.y - (c.y - hw.y - 0.018)), 0.018);
-  float refl = fbm(uv, vec2(3.0), 3, 76.0);
-  vec3 glass = mix(L(0.05, 0.07, 0.09), L(0.16, 0.20, 0.24), smoothstep(0.35, 0.7, refl + (uv.y - 0.5) * 0.6));
-  vec3 trim = L(0.86, 0.84, 0.78) * (0.9 + 0.15 * fine);
-  vec3 col = wall; float h = wh, r = wr, ao = 1.0;
-  col = mix(col, trim, surround * 0.85); h = mix(h, 0.72, surround);
-  col = mix(col, trim * 1.02, sill); h = mix(h, 0.95, sill);
-  col = mix(col, glass, inside); h = mix(h, 0.12, inside); r = mix(r, 0.07, inside); ao = mix(ao, 0.75, inside);
-  col = mix(col, trim * 0.9, max(frame, mull)); h = mix(h, 0.35, max(frame, mull)); r = mix(r, 0.6, max(frame, mull));
-  emit(col, 1.0, h, ao, r, 0.0);
-}`;
-
 // standing-seam roofing. uP.x: 0 = zinc grey, 1 = copper weathered green, 2 = dark membrane
 GENERATORS.roof = `
 void surf(vec2 uv){
@@ -192,8 +152,6 @@ Object.assign(SETS, {
   ashlar: { fn: 'ashlar', size: 1, tile: 2.4, bump: 5, p: [0] },
   rubble: { fn: 'ashlar', size: 1, tile: 2.4, bump: 6, p: [1], seed: 5 },
   stucco: { fn: 'stucco', size: 0.5, tile: 3, bump: 1.5 },
-  facade_stucco: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 4, p: [0] },
-  facade_stone: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 5, p: [1], seed: 3 },
   roof_zinc: { fn: 'roof', size: 0.5, tile: 2, bump: 4, p: [0] },
   roof_copper: { fn: 'roof', size: 0.5, tile: 2, bump: 4, p: [1], seed: 2 },
   roof_membrane: { fn: 'roof', size: 0.5, tile: 3, bump: 1.5, p: [2], seed: 4 },
@@ -214,8 +172,6 @@ Object.assign(MATERIALS, {
   stone: def('ashlar', { wet: POROUS, macro: MACRO }),
   rubble: def('rubble', { wet: POROUS, macro: MACRO }),
   stucco: def('stucco', { wet: [0.25, 0.2, 0.5, 0], macro: [0.2, 0.15, 0.4, 0.5] }),
-  facade_stucco: def('facade_stucco', { wet: [0.2, 0.2, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
-  facade_stone: def('facade_stone', { wet: [0.3, 0.25, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
   roof_zinc: def('roof_zinc', { wet: SEALED, macro: MACRO }),
   roof_copper: def('roof_copper', { wet: SEALED, macro: MACRO }),
   roof_membrane: def('roof_membrane', { wet: SEALED, macro: MACRO }),

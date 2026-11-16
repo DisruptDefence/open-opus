@@ -1,187 +1,346 @@
-// Façade bays, second pass. materials/outdoor.js drew a bay as a flat wall with a painted window; the street views are
-// almost all this texture (the far façade, windows in the material), so its quality is the quality of the town.
+// Walls, third pass: no wall pattern may repeat. A baked tile repeats by nature (one tile of stone laid over a town is
+// the same stone everywhere), so the structure of a wall is no longer baked.
 //
-// What changed, in the library's own method (a GLSL `surf(uv)` that calls `emit(colour, alpha, height, ao, roughness,
-// metalness)`, drawn once on the GPU into albedo / ORM / normal; the lifted materials work the same way and carry their
-// realism in the height and ambient-occlusion channels, which is where this pass spends its effort):
-//   masonry   courses of different block counts, per-block tone and hue, a lime mortar joint recessed 5 mm (not a black
-//             line), an arris on every block that catches the light, chipped corners, pits, and rain streaks
-//   brick     real size (230 x 76 mm, 13 to a bay), running bond with a header course every sixth, burnt and pale bricks
-//   stucco    trowel waves, hairline cracks, and patches where the render has fallen away to the masonry under it
-//   window    a recessed opening with a reveal shadow, a six-over-six sash (muntins, meeting rail), panes that reflect
-//             sky or stay dark or hold a curtain, a projecting sill with a drip stain, a dressed lintel and surround
-//   storey    a string course at every floor line with the shadow it casts
+//   baked   one small tile of DETAIL per kind of wall (render, masonry): grain, pits, hairline cracks, soot; neutral
+//           grey, the library's own method (GLSL `surf(uv)` calling `emit`, drawn once into albedo / ORM / normal).
+//           The shader samples it twice at two scales (so its period is no period at all) and multiplies.
+//   live    everything that must differ: the courses of stone and brick (block length, course height, bond, joint
+//           width and colour, block tones), the windows of the far façade, string courses, weathering. Drawn per
+//           pixel from a hash of the BUILDING (its wall tint, which the mesher writes into every vertex, is its id:
+//           gen/wallvar.js), the bay and the storey. One material per kind of wall, one draw call: no per-building
+//           material, no per-building vertex data.
 //
-// One bay is 3.0 m wide by 3.2 m high, as before (gen/facade.js: u counts bays, v counts storeys), so what is painted and
-// what is modelled still line up. Importing this module (after outdoor.js, which it imports itself) replaces the
-// `facade` generator and the facade sets; nothing else changes.
+// Where the per-pixel part runs: the far façade (uv in metres: u along the wall, v above the building's base, one bay
+// 3.0 x 3.2 m as gen/facade.js writes it) draws masonry, windows, bands and weathering; a near wall (triplanar, real
+// geometry for its openings) draws masonry and weathering only. Both read the same code.
+//
+// The windows are DATA: the style pack's `bayWindows` table (gen/style.js, styles/*.json) is compiled by gen/wallvar.js
+// into uniforms (setBayStyle below); a new place adds or changes window types by editing that table, no engine code.
+//
+// Importing this module (after outdoor.js, which it imports itself) defines the sets and materials; the soups name them
+// (gen/style.js).
 import './outdoor.js';
-import { Tn as GENERATORS, c3 as SETS, l1 as MATERIALS, Nt as def } from './materials.js';
+import { Tn as GENERATORS, c3 as SETS, l1 as MATERIALS, Nt as def, LIVE } from './materials.js';
+import { compileWindows, paletteRows, MAX_TYPES } from '../gen/wallvar.js';
+import { parseColor } from '../gen/style.js';
 
-/** The bay's size in metres; window geometry in the shader is written against it. */
-export const BAY = { width: 3.0, height: 3.2, window: [1.11, 1.7], sillAt: 0.75 };
+/** The bay's size in metres; the shader is written against it (gen/facade.js: u counts bays of 3 m, v counts storeys of 3.2 m). */
+export const BAY = { width: 3.0, height: 3.2 };
 
-export const BAY_SHADER = `
-// ---- walls: each returns albedo (linear), height, roughness, ambient occlusion ----
-void brickWall(vec2 uv, out vec3 col, out float h, out float r, out float ao){
-  const float rows = 42.0;
-  float row = floor(uv.y * rows);
-  bool header = mod(row, 6.0) > 4.5;                                    // a header course: bricks end on
-  float cols = header ? 26.0 : 13.0;
-  float x = uv.x * cols + (header ? 0.0 : 0.5 * mod(row, 2.0));
-  vec2 f = vec2(fract(x), fract(uv.y * rows));
-  vec3 q = h3(vec2(mod(floor(x), cols), row), vec2(26.0, rows), 91.0);
-  float bw = 3.0 / cols, bh = 3.2 / rows;
-  float de = min(min(f.x, 1.0 - f.x) * bw, min(f.y, 1.0 - f.y) * bh) + (fbm(uv, vec2(110.0), 3, 92.0) - 0.5) * 0.003;
-  float brick = smoothstep(0.0035, 0.0065, de);
-  float fine = fbm(uv, vec2(200.0), 3, 93.0), mid = fbm(uv, vec2(30.0), 4, 94.0), big = fbm(uv, vec2(3.0), 4, 95.0);
-  vec3 c = mix(L(0.52, 0.25, 0.18), L(0.44, 0.21, 0.15), q.x);
-  c = mix(c, L(0.60, 0.33, 0.21), smoothstep(0.55, 1.0, q.y) * 0.8);   // orange
-  c = mix(c, L(0.25, 0.14, 0.12), smoothstep(0.86, 1.0, q.z) * 0.9);   // burnt
-  c = mix(c, L(0.58, 0.42, 0.30), step(0.97, q.y) * 0.8);              // pale
-  if (header) c = mix(c, L(0.27, 0.17, 0.15), 0.35);                   // vitrified headers
-  c *= (0.84 + 0.3 * mid) * (0.9 + 0.2 * fine) * (0.9 + 0.16 * big);
-  float pit = smoothstep(0.7, 0.8, fbm(uv, vec2(120.0), 3, 96.0)); c *= 1.0 - pit * 0.3;
-  float soot = smoothstep(0.5, 0.8, fbm(uv, vec2(3.0), 4, 97.0));
-  float ef = smoothstep(0.72, 0.86, fbm(uv, vec2(6.0), 4, 98.0)) * brick;
-  c = mix(c, L(0.70, 0.67, 0.62), ef * 0.28);
-  vec3 mortar = L(0.60, 0.57, 0.52) * (0.75 + 0.45 * fine);
-  col = mix(mortar, c, brick) * (1.0 - soot * 0.3);
-  float face = 0.58 + (q.x - 0.5) * 0.12 + (mid - 0.5) * 0.12 + (fine - 0.5) * 0.08 - pit * 0.16;
-  h = mix(0.25 + fine * 0.06, face + 0.05 * smoothstep(0.0, 0.012, de), brick);
-  r = mix(0.97, 0.88 + (mid - 0.5) * 0.12, brick);
-  ao = mix(0.55, 1.0, brick * smoothstep(0.0, 0.01, de)) * (1.0 - pit * 0.25);
-}
-
-void stuccoWall(vec2 uv, out vec3 col, out float h, out float r, out float ao){
-  float fine = fbm(uv, vec2(180.0), 3, 61.0), mid = fbm(uv, vec2(22.0), 4, 62.0), big = fbm(uv, vec2(2.0), 4, 63.0);
-  float streak = fbm(uv * vec2(24.0, 1.0), vec2(24.0, 2.0), 4, 64.0);
-  float wave = fbm(uv, vec2(9.0, 6.0), 3, 65.0);
-  col = L(0.80, 0.77, 0.70) * (0.88 + 0.16 * mid) * (0.92 + 0.14 * big);
-  col *= 1.0 - smoothstep(0.5, 0.85, streak) * 0.2 * (0.4 + big);
-  float crack = smoothstep(0.011, 0.003, abs(fbm(uv + 0.2, vec2(3.0), 4, 66.0) - 0.5)) * smoothstep(0.45, 0.65, big);
-  h = 0.52 + fine * 0.16 + wave * 0.14 - crack * 0.25;
-  r = 0.92; ao = 1.0 - crack * 0.5;
-  col = mix(col, L(0.30, 0.28, 0.25), crack * 0.7);
-  // render fallen away: the wall under it shows (brick), with a raised, lighter edge to the patch
-  float loss = smoothstep(0.80, 0.84, fbm(uv, vec2(3.0), 4, 67.0) * 0.6 + fbm(uv, vec2(14.0), 3, 68.0) * 0.4 + (big - 0.5) * 0.12) * smoothstep(0.52, 0.62, fbm(uv, vec2(5.0), 3, 69.0));
-  float rim = smoothstep(0.0, 0.05, loss) * (1.0 - smoothstep(0.05, 0.2, loss));
-  if (loss > 0.0) {
-    vec3 bc; float bh, br, bao; brickWall(uv, bc, bh, br, bao);
-    col = mix(col, mix(bc, col, 0.45) * 0.95, loss); h = mix(h, bh - 0.12, loss); r = mix(r, br, loss); ao = mix(ao, bao * 0.8, loss);
-  }
-  col = mix(col, col * 1.08, rim * 0.5); h += rim * 0.1;
-}
-
-void stoneWall(vec2 uv, float warm, out vec3 col, out float h, out float r, out float ao){
-  const float rows = 8.0;
-  float row = floor(uv.y * rows);
-  vec3 rr = h3(vec2(row, 0.0), vec2(rows, 1.0), 74.0);
-  float n = 4.0 + floor(rr.x * 3.0);                                   // blocks in this course: 4, 5 or 6
-  float x = uv.x * n + rr.y;
-  vec2 f = vec2(fract(x), fract(uv.y * rows));
-  vec3 q = h3(vec2(mod(floor(x), n), row), vec2(6.0, rows), 75.0 + warm * 9.0);
-  float bw = 3.0 / n, bh = 3.2 / rows;
-  float rag = fbm(uv, vec2(60.0), 3, 79.0) - 0.5;
-  float de = min(min(f.x, 1.0 - f.x) * bw, min(f.y, 1.0 - f.y) * bh) + rag * 0.007;
-  float block = smoothstep(0.005, 0.011, de);
-  float arris = smoothstep(0.0, 0.045, de);
-  float fine = fbm(uv, vec2(150.0), 3, 71.0), mid = fbm(uv, vec2(16.0), 4, 72.0), big = fbm(uv, vec2(2.0), 3, 77.0);
-  float pit = smoothstep(0.7, 0.82, fbm(uv, vec2(220.0), 3, 78.0));
-  vec3 stoneA = mix(L(0.50, 0.49, 0.46), L(0.68, 0.66, 0.60), q.x);
-  vec3 stoneB = mix(L(0.56, 0.50, 0.40), L(0.42, 0.38, 0.34), q.y);   // warmer, browner
-  vec3 a = mix(stoneA, stoneB, clamp(warm * 0.75 + step(0.78, q.z) * 0.45 + (rr.z - 0.5) * 0.2, 0.0, 1.0));
-  vec3 c = a * (0.8 + 0.34 * fine) * (0.86 + 0.24 * mid) * (0.94 + 0.12 * big);
-  float streak = fbm(uv * vec2(30.0, 1.0), vec2(30.0, 2.0), 3, 56.0);
-  c *= 1.0 - smoothstep(0.55, 0.85, streak) * 0.2 * (0.4 + big);
-  // corners knocked off: paler, lower
-  float chip = smoothstep(0.64, 0.8, fbm(uv, vec2(36.0), 3, 80.0)) * (1.0 - smoothstep(0.0, 0.07, de));
-  c = mix(c, c * 1.18 + 0.02, chip * 0.7);
-  c *= 1.0 - pit * 0.3;
-  vec3 mortar = L(0.50, 0.48, 0.43) * (0.78 + 0.4 * fbm(uv, vec2(210.0), 2, 81.0));
-  col = mix(mortar, c, block);
-  h = mix(0.28, 0.5 + 0.2 * arris + (q.z - 0.5) * 0.14 + (mid - 0.5) * 0.12 - pit * 0.06 - chip * 0.07, block);
-  r = mix(0.97, 0.86 + (mid - 0.5) * 0.12, block);
-  ao = mix(0.5, 1.0, block * smoothstep(0.0, 0.02, de)) * (1.0 - pit * 0.2);
-}
-
+// ---- the baked detail tile -------------------------------------------------------------------------------------------
+GENERATORS.walldetail = `
 void surf(vec2 uv){
-  float mode = uP.x;
-  vec3 col; float h, r, ao;
-  if (mode < 0.5) stuccoWall(uv, col, h, r, ao);
-  else if (mode < 1.5) stoneWall(uv, uP.y, col, h, r, ao);
-  else brickWall(uv, col, h, r, ao);
-  float fine = fbm(uv, vec2(150.0), 3, 101.0);
-
-  vec2 m = uv * vec2(3.0, 3.2);                        // metres within the bay
-  vec2 cm = vec2(1.5, 1.6), hw = vec2(0.555, 0.85);    // the opening: 1.11 x 1.70 m, sill 0.75 m up
-  vec2 d = abs(m - cm) - hw;
-  float edge = max(d.x, d.y);                          // < 0 inside the opening
-  float inside = step(edge, 0.0);
-  float top = cm.y + hw.y, bot = cm.y - hw.y;
-  vec3 dress = L(0.74, 0.71, 0.64) * (0.9 + 0.16 * fine);          // dressed stone or painted trim
-  if (mode < 0.5) dress = L(0.88, 0.86, 0.80) * (0.92 + 0.12 * fine);
-  float dressH = 0.78;
-
-  // string course at the floor line: a band that stands out, and the shadow it throws on the wall below
-  float band = step(3.02, m.y) * step(m.y, 3.2);
-  float bandTop = step(3.14, m.y);
-  col = mix(col, dress, band); h = mix(h, dressH - bandTop * 0.06, band); r = mix(r, 0.85, band);
-  ao *= 1.0 - 0.45 * smoothstep(2.74, 3.02, m.y) * (1.0 - band);
-
-  // surround: 110 mm of dressing round the opening, a lintel with joints and a keystone, a projecting sill
-  float surround = step(0.0, edge) * step(edge, 0.11);
-  float lintel = step(abs(m.x - cm.x), hw.x + 0.2) * step(top + 0.0, m.y) * step(m.y, top + 0.30);
-  float vj = abs(fract((m.x - cm.x) / 0.19 + 0.5) - 0.5) * 0.19;
-  float joint = step(vj, 0.004) * step(top + 0.11, m.y);
-  float key = step(abs(m.x - cm.x), 0.085) * step(top + 0.11, m.y) * step(m.y, top + 0.35);
-  float sill = step(abs(m.x - cm.x), hw.x + 0.1) * step(bot - 0.085, m.y) * step(m.y, bot);
-  float dr = max(max(surround, lintel), max(sill, key));
-  col = mix(col, dress * (1.0 - joint * 0.35), dr); h = mix(h, dressH + key * 0.06 + sill * 0.08 + lintel * 0.03, dr); r = mix(r, 0.8, dr);
-  ao = mix(ao, 1.0, dr);
-  // under the sill and the lintel: a dark shadow line, and a stain running down from the sill
-  float underSill = step(abs(m.x - cm.x), hw.x + 0.12) * smoothstep(0.17, 0.0, (bot - 0.085) - m.y) * step(m.y, bot - 0.085);
-  float underLintel = step(abs(m.x - cm.x), hw.x + 0.15) * smoothstep(0.1, 0.0, m.y - (top + 0.30)) * step(top + 0.30, m.y);
-  ao *= 1.0 - 0.5 * underSill * (1.0 - dr) - 0.4 * underLintel * (1.0 - dr);
-  float drip = smoothstep(0.5, 0.85, fbm(uv, vec2(54.0, 2.0), 3, 102.0)) * step(abs(m.x - cm.x), hw.x + 0.08) * smoothstep(1.2, 0.0, (bot - 0.085) - m.y) * step(m.y, bot - 0.085);
-  col *= 1.0 - drip * 0.3;
-
-  // the opening: reveal shadow, sash, muntins, panes
-  float p = (m.x - (cm.x - hw.x)) / (2.0 * hw.x), s = (m.y - bot) / (2.0 * hw.y);
-  float px = p * 3.0, qy = s * 4.0;
-  float gx = min(fract(px), 1.0 - fract(px)) * (2.0 * hw.x / 3.0), gy = min(fract(qy), 1.0 - fract(qy)) * (2.0 * hw.y / 4.0);
-  float frame = step(-0.055, edge);
-  float rail = step(abs(s - 0.5) * 2.0 * hw.y, 0.032);
-  float mun = max(step(gx, 0.012), step(gy, 0.011));
-  vec2 pid = vec2(floor(px), floor(qy));
-  vec3 pr = h3(pid, vec2(3.0, 4.0), 103.0);
-  float sky = smoothstep(-0.2, 1.1, s + (pr.x - 0.5) * 0.5);
-  vec3 glass = mix(L(0.03, 0.04, 0.05), L(0.34, 0.45, 0.56), sky * (0.35 + 0.65 * pr.y));
-  glass = mix(glass, L(0.40, 0.37, 0.30) * 0.5, step(0.84, pr.z) * 0.8);                     // a curtain
-  vec3 sashC = L(0.80, 0.78, 0.72) * (0.9 + 0.2 * fine);
-  float wood = max(max(frame, rail), mun);
-  vec3 win = mix(glass, sashC, wood);
-  float winH = mix(0.16, 0.34 + 0.06 * (1.0 - smoothstep(0.0, 0.03, -edge)), wood);
-  float winR = mix(0.06, 0.55, wood);
-  float winAo = mix(0.8, 0.95, wood);
-  float shadowTop = smoothstep(0.18, 0.0, top - m.y) * 0.5, shadowSide = smoothstep(0.14, 0.0, (m.x - (cm.x - hw.x))) * 0.35;
-  winAo *= 1.0 - shadowTop * (1.0 - wood) - shadowSide * (1.0 - wood);
-  col = mix(col, win, inside); h = mix(h, winH, inside); r = mix(r, winR, inside); ao = mix(ao, winAo, inside);
-
-  emit(col, 1.0, h, ao, r, 0.0);
+  float fine = fbm(uv, vec2(180.0), 3, 61.0), mid = fbm(uv, vec2(22.0), 4, 62.0), big = fbm(uv, vec2(2.0), 4, 63.0);
+  float wave = fbm(uv, vec2(9.0, 8.0), 3, 65.0);
+  float lum, h, ao = 1.0, r = 0.92;
+  if (uP.x < 0.5){                                    // render: trowel waves, streaks, hairline cracks
+    float streak = fbm(uv * vec2(24.0, 1.0), vec2(24.0, 2.0), 4, 64.0);
+    lum = 0.5 * (0.9 + 0.16 * mid) * (0.94 + 0.12 * big) * (1.0 - smoothstep(0.5, 0.85, streak) * 0.12);
+    float crack = smoothstep(0.011, 0.003, abs(fbm(uv + 0.2, vec2(3.0), 4, 66.0) - 0.5)) * smoothstep(0.55, 0.7, big);
+    lum *= 1.0 - crack * 0.5; ao = 1.0 - crack * 0.5;
+    h = 0.5 + (fine - 0.5) * 0.4 + (wave - 0.5) * 0.35 - crack * 0.25;
+  } else {                                            // masonry: grain, pits, soot
+    float pit = smoothstep(0.7, 0.82, fbm(uv, vec2(200.0), 3, 78.0));
+    float soot = smoothstep(0.5, 0.8, fbm(uv, vec2(3.0), 4, 97.0));
+    lum = 0.5 * (0.84 + 0.3 * fine) * (0.88 + 0.22 * mid) * (0.94 + 0.12 * big) * (1.0 - pit * 0.3) * (1.0 - soot * 0.2);
+    h = 0.5 + (fine - 0.5) * 0.45 + (mid - 0.5) * 0.3 - pit * 0.25;
+    ao = 1.0 - pit * 0.35; r = 0.9 + (mid - 0.5) * 0.1;
+  }
+  emit(vec3(lum), 1.0, h, ao, r, 0.0);
 }`;
 
-GENERATORS.facade = BAY_SHADER;
+// ---- the live part ---------------------------------------------------------------------------------------------------
+const MAXT = MAX_TYPES;
+export const LIVE_GLSL = `
+uniform vec4 uSlLive;      // x: kind (0 render, 1 stone, 2 rubble, 3 brick); yz: tile size in metres
+uniform vec4 uBwT[${MAXT * 4}];     // window types, 4 vec4 each (gen/wallvar.js windowType)
+uniform float uBwCdf[${MAXT * 3}];  // cumulative weights of the types, per storey class
+uniform float uBwSt[6];    // cumulative weights of the window states
+uniform vec4 uBwOpt;       // x: odd-one-out chance, y: lit window glow, z: grime, w: unused
+uniform vec4 uBwN;         // palette sizes: frames, trim, shutters, glass
+uniform vec3 uBwF[8]; uniform vec3 uBwTr[8]; uniform vec3 uBwSh[8]; uniform vec3 uBwG[4];
+float slLiveH = 0.0; vec3 slLiveEm = vec3(0.0);
 
+// ---- hash: the same arithmetic as gen/wallvar.js ----
+uint lvP(uint v){ uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
+uint lvH(uint a, uint b){ return lvP(a + lvP(b)); }
+float lvU(uint h){ return float(h >> 8u) * (1.0 / 16777216.0); }
+uint lvI(float f){ return uint(int(floor(f))); }
+vec3 lvL(float r, float g, float b){ return pow(vec3(r, g, b), vec3(2.2)); }
+float lvIn(float d, float aa){ return 1.0 - smoothstep(-aa, aa, d); }   // 1 where d < 0, with a pixel of edge
+
+// ---- courses of stone and brick: the distance to the nearest joint (m), the block's hash, the course ----
+float lvE(uint k, float i, float jit){ return i + jit * (2.0 * lvU(lvH(k, lvI(i))) - 1.0); }
+void lvCourses(float x, float y, uint bid, float kind, out float d, out uint hb, out float hdr){
+  float r0 = lvU(lvH(bid, 11u)), r1 = lvU(lvH(bid, 12u)), r3 = lvU(lvH(bid, 14u)), r4 = lvU(lvH(bid, 15u)), r5 = lvU(lvH(bid, 16u));
+  float ch, bl, jit;
+  if (kind > 2.5){ ch = mix(0.066, 0.085, r0); bl = mix(0.205, 0.26, r1); jit = 0.0; }
+  else if (kind > 1.5){ ch = mix(0.19, 0.34, r0); bl = mix(0.32, 0.72, r1); jit = 0.42; }
+  else { ch = mix(0.28, 0.54, r0); bl = mix(0.55, 1.2, r1); jit = 0.2; }
+  float rowId, ly, chh;
+  if (kind > 2.5){ rowId = floor(y / ch); ly = y - rowId * ch; chh = ch; }
+  else {                                                         // three course heights in a rhythm: no two courses alike by rule
+    float a1 = mix(0.68, 1.0, r4), a2 = mix(1.0, 1.35, r5), P = ch * (1.0 + a1 + a2);
+    float k = floor(y / P), yy = y - k * P;
+    float j = yy < ch ? 0.0 : (yy < ch * (1.0 + a1) ? 1.0 : 2.0);
+    float st = j < 0.5 ? 0.0 : (j < 1.5 ? ch : ch * (1.0 + a1));
+    chh = ch * (j < 0.5 ? 1.0 : (j < 1.5 ? a1 : a2)); ly = yy - st; rowId = k * 3.0 + j;
+  }
+  uint ru = lvI(rowId); float blr = bl, off; hdr = 0.0;
+  if (kind > 2.5){
+    off = 0.5 * mod(rowId, 2.0) * bl;                            // running bond; English bond (a header course every n) for some
+    if (r3 < 0.5 && mod(rowId, floor(mix(4.0, 7.9, r3 * 2.0))) < 0.5){ blr = bl * 0.5; hdr = 1.0; off = 0.0; }
+  } else {
+    blr = bl * mix(0.8, 1.25, lvU(lvH(bid ^ ru, 17u))); off = lvU(lvH(bid + 99u, ru)) * blr;
+  }
+  float bx = (x + off) / blr, i = floor(bx); uint k = lvH(bid, ru);
+  if (bx < lvE(k, i, jit)) i -= 1.0; else if (bx >= lvE(k, i + 1.0, jit)) i += 1.0;
+  float dx = min(bx - lvE(k, i, jit), lvE(k, i + 1.0, jit) - bx) * blr;
+  d = min(dx, min(ly, chh - ly)); hb = lvH(k, lvI(i) + 7u);
+}
+// a masonry wall: colour (before the building's tint), height (m), occlusion, roughness
+void lvMasonry(float x, float y, uint bid, float kind, float aa, float warp, out vec3 col, out float h, out float ao, out float rough){
+  float d, hdr; uint hb; lvCourses(x, y, bid, kind, d, hb, hdr); d += warp;
+  float r2 = lvU(lvH(bid, 13u));
+  float rj = kind > 2.5 ? 0.0095 : (kind > 1.5 ? mix(0.014, 0.03, r2) : mix(0.007, 0.015, r2));
+  float edge = d - rj * 0.5, w = max(aa, 0.0025);
+  float face = smoothstep(-w, w, edge), bevel = smoothstep(0.0, kind > 2.5 ? 0.006 : 0.05, edge);
+  float u0 = lvU(hb), u1 = lvU(lvH(hb, 3u)), u2 = lvU(lvH(hb, 5u));
+  vec3 c;
+  if (kind > 2.5){
+    float fam = lvU(lvH(bid, 21u));
+    vec3 a = fam < 0.34 ? lvL(0.52, 0.25, 0.18) : (fam < 0.54 ? lvL(0.40, 0.20, 0.16) : (fam < 0.74 ? lvL(0.62, 0.36, 0.21) : (fam < 0.84 ? lvL(0.66, 0.52, 0.33) : lvL(0.34, 0.21, 0.21))));
+    c = a * (0.78 + 0.44 * u0);
+    c = mix(c, lvL(0.62, 0.33, 0.22), smoothstep(0.6, 1.0, u1) * 0.5);
+    c = mix(c, c * 0.5, smoothstep(0.86, 1.0, u2) * 0.9);                  // burnt
+    c = mix(c, lvL(0.58, 0.42, 0.30), step(0.97, u1) * 0.8);               // pale
+    if (hdr > 0.5) c *= 0.82;                                              // vitrified headers
+    c *= 0.9;
+  } else {
+    float wb = lvU(lvH(bid, 22u)); wb = wb * wb * 0.55; float contrast = mix(0.5, 1.25, lvU(lvH(bid, 23u)));
+    vec3 base = mix(lvL(0.50, 0.49, 0.46), lvL(0.68, 0.66, 0.60), u0);
+    vec3 warm = mix(lvL(0.56, 0.50, 0.40), lvL(0.42, 0.38, 0.34), u1);
+    c = mix(base, warm, clamp(wb + step(0.86, u2) * 0.5, 0.0, 1.0));
+    c *= 1.0 + (u1 - 0.5) * 0.35 * contrast * (kind > 1.5 ? 1.6 : 1.0);
+  }
+  float m = lvU(lvH(bid, 24u));
+  vec3 mortar = m < 0.4 ? lvL(0.60, 0.57, 0.52) : (m < 0.65 ? lvL(0.45, 0.45, 0.43) : (m < 0.8 ? lvL(0.28, 0.27, 0.25) : (m < 0.92 ? lvL(0.62, 0.55, 0.42) : lvL(0.76, 0.75, 0.72))));
+  col = mix(mortar * (0.85 + 0.3 * u2), c, face);
+  float rec = kind > 2.5 ? 0.005 : (kind > 1.5 ? 0.012 : 0.008);
+  h = -rec * (1.0 - face) - (1.0 - bevel) * (kind > 2.5 ? 0.0015 : 0.004) * face + (u1 - 0.5) * 0.004;
+  ao = mix(0.55, 1.0, face * smoothstep(0.0, 0.02, edge));
+  rough = mix(0.97, 0.86, face);
+}
+// the weathering of any wall: tone drift, stains, streaks of rain, damp, salt, patches of repair. x, y in metres on the wall;
+// base: height above the ground (m) or -1 when it is not known.
+void lvWeather(inout vec3 c, inout float h, inout float ao, float x, float y, float base, uint bid, float kind, float aa){
+  float gr = mix(0.45, 1.5, lvU(lvH(bid, 31u)));
+  vec3 q = vec3(x, y, lvU(lvH(bid, 32u)) * 37.0);
+  c *= 1.0 + (slN3(q * vec3(0.11, 0.09, 1.0)) - 0.5) * 0.36 + (slN3(q * vec3(0.37, 0.33, 1.0) + 5.0) - 0.5) * 0.14;
+  c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), slN3(q * vec3(0.07, 0.07, 1.0) + 9.0));
+  float st = slN3(q * vec3(0.5, 0.45, 1.0) + 3.0) * 0.6 + slN3(q * vec3(1.3, 1.1, 1.0) + 1.0) * 0.4;
+  c *= 1.0 - smoothstep(0.52, 0.72, st) * 0.32 * gr;
+  float sx = slN3(vec3(x * 6.0, y * 0.45, q.z)) * slN3(vec3(x * 21.0, y * 0.8, q.z + 3.0));
+  float sm = smoothstep(0.35, 0.65, slN3(vec3(x * 0.55, y * 0.12, q.z + 8.0)));
+  c *= 1.0 - smoothstep(0.14, 0.4, sx) * sm * 0.3 * gr;
+  if (base >= 0.0){
+    float dm = 1.0 - smoothstep(0.1, 1.15, base + (slN3(q * vec3(1.7, 1.7, 1.0) + 2.0) - 0.5) * 0.7);
+    c *= 1.0 - dm * 0.26 * gr; c.g *= 1.0 + dm * 0.05;
+    float ef = smoothstep(0.6, 0.78, slN3(q * vec3(2.3, 2.3, 1.0) + 4.0)) * (1.0 - smoothstep(0.8, 2.2, base)) ;
+    c = mix(c, lvL(0.74, 0.73, 0.69), ef * 0.28);
+  }
+  // patches of repair: a rectangle of another tone, a little proud, with a dark edge
+  vec2 cell = vec2(1.3, 0.85), g = vec2(x, y) / cell + vec2(lvU(lvH(bid, 33u)) * 9.0, 0.0), id = floor(g), f = fract(g);
+  uint ph = lvH(lvH(bid, lvI(id.x)), lvI(id.y) + 55u);
+  if (lvU(ph) < (kind < 0.5 ? 0.03 : 0.05) * gr){
+    vec2 hw = vec2(0.28, 0.25) + 0.2 * vec2(lvU(lvH(ph, 1u)), lvU(lvH(ph, 2u)));
+    vec2 dd = abs(f - 0.5) * cell - hw * 0.5 * cell / vec2(1.3, 0.85);
+    float inn = 1.0 - smoothstep(-aa, aa, max(dd.x, dd.y));
+    float t = lvU(lvH(ph, 3u));
+    vec3 tone = t < 0.33 ? vec3(1.28, 1.2, 1.02) : (t < 0.66 ? vec3(0.78, 0.76, 0.74) : vec3(1.12, 0.98, 0.86));
+    c = mix(c, c * tone, inn); h += inn * 0.004; ao *= 1.0 - 0.3 * smoothstep(-0.025, 0.0, max(dd.x, dd.y)) * inn;
+  }
+}
+// plain render: faint score lines on a building that was dressed that way
+void lvRender(float x, float y, uint bid, float aa, out vec3 col, out float h, out float ao, out float rough){
+  col = lvL(0.80, 0.77, 0.70) * (0.9 + 0.2 * lvU(lvH(bid, 41u))); h = 0.0; ao = 1.0; rough = 0.93;
+  if (lvU(lvH(bid, 42u)) < 0.4 && y < 3.2){
+    float pitch = mix(0.35, 0.6, lvU(lvH(bid, 43u))), d = abs(fract(y / pitch + 0.5) - 0.5) * pitch;
+    float gv = 1.0 - smoothstep(0.004, 0.004 + max(aa, 0.002), d); h -= gv * 0.006; ao *= 1.0 - 0.3 * gv; col *= 1.0 - 0.12 * gv;
+  }
+}
+
+// ---- the window of one bay ----
+void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3 wallCol, inout vec3 col, inout float h, inout float ao, inout float rough, inout vec3 em){
+  uint hs = lvH(lvH(bid, stor), 77u), hbv = lvH(lvH(bid, bayI), stor * 131u + 5u);
+  int cls = stor == 0u ? 0 : (stor == 1u ? 1 : 2);
+  bool odd = lvU(lvH(hs, bayI + 3u)) < uBwOpt.x;
+  float pu = odd ? lvU(lvH(hbv, 78u)) : lvU(lvH(hs, 79u));
+  int ti = 0;
+  for (int i = ${MAXT - 1}; i >= 0; i--) if (pu < uBwCdf[cls * ${MAXT} + i]) ti = i;
+  vec4 T0 = uBwT[ti * 4], T1 = uBwT[ti * 4 + 1], T2 = uBwT[ti * 4 + 2], T3 = uBwT[ti * 4 + 3];
+  int shape = int(T0.x + 0.5); float w = T0.y, hh = T0.z, sill = T0.w;
+  float cols = max(T1.x, 1.0), rows = max(T1.y, 1.0), mun = T1.w, sw = T2.x;
+  int hood = int(T2.w + 0.5);
+  float fit = bayW - 2.0 * sw - 0.35;
+  if (w > fit){ float k = fit / w; w *= k; if (shape == 3) hh = w; }
+  float a = w * 0.5;
+  vec2 q = vec2(p.x, p.y - sill);
+  // the opening as a signed distance: negative inside
+  float d, rise = 0.0;
+  if (shape == 1 || shape == 2){
+    rise = shape == 2 ? a : a * 0.34; float hs0 = hh - rise;
+    if (q.y > hs0){ float R = (a * a + rise * rise) / (2.0 * rise); d = max(-q.y, length(vec2(q.x, q.y - (hh - R))) - R); }
+    else d = max(-q.y, abs(q.x) - a);
+  } else if (shape == 3){ d = length(vec2(q.x, q.y - hh * 0.5)) - a; }
+  else { d = max(abs(q.x) - a, max(-q.y, q.y - hh)); }
+  // colours of the building
+  float fbase = lvU(lvH(bid, 61u)), fodd = lvU(lvH(hbv, 62u));
+  float fsel = lvU(lvH(hbv, 63u)) < 0.07 ? fodd : fbase;
+  vec3 frameC = uBwF[int(fsel * uBwN.x)], trimC = uBwTr[int(lvU(lvH(bid, 64u)) * uBwN.y)], shutC = uBwSh[int(lvU(lvH(bid, 65u)) * uBwN.z)];
+  vec3 trimA = trimC * (0.93 + 0.1 * lvU(lvH(bid, 66u)));
+  float mOpen = lvIn(d, aa), mSur = lvIn(d - sw, aa) * (1.0 - mOpen);
+  // dressing round the opening, lintel, sill, hood
+  float lint = T2.y * step(abs(q.x), a + sw + 0.07) * smoothstep(-aa, aa, q.y - hh + 0.0) * (1.0 - smoothstep(-aa, aa, q.y - (hh + sw + 0.15)));
+  float sil = T2.z * step(abs(q.x), a + sw + 0.07) * (1.0 - smoothstep(-aa, aa, q.y)) * smoothstep(-aa, aa, q.y + sw + 0.07);
+  float hd = 0.0;
+  float hx = a + sw + 0.1;
+  if (hood == 1){ float yy = q.y - (hh + sw + 0.02); hd = step(0.0, yy) * (1.0 - smoothstep(-aa, aa, yy - (hx - abs(q.x)) * 0.62)) * step(abs(q.x), hx); }
+  else if (hood == 2){ float yy = q.y - (hh + sw + 0.02); hd = step(0.0, yy) * (1.0 - smoothstep(-aa, aa, length(vec2(q.x, yy * 2.2)) - hx)); }
+  else if (hood == 3){ float yy = q.y - (hh + sw + 0.01); hd = step(abs(q.x), hx + 0.1) * smoothstep(-aa, aa, yy) * (1.0 - smoothstep(-aa, aa, yy - 0.13)); }
+  float dress = max(max(mSur, lint), max(sil, hd));
+  dress *= 1.0 - mOpen;
+  col = mix(col, trimA, dress); h = mix(h, 0.02 + sil * 0.03 + hd * 0.015, dress); rough = mix(rough, 0.8, dress); ao = mix(ao, 1.0, dress);
+  ao *= 1.0 - 0.45 * (1.0 - dress) * (1.0 - mOpen) * smoothstep(0.16, 0.0, -(q.y + sw + 0.07)) * step(q.y, -sw - 0.07) * step(abs(q.x), a + 0.1) * T2.z;
+  // inside the opening
+  if (mOpen > 0.0 || shape == 4){
+    float depth = -0.13;
+    if (shape == 4){                                        // blocked: infill of the wall's own stone, set back a little
+      col = mix(col, wallCol * 0.78, mOpen); h = mix(h, -0.035, mOpen); ao = mix(ao, 0.7, mOpen);
+    } else {
+      float fw = shape == 5 ? 0.04 : 0.055;
+      float ux = (q.x + a) / w, uy = shape == 3 ? (q.y / hh) : q.y / hh;
+      float ring = smoothstep(-fw - aa, -fw + aa, d);
+      float gx = min(fract(ux * cols), 1.0 - fract(ux * cols)) * w / cols, gy = min(fract(uy * rows), 1.0 - fract(uy * rows)) * hh / rows;
+      float mu = max(1.0 - smoothstep(mun * 0.5 - aa, mun * 0.5 + aa, gx), 1.0 - smoothstep(mun * 0.5 - aa, mun * 0.5 + aa, gy));
+      float rail = T1.z * (1.0 - smoothstep(0.022 - aa, 0.022 + aa, abs(q.y - hh * 0.5)));
+      float fr = max(ring, max(mu, rail));
+      // the pane
+      vec2 pid = vec2(floor(ux * cols), floor(uy * rows));
+      uint ph = lvH(hbv, lvI(pid.x) * 31u + lvI(pid.y) + 700u);
+      float pr = lvU(ph), sky = smoothstep(-0.2, 1.1, uy + (pr - 0.5) * 0.5);
+      float us = lvU(lvH(hbv, 80u)); int stt = 0;
+      for (int i = 5; i >= 0; i--) if (us < uBwSt[i]) stt = i;
+      vec3 gc = uBwG[int(lvU(lvH(bid, 67u)) * uBwN.w)];
+      vec3 skyC = lvL(0.34, 0.45, 0.56) * (0.35 + 0.65 * lvU(lvH(ph, 3u)));
+      vec3 gl = mix(gc, skyC, sky * (0.25 + 0.4 * pr)); float gr = 0.06; vec3 emi = vec3(0.0);
+      if (stt == 1){                                         // curtain
+        float ct = lvU(lvH(hbv, 81u)); vec3 cc = ct < 0.4 ? lvL(0.78, 0.74, 0.66) : (ct < 0.7 ? lvL(0.62, 0.5, 0.42) : (ct < 0.88 ? lvL(0.55, 0.62, 0.7) : lvL(0.7, 0.45, 0.45)));
+        gl = cc * (0.55 + 0.25 * sin(q.x * 38.0 + pr * 3.0)); gr = 0.85;
+      } else if (stt == 2){                                  // roller blind drawn part way
+        float drop = 0.3 + 0.6 * lvU(lvH(hbv, 82u));
+        float bl = smoothstep(-0.02, 0.02, uy - (1.0 - drop)); gl = mix(gl, lvL(0.8, 0.77, 0.68) * 0.7, bl); gr = mix(0.06, 0.8, bl);
+      } else if (stt == 3){ gl = mix(gc, lvL(0.9, 0.62, 0.3) * 0.5, 0.75); emi = lvL(0.95, 0.6, 0.28) * uBwOpt.y; gr = 0.2; }
+      else if (stt == 4){ gl = gc * 0.35; gr = 0.25; }
+      else if (stt == 5){ gl = skyC * (0.9 + 0.3 * sky) * 0.9; }
+      vec3 wood = frameC * (0.95 + 0.1 * pr);
+      col = mix(col, mix(gl, wood, fr), mOpen); rough = mix(rough, mix(gr, 0.55, fr), mOpen);
+      h = mix(h, depth + fr * 0.045, mOpen); ao = mix(ao, mix(0.85, 0.95, fr) * mix(0.62, 1.0, smoothstep(0.0, 0.2, -d)), mOpen);
+      em = mix(em, emi, mOpen * (1.0 - fr));
+    }
+  }
+  // shutters, open (a leaf each side of the opening) or closed (over it)
+  if (lvU(lvH(hbv, 91u)) < T3.x && shape != 4){
+    float closed = step(lvU(lvH(hbv, 92u)), 0.25);
+    float ws = min(a, bayW * 0.5 - (a + sw + 0.07));
+    float zy = step(-0.03, q.y) * step(q.y, hh + 0.03);
+    float leafL = step(a + sw + 0.03, abs(q.x)) * step(abs(q.x), a + sw + 0.03 + ws) * zy * step(0.14, ws);
+    float over = step(abs(q.x), a + 0.03) * zy * mOpen;
+    float sm = mix(leafL, max(over, 0.0), closed);
+    float slat = 1.0 - smoothstep(0.004, 0.004 + aa, abs(fract(q.y / 0.04) - 0.5) * 0.04 - 0.008);
+    float split = closed * (1.0 - smoothstep(0.004, 0.006 + aa, abs(q.x)));
+    vec3 sc = shutC * (1.0 - 0.28 * slat - 0.4 * split);
+    col = mix(col, sc, sm); h = mix(h, 0.03 - slat * 0.006, sm); rough = mix(rough, 0.7, sm); ao = mix(ao, 0.9 - 0.2 * slat, sm); em = mix(em, vec3(0.0), sm);
+  }
+}
+
+void slLiveApply(inout vec4 samp, inout vec4 orm, vec3 tint, vec3 pos, vec3 a, bool near){
+  float kind = uSlLive.x;
+  uint bid;
+  if (tint.r == 1.0 && tint.g == 1.0 && tint.b == 1.0) bid = lvH(lvI(pos.x / 24.0), lvI(pos.z / 24.0));         // untinted walls: a block of town is "a building"
+  else bid = uint(int(tint.r * 255.0 + 0.5)) | (uint(int(tint.g * 255.0 + 0.5)) << 8u) | (uint(int(tint.b * 255.0 + 0.5)) << 16u);
+  float x, y, base = -1.0;
+  if (near){
+    vec3 n = normalize(a); vec2 t = vec2(-n.z, n.x);
+    if (abs(n.y) > 0.7){ x = pos.x; y = pos.z; } else { x = dot(pos.xz, t); y = pos.y; }
+  } else { x = a.x; y = a.y; base = y; }
+  float aa = max(fwidth(x), fwidth(y)) * 0.8;
+  float warp = (dot(samp.rgb, vec3(0.3333)) - 1.0) * 0.004;
+  vec3 col; float h, ao, rough;
+  if (kind < 0.5) lvRender(x, y, bid, aa, col, h, ao, rough);
+  else lvMasonry(x, y, bid, kind, aa, warp, col, h, ao, rough);
+  lvWeather(col, h, ao, x, y, base, bid, kind, aa);
+  vec3 wall = col;
+  vec3 fin = col * tint * samp.rgb;                 // the wall: its own colour, the building's tint, the baked detail
+  vec3 em = vec3(0.0);
+  if (!near){
+    float sh = 3.2, bw = 3.0;
+    float stor = floor(y / sh), ys = y - stor * sh, bay = floor(x / bw), xc = x - (bay + 0.5) * bw;
+    uint su = lvI(stor), bu = lvI(bay);
+    // window: drawn on the lit colour, the dressing in absolute colours
+    vec3 abs0 = fin; float h0 = h, ao0 = ao, r0 = rough;
+    lvWindow(vec2(xc, ys), bw, bid, bu, su, aa, wall * tint, abs0, h0, ao0, r0, em);
+    // string course at the floor line, with the shadow it throws
+    if (lvU(lvH(bid, 51u)) > 0.3){
+      float band = smoothstep(2.99 - aa, 3.02 + aa, ys) * 1.0;
+      vec3 trimC = uBwTr[int(lvU(lvH(bid, 64u)) * uBwN.y)] * (0.93 + 0.1 * lvU(lvH(bid, 66u)));
+      abs0 = mix(abs0, trimC, band); h0 = mix(h0, 0.035 + smoothstep(3.14, 3.17, ys) * 0.0, band); r0 = mix(r0, 0.8, band);
+      ao0 *= 1.0 - 0.45 * smoothstep(2.74, 3.0, ys) * (1.0 - band);
+    }
+    fin = abs0; h = h0; ao = ao0; rough = r0;
+  }
+  samp.rgb = fin / max(tint, vec3(0.04)); samp.a = 1.0;
+  orm.r *= ao; orm.g = clamp(rough + (orm.g - 0.9) * 0.5, 0.05, 1.0);
+  slLiveH = h; slLiveEm = em;
+}
+`;
+
+// ---- the style table to uniforms -------------------------------------------------------------------------------------
+const U = {
+  uBwT: { value: new Float32Array(MAXT * 16) },
+  uBwCdf: { value: new Float32Array(MAXT * 3) },
+  uBwSt: { value: new Float32Array(6) },
+  uBwOpt: { value: [0.12, 0.35, 1, 0] },
+  uBwN: { value: [1, 1, 1, 1] },
+  uBwF: { value: new Float32Array(24) }, uBwTr: { value: new Float32Array(24) }, uBwSh: { value: new Float32Array(24) }, uBwG: { value: new Float32Array(12) },
+};
+// uniform vec4 / vec3 / vec4[] values are given as flat arrays; vec4 and vec3 singles are converted when the uniforms are first set
+LIVE.decl = LIVE_GLSL;
+LIVE.uniforms = U;
+
+/**
+ * Hand the style's window table and colour lists to the wall shader. Called when a scene's style is known (level loader);
+ * the materials already built pick the new values up on their next draw.
+ */
+export function setBayStyle(style) {
+  const bw = (style && style.bayWindows) || {}, c = compileWindows(bw);
+  U.uBwT.value.set(c.types); U.uBwCdf.value.set(c.cdf); U.uBwSt.value.set(c.states);
+  const pal = (list, n, key, fb) => { const r = paletteRows(list, parseColor, n, fb); U[key].value.set(r.rows); return r.count; };
+  const nf = pal(style && style.frames, 8, 'uBwF', [0.85, 0.83, 0.78]), nt = pal(style && style.trim, 8, 'uBwTr', [0.8, 0.78, 0.7]);
+  const ns = pal(bw.shutterColors || (style && style.doors), 8, 'uBwSh', [0.2, 0.3, 0.25]), ng = pal(bw.glass, 4, 'uBwG', [0.012, 0.02, 0.026]);
+  U.uBwN.value = [nf, nt, ns, ng]; U.uBwOpt.value = [c.odd, 0.35, 1, 0];
+  return c;
+}
+
+// ---- sets and materials ---------------------------------------------------------------------------------------------
 Object.assign(SETS, {
-  facade_stucco: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 4, p: [0, 0] },
-  facade_stone: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 5, p: [1, 0], seed: 3 },
-  facade_rubble: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 6, p: [1, 1], seed: 5 },
-  facade_brick: { fn: 'facade', size: 1, tile: [3.0, 3.2], bump: 6, p: [2, 0], seed: 8 },
+  wd_render: { fn: 'walldetail', size: 1, tile: [3.0, 3.2], bump: 3, p: [0] },
+  wd_masonry: { fn: 'walldetail', size: 1, tile: [3.0, 3.2], bump: 3, p: [1], seed: 3 },
 });
-Object.assign(MATERIALS, {
-  facade_stucco: def('facade_stucco', { wet: [0.2, 0.2, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
-  facade_stone: def('facade_stone', { wet: [0.3, 0.25, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
-  facade_rubble: def('facade_rubble', { wet: [0.3, 0.25, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
-  facade_brick: def('facade_brick', { wet: [0.3, 0.25, 0.5, 0], macro: [0.12, 0.08, 0.4, 0.3] }),
-});
+const WET = [0.3, 0.25, 0.5, 0], MACRO = [0.12, 0.08, 0.4, 0.3];
+const kinds = { stucco: ['wd_render', 0], stone: ['wd_masonry', 1], rubble: ['wd_masonry', 2], brick: ['wd_masonry', 3] };
+for (const [k, [set, kind]] of Object.entries(kinds)) {
+  // the far façade (windows in the material) and the near wall (triplanar) are one material per kind, two programs
+  MATERIALS['facade_' + k] = MATERIALS['wall_' + k] = def(set, { live: kind, wet: k === 'stucco' ? [0.2, 0.2, 0.5, 0] : WET, macro: MACRO });
+}
+setBayStyle(null);

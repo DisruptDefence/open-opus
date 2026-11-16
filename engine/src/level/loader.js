@@ -13,9 +13,11 @@ import { Group, Mesh, PlaneGeometry, Vector3 } from '../../vendor/three.module.j
 import { installChunk, uninstallChunk } from '../scene/install.js';
 import { buildTerrain, buildChunkStatic, buildCellNear, buildFarTile, disposeGroup } from './build.js';
 import { createDetail, DETAIL_RADIUS } from './detail.js';
+import { setBayStyle } from '../materials/facades.js';
 
 export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   const m = source.manifest, root = new Group(); root.name = 'level'; G.scene.add(root);
+  setBayStyle(m.style); // the style pack's window table and colours reach the wall shader
   const farRoot = new Group(); farRoot.name = 'far'; root.add(farRoot);
   const far = await source.far();
   G.terrain.setFar(far.grid);

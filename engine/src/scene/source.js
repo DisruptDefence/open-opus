@@ -46,6 +46,7 @@ import { readContainer, dequantiseHeights } from './container.js';
 import { createGrid } from '../terrain/heightfield.js';
 import { CHUNK, gridOf } from './grid.js';
 import { cellBoxes, cellIndex, clipLine, lineLength } from '../gen/cells.js';
+import { jitterTint } from '../gen/wallvar.js';
 import { resolveStyle, parseColor, paletteColor, FACADE_NAMES, ROOF_MAT_NAMES } from '../gen/style.js';
 import { linear } from '../gen/soup.js';
 export { lineToRings } from '../gen/structures.js';
@@ -70,7 +71,12 @@ function completeBuilding(b, style) {
   b.blind = new Set(b.blind || []); b.front = new Set(b.front || []);
   b.passages = (b.passages || []).map((p) => (Array.isArray(p) ? { x1: p[0], z1: p[1], x2: p[2], z2: p[3], w: p[4], h: p[5] } : p));
   b.yMin = b.yMin ?? b.yBase + (b.minHeight || 0);
-  if (!b.tint) b.tint = b.styled ? paletteColor(style.palettes[FACADE_NAMES[b.facade]] || style.palettes.generic, b.palette || 0) : legacyTint(b.palette || 0);
+  // a styled palette entry is a family of colours: each building gets its own tone and hue within it (gen/wallvar.js), which is
+  // also its id in the wall shader. A scene from before formatMinor 1 keeps its exact colours (the rules it was drawn with).
+  if (!b.tint) {
+    const pick = b.styled ? paletteColor(style.palettes[FACADE_NAMES[b.facade]] || style.palettes.generic, b.palette || 0) : legacyTint(b.palette || 0);
+    b.tint = b.styled ? jitterTint(pick, b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13)) : pick;
+  }
   if (b.roofColor === undefined || typeof b.roofColor === 'string') b.roofColor = parseColor(b.roofColor) || (b.roofPalette != null ? paletteColor(style.roofs[ROOF_MAT_NAMES[b.roofMat]] || style.roofs.generic, b.roofPalette, null) : null);
   return b;
 }

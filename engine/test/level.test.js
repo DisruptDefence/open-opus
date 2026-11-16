@@ -46,7 +46,7 @@ test('the mesher: base has what never changes, far and near are two pictures of 
       assert.equal(env.season, 'summer', 'the environment starts from the style; the loader sets the scene\'s season');
       for (const cell of chunk.cells) for (const g of GROUPS) for (const [key, s] of cellSoups(cell, g, env).map) total[g].set(key, (total[g].get(key) || 0) + s.pos.length / 9);
     }
-    assert.ok(total.base.get('roof_zinc|tv') > 0, 'roofs are in base, tinted when the scene gives a colour'); assert.ok(total.base.get('stone|t') > 0, 'solid walls are in base');
+    assert.ok(total.base.get('roof_zinc|tv') > 0, 'roofs are in base, tinted when the scene gives a colour'); assert.ok(total.base.get('wall_stone|t') > 0, 'solid walls are in base');
     assert.equal(total.base.get('galv|t'), undefined, 'a wall drawn as a rail is not in base'); assert.equal(total.near.get('galv|t'), undefined); assert.ok(total.near.get('metal|tv') > 10, 'the rail is posts and rails in iron, in near');
     assert.ok(total.far.get('facade_stone|v') > 0 && total.far.get('leaves|t') > 0, 'flat façades and simple trees are in far');
     for (const key of ['facade_stone|v', 'facade_stucco|v', 'leaves|t', 'wood|t']) assert.equal(total.near.get(key), total.far.get(key), `the placeholders draw the same ${key} near and far`);
