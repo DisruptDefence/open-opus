@@ -53,14 +53,15 @@ export function buildPerson(look, far = 0) {
   rb.bone('root', null, 0, 0, 0);
   const bind = bindJoints();
   for (const n of BONES) rb.bone(n, 'root', ...bind[n]);
-  const cloth = look.cloth, cloth2 = shade(cloth, 0.86), gear = look.gear, gear2 = shade(gear, 0.8), skin = look.skin, boot = look.boot, metal = [0.55, 0.56, 0.58], poly = [0.16, 0.16, 0.17];
+  // the fabric and polymer sets are dark: their vertex colours are lifted so the pack's colour is what is seen
+  const cloth = shade(look.cloth, 2.3), cloth2 = shade(cloth, 0.86), gear = shade(look.gear, 1.7), gear2 = shade(gear, 0.8), skin = look.skin, boot = shade(look.boot, 1.5), metal = [0.05, 0.05, 0.055], poly = [0.035, 0.035, 0.038]; // linear: a black carbine
   const add = (slot, bone, geo, col, ao = true) => rb.add(slot, bone, geo, col, ao);
   // pelvis: seat, belt and two pouches
-  add('cloth', 'pelvis', P(Bx(0.33, 0.21, 0.22, 0.07), 0, 0.02, 0.005), cloth);
+  add('cloth', 'pelvis', P(Bx(0.35, 0.22, 0.24, 0.07), 0, 0.02, 0.005), cloth);
   add('gear', 'pelvis', P(Bx(0.35, 0.055, 0.24, 0.02), 0, 0.1, 0), gear2);
   if (!far) for (const x of [-0.13, 0.13]) add('gear', 'pelvis', P(Bx(0.06, 0.08, 0.07, 0.015), x, 0.06, 0.09), gear);
   // spine: the trunk, the plate carrier, mag pouches, shoulder straps, the neck; a pack on some
-  add('cloth', 'spine', limb([[0.135, 0], [0.15, 0.1], [0.172, 0.25], [0.18, 0.34], [0.16, 0.41], [0.075, 0.46]], seg(12), 1.08, 0.66).rotateX(Math.PI), cloth);
+  add('cloth', 'spine', limb([[0.145, 0], [0.16, 0.1], [0.178, 0.25], [0.186, 0.34], [0.165, 0.41], [0.08, 0.46]], seg(12), 1.12, 0.72).rotateX(Math.PI), cloth);
   add('gear', 'spine', P(Bx(0.31, 0.3, 0.07, 0.025), 0, 0.25, -0.1), gear);
   add('gear', 'spine', P(Bx(0.31, 0.33, 0.06, 0.025), 0, 0.25, 0.105), gear);
   add('gear', 'spine', P(Bx(0.37, 0.13, 0.21, 0.03), 0, 0.13, 0), gear2);
@@ -88,9 +89,9 @@ export function buildPerson(look, far = 0) {
   } else add('skin', 'head', P(dome(1, seg(12), seg(6), 0.5, 0.09, 0.07, 0.1), 0, 0.15, 0.006), shade(skin, 0.45)); // hair
   // arms
   for (const s of ['L', 'R']) {
-    add('cloth', 'upperArm' + s, ball(0.068, seg(10), seg(8)), cloth);
-    add('cloth', 'upperArm' + s, limb([[0.064, 0], [0.06, 0.12], [0.05, 0.29]], seg(9), 1, 0.95), cloth);
-    add('cloth', 'forearm' + s, ball(0.05, seg(8), seg(6)), cloth);
+    add('cloth', 'upperArm' + s, ball(0.066, seg(10), seg(8)), cloth);
+    add('cloth', 'upperArm' + s, limb([[0.07, 0], [0.065, 0.12], [0.054, 0.29]], seg(9), 1, 0.95), cloth);
+    add('cloth', 'forearm' + s, ball(0.046, seg(8), seg(6)), cloth);
     add('cloth', 'forearm' + s, limb([[0.05, 0], [0.047, 0.1], [0.038, 0.24]], seg(9), 1, 0.85), cloth2);
     add('gear', 'hand' + s, P(Bx(0.045, 0.1, 0.085, 0.018), 0, -0.055, 0), gear2);
     if (!far) add('gear', 'hand' + s, P(Bx(0.026, 0.055, 0.03, 0.01), (s === 'L' ? 1 : -1) * 0.022, -0.035, -0.04, 0.4), gear2); // thumb
@@ -98,9 +99,9 @@ export function buildPerson(look, far = 0) {
   // legs
   for (const s of ['L', 'R']) {
     const out = s === 'L' ? -1 : 1;
-    add('cloth', 'thigh' + s, limb([[0.09, 0], [0.088, 0.08], [0.075, 0.25], [0.062, 0.43]], seg(10), 1, 1.05), cloth);
+    add('cloth', 'thigh' + s, limb([[0.1, 0], [0.098, 0.08], [0.082, 0.25], [0.066, 0.43]], seg(10), 1, 1.08), cloth);
     if (!far) add('cloth', 'thigh' + s, P(Bx(0.035, 0.14, 0.11, 0.014), out * 0.078, -0.23, 0.005), cloth2); // cargo pocket
-    add('cloth', 'shin' + s, ball(0.062, seg(10), seg(8)), cloth);
+    add('cloth', 'shin' + s, ball(0.057, seg(10), seg(8)), cloth);
     add('gear', 'shin' + s, P(Bx(0.085, 0.1, 0.035, 0.014), 0, -0.035, -0.058), gear); // knee pad
     add('cloth', 'shin' + s, limb([[0.062, 0], [0.064, 0.1], [0.05, 0.3], [0.046, 0.36]], seg(9), 1, 1.05), cloth);
     add('gear', 'shin' + s, P(ot(0.055, 0.058, 0.13, seg(10)), 0, -0.35, 0.0), boot);
@@ -108,17 +109,17 @@ export function buildPerson(look, far = 0) {
     add('gear', 'foot' + s, P(Bx(0.11, 0.028, 0.285, 0.01), 0, -0.075, -0.058), shade(boot, 0.55));
   }
   // the rifle (grip at the origin, barrel along -Z)
-  add('metal', 'rifle', P(Bx(0.032, 0.1, 0.045, 0.01), 0, -0.045, 0.01, 0.32), poly);
+  add('gear', 'rifle', P(Bx(0.032, 0.1, 0.045, 0.01), 0, -0.045, 0.01, 0.32), poly);
   add('metal', 'rifle', P(Bx(0.052, 0.085, 0.3, 0.01), 0, 0.04, -0.06), metal);
-  add('metal', 'rifle', P(Bx(0.03, 0.15, 0.07, 0.008), 0, -0.07, -0.13, -0.22), poly);
-  add('metal', 'rifle', P(Bx(0.05, 0.11, 0.15, 0.012), 0, 0.02, 0.195), poly);
+  add('gear', 'rifle', P(Bx(0.03, 0.15, 0.07, 0.008), 0, -0.07, -0.13, -0.22), poly);
+  add('gear', 'rifle', P(Bx(0.05, 0.11, 0.15, 0.012), 0, 0.02, 0.195), poly);
   add('metal', 'rifle', P(ot(0.016, 0.016, 0.1, seg(8)), 0, 0.045, 0.1, Math.PI / 2), metal);
-  add('metal', 'rifle', P(Bx(0.058, 0.06, 0.26, 0.012), 0, 0.04, -0.3), poly);
+  add('gear', 'rifle', P(Bx(0.058, 0.06, 0.26, 0.012), 0, 0.04, -0.3), poly);
   add('metal', 'rifle', P(ot(0.011, 0.011, 0.16, seg(8)), 0, 0.045, -0.51, Math.PI / 2), metal);
   add('metal', 'rifle', P(ot(0.017, 0.017, 0.05, seg(8)), 0, 0.045, -0.615, Math.PI / 2), metal);
-  add('metal', 'rifle', P(ot(0.02, 0.02, 0.11, seg(10)), 0, 0.115, -0.07, Math.PI / 2), poly); // optic
+  add('gear', 'rifle', P(ot(0.02, 0.02, 0.11, seg(10)), 0, 0.115, -0.07, Math.PI / 2), poly); // optic
   add('metal', 'rifle', P(Bx(0.03, 0.03, 0.05, 0.006), 0, 0.09, -0.07), metal);
-  add('metal', 'rifle', P(ot(0.014, 0.014, 0.07, seg(8)), 0.037, 0.02, -0.37, Math.PI / 2), poly); // weapon light
+  add('gear', 'rifle', P(ot(0.014, 0.014, 0.07, seg(8)), 0.037, 0.02, -0.37, Math.PI / 2), poly); // weapon light
   add('lens', 'rifle', P(ot(0.012, 0.012, 0.004, seg(8)), 0.037, 0.02, -0.407, Math.PI / 2), [1, 1, 1], false);
   const built = rb.build(['cloth', 'gear', 'skin', 'metal', 'lens']);
   setRigDetail(0);
@@ -196,7 +197,8 @@ export function createPerson(G, kit, rng) {
     const sp = s.speed, moving = sp > 0.25 && s.alive;
     for (const f of s.feet) if (f.swing) {
       f.u += dt / f.dur;
-      const u = Math.min(1, f.u); f.w.lerpVectors(f.from, f.to, ease(u)); f.w.y += Math.sin(Math.PI * u) * f.lift;
+      // the foot rises early (at a run the heel kicks up behind) and comes down onto its place
+      const u = Math.min(1, f.u); f.w.lerpVectors(f.from, f.to, ease(u)); f.w.y += Math.sin(Math.PI * Math.pow(u, f.lift > 0.12 ? 0.6 : 0.85)) * f.lift;
       if (f.u >= 1) { f.swing = false; f.w.copy(f.to); }
     }
     if (!s.alive) return;
@@ -217,7 +219,7 @@ export function createPerson(G, kit, rng) {
         f.swing = true; f.u = 0; f.dur = air; f.from.copy(f.w); s.last = k;
         footHome(k, f.to).addScaledVector(tmp2.set(v.vx, 0, v.vz), air + d * C * 0.5);
         f.to.y = groundAt(f.to.x, f.to.z, s.pos.y) + B.ankle; f.yaw = s.yaw;
-        f.lift = clamp(0.06 + sp * 0.03, 0.08, 0.2) * (s.limp > 0.05 && k === s.limpSide ? 0.5 : 1);
+        f.lift = clamp(0.04 + sp * 0.05, 0.08, 0.28) * (s.limp > 0.05 && k === s.limpSide ? 0.5 : 1);
       }
       return;
     }

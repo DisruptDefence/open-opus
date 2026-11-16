@@ -82,7 +82,7 @@ try {
   const cam = (v, extra = {}) => ({ x: v.x, z: v.z, heading: v.heading, pitch: v.pitch, fov: v.fov || 60, ...extra });
 
   if (sets.includes('look')) { // close-ups: front and three-quarter, every look of the two human archetypes, and the poses
-    const c = { x: 20, z: 24, heading: 0 };
+    const c = { x: 20, z: 19, heading: 0 }; // the test scene's open ground north of the player's start
     const row = (kind, n, d, pose, turn = 0) => Array.from({ length: n }, (_, i) => ({ id: kind[0] + i, kind, ...ahead(c, d, (i - (n - 1) / 2) * 1.0), heading: facing(c) + turn, pose }));
     await stage([...row('sentry', 4, 4.2, { anim: 'idle', t: 1 }), ...row('patrol', 4, 6, { anim: 'idle', t: 1 }, 30)]);
     await picture('look', 'looks', cam(c, { pitch: -8, fov: 55 }));
