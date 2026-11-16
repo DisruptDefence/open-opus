@@ -18,6 +18,7 @@ class Ctx:
     surface_height: Callable[[float, float], float | None]
     ext: dict
     play: dict
+    carve: Callable[..., None] | None = None       # terrain.Terrain.carve: levels the ground along a way (gate passages)
     rules: dict = field(default_factory=dict)
     sources: list = field(default_factory=list)
     features: dict = field(default_factory=dict)   # filled by osm.classify

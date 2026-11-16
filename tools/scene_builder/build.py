@@ -40,7 +40,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
 
     ter, dsm = terrain.load(dtm_raw, dsm_raw, pl)
     ctx = Ctx(place=pl, style=st, osm=osm_doc["elements"], game=pl.game, geo=pl.geo, ground=ter.ground,
-              surface_height=(dsm.at if dsm else (lambda x, z: None)), ext=ext, play=pl.play)
+              surface_height=(dsm.at if dsm else (lambda x, z: None)), ext=ext, play=pl.play, carve=ter.carve)
     ctx.surface_model = dsm is not None
     if dsm is None:
         print("warning: no surface model here, heights come from tags and rules", file=sys.stderr)

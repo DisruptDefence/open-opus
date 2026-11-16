@@ -114,6 +114,26 @@ class Terrain:
         v = self.heights[j * self.nx + i]
         return (((v & 255) << 8 | v >> 8) if sys.byteorder == "big" else v) / 10
 
+    def carve(self, x1: float, z1: float, x2: float, z2: float, half: float, margin: float = 3.0) -> None:
+        """Level a way: the cells within `half` of the line x1,z1 - x2,z2, from `margin` before its start to `margin` after its
+        end, take the heights on a straight line between the ground at those two ends. A road that runs through a gate
+        building is level in life; the elevation model under the building is a mound (item 7 of the detail plan)."""
+        ln = math.hypot(x2 - x1, z2 - z1)
+        if ln < 1e-6:
+            return
+        ux, uz = (x2 - x1) / ln, (z2 - z1) / ln
+        ya, yb = self.ground(x1 - ux * margin, z1 - uz * margin), self.ground(x2 + ux * margin, z2 + uz * margin)
+        reach = half + self.cell
+        i0, i1 = int((min(x1, x2) - reach - margin - self.minX) / self.cell), int((max(x1, x2) + reach + margin - self.minX) / self.cell) + 1
+        j0, j1 = int((min(z1, z2) - reach - margin - self.minZ) / self.cell), int((max(z1, z2) + reach + margin - self.minZ) / self.cell) + 1
+        for j in range(max(0, j0), min(self.nz, j1 + 1)):
+            for i in range(max(0, i0), min(self.nx, i1 + 1)):
+                dx, dz = self.minX + i * self.cell - x1, self.minZ + j * self.cell - z1
+                t, lat = dx * ux + dz * uz, -dx * uz + dz * ux
+                if abs(lat) <= half and -margin <= t <= ln + margin:
+                    v = max(0, min(65535, int(round((ya + (yb - ya) * (t + margin) / (ln + 2 * margin)) * 10))))
+                    self.heights[j * self.nx + i] = ((v & 255) << 8 | v >> 8) if sys.byteorder == "big" else v
+
     def scene_block(self) -> dict:
         return {"cell": self.cell, "nx": self.nx, "nz": self.nz, "minX": self.minX, "minZ": self.minZ, "unit": 0.1,
                 "min": round(self.lo, 1), "max": round(self.hi, 1), "encoding": "base64 uint16 little-endian, rows north to south",

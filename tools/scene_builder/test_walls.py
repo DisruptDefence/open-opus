@@ -81,7 +81,7 @@ class Passages(unittest.TestCase):
 
     def test_a_road_through_a_gate_building_gives_its_width_and_piers_of_two_metres(self):
         out = self.passage(rect(-5, -5, 5, 5), road([(-20, 0), (20, 0)], 6))
-        ((x1, z1, x2, z2, w),) = out[("way", 1, 0)]
+        ((x1, z1, x2, z2, w, top),) = out[("way", 1, 0)]
         self.assertEqual(w, 6)
         self.assertAlmostEqual(x1, -5.5, 1)
         self.assertAlmostEqual(x2, 5.5, 1)
@@ -106,6 +106,13 @@ class Passages(unittest.TestCase):
                        roads=[road([(-20, 0), (20, 0)], 6), road([(-20, 1.5), (20, 1.5)], 3, "footway")])
         self.assertEqual(len(walls.passages(ctx)[("way", 1, 0)]), len(out[("way", 1, 0)]))
 
+    def test_on_a_slope_the_arch_starts_above_the_highest_ground_of_the_way(self):
+        ring = rect(-5, -5, 5, 5)
+        ctx = make_ctx(lambda x, z: 3.0 + 0.5 * (x + 5) if x > -5 else 3.0, buildings_=[feature(ring, historic="city_gate", height="24")], roads=[road([(-20, 0), (20, 0)], 6)])
+        ctx.passages = walls.passages(ctx)
+        (b,) = buildings.build(ctx)["buildings"]
+        self.assertGreaterEqual(b["pass"][0][5], 5.0 + 2.2)     # the way climbs 5 m inside the footprint, 2.2 m clear at least
+
     def test_the_building_record_carries_the_passage_a_flat_roof_and_no_front(self):
         ring = rect(-5, -5, 5, 5)
         ctx = make_ctx(lambda x, z: 0.0, buildings_=[feature(ring, historic="city_gate")], roads=[road([(-20, 0), (20, 0)], 6)])
@@ -113,7 +120,7 @@ class Passages(unittest.TestCase):
         (b,) = buildings.build(ctx)["buildings"]
         (p,) = b["pass"]
         self.assertEqual(p[4], 6)
-        self.assertTrue(2.0 <= p[5] <= 7.0 and p[5] <= 0.7 * b["h"])
+        self.assertTrue(2.2 <= p[5] <= 7.0 and p[5] <= 0.7 * b["h"])
         self.assertEqual((b["rs"], b["gf"]), (0, 0))
         self.assertNotIn("front", b)
 

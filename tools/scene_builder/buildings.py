@@ -482,7 +482,12 @@ def build(ctx) -> dict:
 
         gf = 1 if use == 2 and front else 2 if kind in ("garage", "garages", "carport") else 0
         # item 7: a road through the building is a passage; the building then has a flat roof, no shopfront, no street front
-        gate = [[x1, z1, x2, z2, w, round(min(0.7 * eave_h, w + 1.0), 1)] for x1, z1, x2, z2, w in getattr(ctx, "passages", {}).get(ft["src"], [])]
+        gate = []
+        for x1, z1, x2, z2, w, top in getattr(ctx, "passages", {}).get(ft["src"], []):
+            rise = max(0.0, top - g)                        # the way climbs inside the footprint: the arch starts above its highest ground
+            clear = min(0.7 * eave_h - rise, w + 1.0)
+            if clear >= 2.2:
+                gate.append([x1, z1, x2, z2, w, round(rise + clear, 1)])
         if gate:
             rs, rh, rd, gf, front = 0, 0.0, 255, 0, []
         stats["blind"] += bool(blind)

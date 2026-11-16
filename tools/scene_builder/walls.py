@@ -161,11 +161,12 @@ def _segs_near(a, b, d: float) -> bool:
 
 MAX_PER_BUILDING = 3
 MIN_LENGTH = 3.0
+MAX_CLIMB = 3.0         # m: the highest end of a way above the lowest ground of the footprint for the way to be an arch
 
 
 def passages(ctx) -> dict:
-    """{ building src: [(x1, z1, x2, z2, w)] }: the way a road takes through each building that has one, widest first,
-    one way where roads run side by side. The clear height needs the eave, which buildings.py knows. A building that
+    """{ building src: [(x1, z1, x2, z2, w, top)] }: the way a road takes through each building that has one, widest first,
+    one way where roads run side by side, and the highest ground along it. The clear height needs the eave, which buildings.py knows. A building that
     other building parts draw is left alone (its outline is not drawn)."""
     out: dict = {}
     roads = ctx.layers.get("roads", [])
@@ -205,5 +206,13 @@ def passages(ctx) -> dict:
         for _, _, c in sorted(cands):
             taken = out.get(ft["src"], [])
             if len(taken) < MAX_PER_BUILDING and not any(_segs_near(c, e, (c[4] + e[4]) / 2 + 0.5) for e in taken):
-                out.setdefault(ft["src"], []).append(c)
+                ln = math.hypot(c[2] - c[0], c[3] - c[1])
+                ux, uz = (c[2] - c[0]) / ln, (c[3] - c[1]) / ln
+                ends = [ctx.ground(c[0] - ux * 3, c[1] - uz * 3), ctx.ground(c[2] + ux * 3, c[3] + uz * 3)]
+                if max(ends) - min(ctx.ground(*q) for q in ring) > MAX_CLIMB:       # a flight of steps through a building: no arch
+                    continue
+                if ctx.carve:
+                    ctx.carve(c[0], c[1], c[2], c[3], c[4] / 2 + 0.6)       # the road is level through the gate, whatever the model says
+                top = max(ctx.ground(c[0] + (c[2] - c[0]) * k / 10, c[1] + (c[3] - c[1]) * k / 10) for k in range(11))
+                out.setdefault(ft["src"], []).append(c + (round(top, 1),))
     return out
