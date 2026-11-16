@@ -481,6 +481,10 @@ def build(ctx) -> dict:
         stats["facade"] += 1
 
         gf = 1 if use == 2 and front else 2 if kind in ("garage", "garages", "carport") else 0
+        # item 7: a road through the building is a passage; the building then has a flat roof, no shopfront, no street front
+        gate = [[x1, z1, x2, z2, w, round(min(0.7 * eave_h, w + 1.0), 1)] for x1, z1, x2, z2, w in getattr(ctx, "passages", {}).get(ft["src"], [])]
+        if gate:
+            rs, rh, rd, gf, front = 0, 0.0, 255, 0, []
         stats["blind"] += bool(blind)
         stats["front"] += bool(front)
 
@@ -504,6 +508,8 @@ def build(ctx) -> dict:
         if front:
             b["front"] = front
         b["gf"] = gf
+        if gate:
+            b["pass"] = gate
         (parts if ft["is_part"] else buildings).append(b)
 
     parts_mod.mark(buildings, parts)
