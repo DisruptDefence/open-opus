@@ -630,7 +630,8 @@ counting only triangles with `ny > 0.05`:
 - Hipped 12 × 8, `H = 4`: ridge length 4 (12 − 8), ridge at `e + 4`.
 - Mansard 10 × 10, `H = 4`: the lower ring is at inset 1.2 and height `e + 3.2`; four slots, each `slope` = 3.2 / 1.2.
 - Pyramidal 6 × 6: 4 triangles meeting at the centre at `e + H`. Dome: apex at `e + H` within 1 mm.
-- `inset` of a 10 × 10 square by 1 is the 8 × 8 square; by 6 is `null`; of the L by 1 has 6 vertices, lies inside the L, and its area (shoelace) equals the L's area minus its perimeter × 1 plus 4 × 1² − … computed in the test from the offset edges themselves (each new vertex is checked to be exactly 1 m from its two edges), not from a hard-coded number.
+- `inset` of a 10 × 10 square by 1 is the 8 × 8 square; by 6 is `null`; of the L `(0,0) (12,0) (12,4) (6,4) (6,8) (0,8)` by 1 is
+  `(1,1) (11,1) (11,3) (5,3) (5,7) (1,7)` (area 36), in either winding.
 - `triangulate` of a square with a square hole gives 8 triangles whose areas sum to outer − hole.
 - On the regenerated Old Quebec scene: every building produces a roof without throwing; the fan-fallback counter is 0; total roof triangles < 120 000.
 
