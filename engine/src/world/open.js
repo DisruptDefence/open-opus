@@ -38,6 +38,9 @@ export function openWorld({ source, params = {}, modules = {}, onProgress } = {}
     geo: { toGeo: geo('toGeo'), toGame: geo('toGame'), toMGRS: geo('toMGRS'), toUTM: geo('toUTM'), headingTrue: geo('headingTrue'), get convergenceDeg() { return need('geo.convergenceDeg').geo.convergenceDeg; } },
     scene: call('scene'),
     overhead: call('overhead'),
+    photo: (pose) => { try { return Promise.resolve(need('photo').photo(pose)); } catch (e) { return Promise.reject(e); } },
+    stats: call('stats'),
+    photographing: () => (api ? api.photographing() : false),
     apply: (cmd) => { if (!api) throw new ScenarioCommandError('not-ready', cmd && cmd.op, 'the world is still loading; await ready() first'); api.apply(cmd); },
   };
   // For the engine's own checks (frame statistics, a manual frame in tests). Not on the world object, so nothing

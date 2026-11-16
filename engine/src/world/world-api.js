@@ -92,6 +92,35 @@ export function createWorldApi(engine, emit) {
     return { image: await createImageBitmap(img), width: W, height: H, bounds: { minX: x - halfWidth, maxX: x + halfWidth, minZ: z - halfHeight, maxZ: z + halfHeight } };
   }
 
+  // ---- photo mode ------------------------------------------------------------------------------------------------
+  // The camera leaves the player and stands where the caller says: no HUD, no weapon, no player input. The scene
+  // streams round the camera while it lasts. The simulation is not stopped: a caller that wants stillness pauses.
+  let fovBefore = null;
+  async function photo(pose) {
+    if (pose == null) {
+      if (!G.photo) return null;
+      G.photo = null;
+      if (fovBefore != null) { G.camera.fov = fovBefore; G.camera.updateProjectionMatrix(); fovBefore = null; }
+      const playing = G.game.state === 'playing';
+      if (G.weapon.setVisible) G.weapon.setVisible(playing || G.game.state === 'paused');
+      if (playing && !G.hold.mode) { G.hud.show(true); G.input.setGameplay(true); }
+      emit('photo', { on: false });
+      return null;
+    }
+    const x = +pose.x, z = +pose.z;
+    if (!(Number.isFinite(x) && Number.isFinite(z))) throw new Error('photo: a pose needs x and z in game metres');
+    const was = !!G.photo, deg = Math.PI / 180;
+    const p = { x, z, y: 0, yaw: yawOf(pose.heading), pitch: Math.max(-89, Math.min(89, +pose.pitch || 0)) * deg, fov: Math.max(10, Math.min(120, +pose.fov || 60)) };
+    if (fovBefore == null) fovBefore = G.camera.fov;
+    const place = () => { p.y = Number.isFinite(+pose.y) && pose.y != null ? +pose.y : G.physics.groundHeight(x, z) + (Number.isFinite(+pose.height) && pose.height != null ? +pose.height : 1.7); };
+    place(); G.photo = p;
+    G.hud.show(false); G.input.setGameplay(false); if (G.weapon.setVisible) G.weapon.setVisible(false);
+    if (!was) emit('photo', { on: true });
+    await G.level.preload(x, z); // the ground under the camera may only now be known
+    if (G.photo === p) place();
+    return { x, y: round(p.y), z, heading: ((+pose.heading || 0) % 360 + 360) % 360, pitch: round(p.pitch / deg), fov: p.fov };
+  }
+
   const man = G.level.manifest;
   return {
     version: 1,
@@ -126,6 +155,10 @@ export function createWorldApi(engine, emit) {
     },
     scene: () => ({ id: man.id, name: man.name, version: man.version, bounds: { ...man.bounds }, walkable: { ...(man.walkable || man.bounds) }, credits: [...(man.credits || [])] }),
     overhead,
+    photo,
+    /** What the last frame cost, as plain numbers: for budgets and captures. */
+    stats() { const t = engine.stats(), sc = t.scene || {}; return { quality: t.quality, frameMs: t.frameMs, calls: t.calls ?? 0, triangles: t.tris ?? 0, chunksLive: sc.chunksLive ?? 0, sceneTriangles: sc.tris ?? 0, buildMs: round(sc.buildMs ?? 0, 10) }; },
+    photographing: () => !!G.photo,
     /** Scenario commands (director/director.js). Throws a ScenarioCommandError, and only that, when one cannot be applied. */
     apply(cmd) {
       let copy;
