@@ -66,3 +66,42 @@ test('an enemy shot plays a sound by the pack entry of its archetype, else its c
   assert.equal(shot('mute', 'ground'), 0, 'an archetype whose entry has no fire plays nothing');
   assert.equal(shot('unknown', 'naval'), 0, 'no entry at all plays nothing');
 });
+
+test('the voices are synthesised barks of the lengths given, every variant different, nothing silent or broken', async () => {
+  const { VOICE_SOUNDS } = await import('../src/audio/voice.js');
+  const { createRng } = await import('../src/shared/lifted.js');
+  const lengths = { voice_pain: [0.25, 0.46], voice_death: [0.8, 1.11], voice_contact: [0.3, 0.55] };
+  for (const [name, def] of Object.entries(VOICE_SOUNDS)) {
+    const seen = new Set();
+    for (let v = 0; v < def.n; v++) {
+      const x = def.gen(def.sr, createRng(7 + v), v), sec = x.length / def.sr;
+      assert.ok(sec >= lengths[name][0] && sec <= lengths[name][1], `${name}#${v}: ${sec.toFixed(2)} s`);
+      let peak = 0, sum = 0; for (const s of x) { assert.ok(Number.isFinite(s)); peak = Math.max(peak, Math.abs(s)); sum += s * s; }
+      assert.ok(peak > 0.01 && Math.sqrt(sum / x.length) > 0.002, `${name}#${v} is not silent`);
+      seen.add(x.length + ':' + peak.toFixed(5));
+    }
+    assert.equal(seen.size, def.n, `${name}: its variants differ`);
+  }
+});
+
+test('people speak, one thing at a time; a death is always heard; machines say nothing', async (t) => {
+  const had = { window: globalThis.window, document: globalThis.document };
+  globalThis.window = { AudioContext: StubContext, addEventListener() {}, removeEventListener() {} };
+  globalThis.document = { addEventListener() {}, hidden: false };
+  t.after(() => { for (const k of ['window', 'document']) { if (had[k] === undefined) delete globalThis[k]; else globalThis[k] = had[k]; } });
+  const { audio, events, G } = await audioFor(DEFAULT_PACK);
+  G.time = { t: 10 };
+  const who = (archetype, type = 'ground') => ({ id: archetype + '-1', archetype, type, alive: true, health: 50, pos: { x: 4, y: 0, z: 2 } });
+  const said = (fn) => { const before = sources; fn(); return sources - before; };
+  const s = who('sentry'), c = who('crawler');
+  assert.ok(audio.names.includes('voice_pain') && audio.names.includes('voice_death') && audio.names.includes('voice_contact'));
+  assert.equal(said(() => events.emit('enemy:hit', { enemy: s })), 1, 'a hit person cries out');
+  G.time.t += 0.3; assert.equal(said(() => events.emit('enemy:hit', { enemy: s })), 0, 'not twice within 0.85 s');
+  G.time.t += 0.1; s.alive = false; s.health = 0;
+  assert.ok(said(() => events.emit('enemy:killed', { enemy: s, pos: s.pos })) >= 1, 'its death is heard at once');
+  assert.equal(said(() => events.emit('enemy:hit', { enemy: c })), 0, 'a machine has no voice');
+  G.time.t += 2; const p = who('patrol'), q = who('crawler'); q.id = 'crawler-2';
+  said(() => events.emit('enemy:alert', { enemy: q })); // the alarm sound, after which the stub's clock holds it back
+  assert.equal(said(() => events.emit('enemy:alert', { enemy: q })), 0, 'a machine adds no voice to the alarm');
+  assert.equal(said(() => events.emit('enemy:alert', { enemy: p })), 1, 'a patrol calls out the contact');
+});

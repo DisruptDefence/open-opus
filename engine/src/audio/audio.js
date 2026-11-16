@@ -1,3 +1,4 @@
+import { VOICE_SOUNDS, attachVoices } from './voice.js'; // OPUS: synthesised voices of people (voice.js)
 export var vt = Math.PI * 2;
 export function ao(i) {
   let e = i >>> 0;
@@ -1846,6 +1847,7 @@ export function iC() {
   };
 }
 export async function createAudio(i) {
+  Object.assign(Go, VOICE_SOUNDS); // OPUS: the voices join the sound table
   let e = typeof window < 'u' && (window.AudioContext || window.webkitAudioContext),
     t = null;
   try {
@@ -2751,6 +2753,7 @@ export function u_(i, e, t) {
     }
     return ((Pt.peak = +Pt.peak.toFixed(3)), Pt);
   }
+  attachVoices(i, { play: ze }); // OPUS: people speak (voice.js)
   return (
     Object.assign(Re, {
       ctx: e,
