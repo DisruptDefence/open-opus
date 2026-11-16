@@ -56,7 +56,7 @@
 
 
 import { SOUP, GROUND_SOUP, SURFACE_NAMES } from './style.js';
-import { tri, quad, prism } from './soup.js';
+import { tri, quad, prism, rng, linear } from './soup.js';
 
 const LIFT_ROAD = 0.03, LIFT_MARK = 0.04, LIFT_MARGIN = 0.02, MARGIN = 0.6, KERB_STONE = 0.15;
 const HARD = new Set([1, 2, 3, 4]); // surfaces that sit beside paving: they get a margin strip
@@ -196,6 +196,78 @@ function between(P, cum, sa, sb) {
   return out;
 }
 
+
+// ---- street wear ---------------------------------------------------------------------------------------------------
+// Thin alpha decals over the road and sidewalk (materials/outdoor.js `wear`: four bands in one texture), so a street is
+// not one clean sheet: grit and leaves along the kerb and at the foot of the walls, tyre tracks, repaired patches of
+// asphalt with their sealed seams, oil stains, manhole covers. Everything is placed by distance along the whole way
+// (s0 + s) and by numbers drawn from the way's own length and width, never from the piece, so the two cells that
+// draw one place draw the same thing. `style.wear` says how much of each kind (0 = none).
+const WEAR_BAND = [0, 0.25, 0.5, 0.75], LIFT_WEAR = 0.012, WEAR_TILE = 4;
+const wearV = (band, t) => WEAR_BAND[band] + (0.08 + 0.84 * t) * 0.25;
+const hash32 = (...v) => { let h = 2166136261; for (const x of v) { h = Math.imul(h ^ (Math.round(x) | 0), 16777619); h ^= h >>> 15; } return h >>> 0; };
+
+/** A plan quad [p0, p1, p2, p3] with a uv at each corner, laid on the ground (the uv is affine over the quad). */
+function layUV(soup, q, uv, tile, lift) {
+  const ax = q[1][0] - q[0][0], az = q[1][1] - q[0][1], bx = q[3][0] - q[0][0], bz = q[3][1] - q[0][1], det = ax * bz - az * bx;
+  if (Math.abs(det) < 1e-9) return;
+  const at = (x, z) => { const a = ((x - q[0][0]) * bz - (z - q[0][1]) * bx) / det, b = ((z - q[0][1]) * ax - (x - q[0][0]) * az) / det; return [uv[0][0] + a * (uv[1][0] - uv[0][0]) + b * (uv[3][0] - uv[0][0]), uv[0][1] + a * (uv[1][1] - uv[0][1]) + b * (uv[3][1] - uv[0][1])]; };
+  for (const tr of [[q[0], q[1], q[2]], [q[0], q[2], q[3]]]) for (const t of drape(tr, tile)) tri(soup, [t[0][0], t[0][1] + lift, t[0][2]], [t[1][0], t[1][1] + lift, t[1][2]], [t[2][0], t[2][1] + lift, t[2][2]], null, at(t[0][0], t[0][2]), at(t[1][0], t[1][2]), at(t[2][0], t[2][2]));
+}
+/** A band along two lines of the same length: t = 0 on A, 1 on B; u runs with the metres along the whole way (WEAR_TILE m a repeat). */
+function wearBand(soup, A, B, cum, s0, band, tile, lift) {
+  for (let i = 0; i + 1 < A.length; i++) {
+    const u0 = (s0 + cum[i]) / WEAR_TILE, u1 = (s0 + cum[i + 1]) / WEAR_TILE, v0 = wearV(band, 0), v1 = wearV(band, 1);
+    layUV(soup, [A[i], A[i + 1], B[i + 1], B[i]], [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], tile, lift);
+  }
+}
+/** A rectangle centred at metre `s` along the piece, `len` along and `w` across, `off` metres left of the centre line, uv spanning the band's own square. */
+function wearSpot(soup, P, cum, s, off, len, w, band, tile, lift) {
+  const a = along(P, cum, s - 0.4), b = along(P, cum, s + 0.4), c = along(P, cum, s), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const ex = (b[0] - a[0]) / l, ez = (b[1] - a[1]) / l, nx = ez, nz = -ex; // left of the direction of travel
+  const pt = (du, dv) => [c[0] + ex * du + nx * (off + dv), c[1] + ez * du + nz * (off + dv)];
+  const u0 = 0.04, u1 = 0.96;
+  layUV(soup, [pt(-len / 2, -w / 2), pt(len / 2, -w / 2), pt(len / 2, w / 2), pt(-len / 2, w / 2)], [[u0, wearV(band, 0)], [u1, wearV(band, 0)], [u1, wearV(band, 1)], [u0, wearV(band, 1)]], tile, lift);
+}
+const IRON_TINT = linear(0x2b2c2d), IRON_LIGHT = linear(0x4a4a48);
+function wearRoad(soups, road, P, cum, strips, tile, style) {
+  const W = (k) => (style.wear && typeof style.wear[k] === 'number' ? style.wear[k] : 1);
+  const vehicle = road.cls >= 2 && road.cls <= 5 && !road.steps && road.width >= 3, hard = road.surface === 1 || road.surface === 3 || road.surface === 2;
+  const sw = style.sidewalk, hw = road.width / 2, plen = cum[cum.length - 1], len = road.len || plen, s0 = road.s0 || 0;
+  const wsoup = soupOf(soups, SOUP.wear), lift = LIFT_ROAD + LIFT_WEAR;
+  if (W('gutter') > 0 && vehicle && hard) for (const side of [1, -1]) wearBand(wsoup, offsetLine(P, side * hw), offsetLine(P, side * (hw - 0.55)), cum, s0, 0, tile, lift); // grit against the kerb or the wall
+  if (W('gutter') > 0) for (const t of strips) wearBand(wsoup, t.outer, offsetLine(P, t.side * (hw + sw.width - 0.45)), cum, s0, 0, tile, style.kerb + LIFT_WEAR); // and at the foot of the walls
+  if (!(vehicle && hard)) return;
+  const seed = hash32(len * 10, road.width * 10, road.surface);
+  if (W('tracks') > 0 && road.surface !== 2) {
+    const o = hw >= 2.5 ? hw * 0.5 : 0.75, lo = Math.max(0, 1.5 - s0), hi = Math.min(plen, len - s0 - 1.5);
+    if (hi - lo > 3) { const M = between(P, cum, lo, hi), cm = cumulative(M); for (const side of [1, -1]) wearBand(wsoup, offsetLine(M, side * o - 0.4), offsetLine(M, side * o + 0.4), cm, s0 + lo, 1, tile, lift + 0.001); }
+  }
+  const slot = (every, salt, fn) => { // one candidate per `every` metres of the whole way, its place drawn from the way's numbers and the slot
+    for (let k = Math.floor((s0 - 6) / every); (k + 1) * every <= s0 + plen + 6; k++) { const r = rng(hash32(seed, k, salt)), sAbs = (k + 0.15 + 0.7 * r()) * every; fn(r, sAbs - s0, sAbs); }
+  };
+  if (W('patches') > 0 && road.surface === 1) slot(24, 1, (r, s, sAbs) => {
+    if (r() > 0.5 * W('patches')) return;
+    const l = r.range(2.4, 5.2), w = Math.min(r.range(1.1, 2.4), hw * 1.2), off = r.range(-(hw - w / 2 - 0.5), hw - w / 2 - 0.5);
+    if (sAbs - l / 2 > 1.5 && sAbs + l / 2 < len - 1.5) wearSpot(wsoup, P, cum, s, off, l, w, 2, tile, lift + 0.002);
+  });
+  if (W('oil') > 0) slot(14, 2, (r, s, sAbs) => {
+    if (r() > 0.45 * W('oil')) return;
+    const d = r.range(0.6, 1.5), off = (r() < 0.5 ? -1 : 1) * Math.min(hw * 0.5, hw - 0.9) * r.range(0.6, 1.1) + r.range(-0.2, 0.2);
+    if (sAbs > 2 && sAbs < len - 2) wearSpot(wsoup, P, cum, s, off, d * 1.1, d, 3, tile, lift + 0.003);
+  });
+  if (W('manholes') > 0) slot(38, 3, (r, s, sAbs) => {
+    if (r() > 0.7 * W('manholes') || sAbs < 3 || sAbs > len - 3) return;
+    const off = r.range(-0.35, 0.35) * hw, c = along(P, cum, s), a0 = along(P, cum, s - 0.4), b0 = along(P, cum, s + 0.4), l = Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) || 1;
+    const x = c[0] + ((b0[1] - a0[1]) / l) * off, z = c[1] - ((b0[0] - a0[0]) / l) * off, iron = soupOf(soups, SOUP.iron);
+    for (const [rad, top, tint] of [[0.32, 0.026, IRON_TINT], [0.2, 0.034, IRON_LIGHT], [0.1, 0.04, IRON_TINT]]) {
+      const ring = []; let hi = -1e9, lo = 1e9;
+      for (let k = 0; k < 14; k++) { const an = (k / 14) * Math.PI * 2, px = x + Math.cos(an) * rad, pz = z + Math.sin(an) * rad, h = meshHeight(tile, px, pz); ring.push(px, pz); hi = Math.max(hi, h); lo = Math.min(lo, h); }
+      prism(iron, ring, lo - 0.02, hi + LIFT_ROAD + top, tint, true);
+    }
+  });
+}
+
 export function roadRibbons(soups, road, tile, style) {
   const P = points(road.pts); if (P.length < 2) return;
   const hw = road.width / 2, road_ = soupOf(soups, surfaceSoup(road.surface)), L = offsetLine(P, hw), R = offsetLine(P, -hw);
@@ -233,6 +305,7 @@ export function roadRibbons(soups, road, tile, style) {
       for (const q of stripQuads(offsetLine(M, 0.06), offsetLine(M, -0.06))) lay(mark, q, tile, LIFT_MARK);
     }
   }
+  wearRoad(soups, road, P, cumulative(P), strips, tile, style);
 }
 
 export function crossing(soups, c, tile, style) { // eslint-disable-line no-unused-vars

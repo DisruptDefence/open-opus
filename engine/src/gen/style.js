@@ -48,6 +48,7 @@ export const SOUP = {
   awning: 'tarp|vd',
   kerb: 'stone|tn',
   paint: 'paint_white|tn',  // road markings
+  wear: 'wear|n',           // street wear decals (gutter grit, tyre tracks, asphalt patches, oil): alpha-blended, uv = [along, across] in the wear texture's four bands
   tread: 'stone|t',         // stair treads and stringers
   iron: 'metal|tv',         // lamp posts, rails, bollards: dark iron, tinted
   timber: 'wood|tv',
@@ -115,6 +116,8 @@ export const DEFAULT_STYLE = {
   chimneys: { perBuilding: [0, 1], width: 0.8, depth: 0.6, above: 1.0 },
   sidewalk: { width: 1.6, surface: 'concrete' },
   kerb: 0.14, season: 'summer',
+  // street wear (gen/ground.js): how much of each kind a street gets, 0 = none, 1 = the usual; all drawn near only
+  wear: { gutter: 1, tracks: 1, patches: 1, oil: 1, manholes: 1 },
 };
 
 const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);

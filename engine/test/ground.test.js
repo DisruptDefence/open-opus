@@ -119,3 +119,23 @@ test('physics: a capsule steps down the kerb and up again, and climbs the steps 
   const up = walk(physics, down.pos, 0, -1, 2, 3.5); assert.ok(!up.blocked && up.pos.z < -24.5, `and back up onto the sidewalk and beyond: z ${up.pos.z}`);
   const st = { x: 120, y: terrain.height(120, -20) + 0.05, z: -20 }, climb = walk(physics, st, 0, -1, 2.5, 12); assert.ok(climb.pos.z < -45, `climbs the steps at walking speed: z ${climb.pos.z}`);
 });
+
+test('street wear: decals on a street, none off it, the same either side of a cell cut, in their bands, on the ground', () => {
+  const tile = tileOf((x) => x * 0.02, { n: 101, minX: -20, minZ: -20 }), box = { x0: 40, x1: 90, z0: -10, z1: 10 };
+  const make = (r, st = STYLE) => { const s = createSoups(); roadRibbons(s, r, tile, st); return clipSoups(s, box); };
+  const key = (sp) => { const o = []; for (let i = 0; i < sp.pos.length; i += 9) o.push([...sp.pos.slice(i, i + 9)].map((v) => v.toFixed(4)).join(',')); return o.sort(); };
+  const A = road({ pts: [0, 0, 100, 0], len: 230, s0: 0, sidewalk: 'both' }), B = road({ pts: [30, 0, 140, 0], len: 230, s0: 30, sidewalk: 'both' });
+  const a = make(A), b = make(B), wa = a.map.get('wear|n'), wb = b.map.get('wear|n');
+  assert.ok(wa && wa.pos.length > 0, 'a street gets wear'); const moments = (sp) => { let A = 0, U = 0, V = 0; for (let i = 0, t = 0; i < sp.pos.length; i += 9, t++) { const T = [0, 3, 6].map((k) => [sp.pos[i + k], 0, sp.pos[i + k + 2]]), a = area2d(T); A += a; U += a * (sp.uv[t * 6] + sp.uv[t * 6 + 2] + sp.uv[t * 6 + 4]) / 3; V += a * (sp.uv[t * 6 + 1] + sp.uv[t * 6 + 3] + sp.uv[t * 6 + 5]) / 3; } return [A, U, V]; };
+  for (const [x, y] of moments(wa).map((v, i) => [v, moments(wb)[i]])) assert.ok(Math.abs(x - y) < 1e-6 * Math.max(1, Math.abs(x)), 'both pieces draw the same wear: same area, same texture coordinates');
+  for (const k of ['metal|tv', 'paint_white|tn']) if (a.map.get(k) || b.map.get(k)) assert.deepEqual(key(a.map.get(k)), key(b.map.get(k)));
+  for (let i = 0; i < wa.uv.length; i += 2) { const v = wa.uv[i + 1] % 1; assert.ok(wa.uv[i + 1] >= 0 && wa.uv[i + 1] <= 1 && v >= 0, 'v is within the wear texture'); }
+  for (let i = 0; i < wa.pos.length; i += 3) assert.ok(Math.abs(wa.pos[i + 1] - (wa.pos[i] * 0.02)) < 0.3 && wa.pos[i + 1] > wa.pos[i] * 0.02 - 0.01, 'on the ground');
+  const off = make(A, resolveStyle({ wear: { gutter: 0, tracks: 0, patches: 0, oil: 0, manholes: 0 } }));
+  const has = (m, k) => !!(m.map.get(k) && m.map.get(k).pos.length);
+  assert.ok(!has(off, 'wear|n') && !has(off, 'metal|tv'), 'all kinds can be switched off');
+  const foot = make(road({ pts: [0, 0, 100, 0], len: 230, kind: 'footway', cls: 8, width: 2.6, surface: 4 }));
+  assert.ok(!has(foot, 'wear|n'), 'a footway is not a street');
+  const gravel = make(road({ pts: [0, 0, 100, 0], len: 230, surface: 5 }));
+  assert.ok(!has(gravel, 'wear|n'), 'no wear on a gravel road');
+});
