@@ -29,6 +29,7 @@ import { clipSoups } from './cells.js';
 import { STRUCTURE_SOUP } from './style.js';
 import { roof } from './roof.js';
 import { facadeFar, facadeNear } from './facade.js';
+import { lookOf, lookStyle, landmarkNear, landmarkBase } from './landmark.js';
 import { passagePieces, passageArch } from './passage.js';
 import { wallRings, wall as drawWall } from './structures.js';
 import { roadRibbons, steps, crossing, liftRaster } from './ground.js';
@@ -85,6 +86,7 @@ export function cellSoups(cell, group, env) {
     for (const b of cell.buildings) {
       const info = roof(soups, b, style) || {};
       roofInfos.set(b, { slots: info.slots || [], ridge: info.ridge || [], parapet: info.parapet || 0 });
+      if (b.look) landmarkBase(soups, b, style, roofInfos.get(b));
       for (const p of b.passages || []) passageArch(soups, b, p, groundAt, style);
     }
     for (const w of cell.walls) {
@@ -95,7 +97,11 @@ export function cellSoups(cell, group, env) {
     for (const b of cell.buildings) { const info = roofInfoOf(b, style); for (const piece of piecesOf(b)) facadeFar(soups, piece, groundAt, style, info); }
     for (const t of cell.trees) tree(soups, t, groundAt(t.x, t.z), season, 0);
   } else if (group === 'near') {
-    for (const b of cell.buildings) { const info = roofInfoOf(b, style); for (const piece of piecesOf(b)) facadeNear(soups, piece, groundAt, style, info); }
+    for (const b of cell.buildings) {
+      const info = roofInfoOf(b, style), st = b.look ? lookStyle(style, lookOf(style, b)) : style;
+      for (const piece of piecesOf(b)) facadeNear(soups, piece, groundAt, st, info);
+      if (b.look) landmarkNear(soups, b, groundAt, style, info);
+    }
     for (const t of cell.trees) tree(soups, t, groundAt(t.x, t.z), season, 1);
     for (const w of cell.walls) if (w.rail && !w.ring) drawWall(soups, w, groundAt, style);
     if (cell.roads.length || cell.crossings.length) {

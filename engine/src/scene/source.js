@@ -67,7 +67,7 @@ const boxOf = (r) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -I
 /** Fill in every field of a building record the format lets a file leave out. */
 function completeBuilding(b, style) {
   b.holes = b.holes || []; b.levels = b.levels || 0; b.roofShape = b.roofShape || 0; b.roofDir = b.roofDir ?? 255; b.roofMat = b.roofMat ?? 1; b.facade = b.facade ?? 4;
-  b.hRoof = b.hRoof || 0; b.use = b.use || 0; b.groundFloor = b.groundFloor || 0; b.name = b.name || ''; b.kind = b.kind || ''; b.part = !!b.part;
+  b.hRoof = b.hRoof || 0; b.use = b.use || 0; b.groundFloor = b.groundFloor || 0; b.name = b.name || ''; b.kind = b.kind || ''; b.part = !!b.part; b.look = b.look || '';
   b.blind = new Set(b.blind || []); b.front = new Set(b.front || []);
   b.passages = (b.passages || []).map((p) => (Array.isArray(p) ? { x1: p[0], z1: p[1], x2: p[2], z2: p[3], w: p[4], h: p[5] } : p));
   b.yMin = b.yMin ?? b.yBase + (b.minHeight || 0);
@@ -249,7 +249,7 @@ export function jsonSource(scene) {
     put(own(...boxOf(b.r)), 'buildings', completeBuilding({ id: b.id ?? n, ring: b.r, holes: b.holes || [], yBase, minHeight: b.mh || 0, hEave: b.h - hRoof, hRoof, levels: b.lv || 0,
       roofShape, roofDir: b.rd ?? 255, roofMat: b.rmt ?? (b.mat === 'copper' || /^#(4|5|6|7|8)/.test(b.rc || '') ? 2 : 1), roofColor: b.rc || undefined, roofPalette: b.rp,
       facade: b.fa ?? FACADE[b.mat] ?? (b.k === 'church' || b.h > 14 ? 1 : ((n + 1) % 3 ? 4 : 1)), styled, palette: styled ? b.pal : (n + 1) % 5,
-      use: b.use || 0, blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
+      use: b.use || 0, look: b.lm || '', blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
   }
   // Trees: [x, z, height, crownRadius, kind, form]; a short record takes the old seeded numbers.
   for (const [x, z, height, crown, kind, form] of scene.trees || []) put(own(x, x, z, z), 'trees', completeTree({ x, z, height: height ?? 7 + ((x * 13.7 + z * 7.3) % 5 + 5) % 5, crownRadius: crown ?? 2.5 + (((x * 3.1 + z * 5.9) % 2) + 2) % 2, kind: kind || 1, form: form || 0 }));
