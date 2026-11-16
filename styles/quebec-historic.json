@@ -69,7 +69,7 @@
         "rubble": { "set": ["bricks102", "old_stone_wall"], "scale": 1 },
         "brick": { "set": ["bricks003", "brick_wall_006"], "scale": 1 },
         "stucco": { "set": ["plaster003", "worn_plaster_wall"], "scale": 1, "strength": 0.7 },
-        "cobble": { "set": ["pavingstones041", "cobblestone_floor_04"], "scale": 1, "hue": 1, "base": 0.22 },
+        "cobble": { "set": ["pavingstones041", "cobblestone_floor_04"], "scale": 1, "hue": 1, "base": 0.13 },
         "asphalt": { "set": ["asphalt012", "worn_asphalt"], "scale": 1, "hue": 1, "base": 0.1 },
         "paving": { "set": ["pavingstones126a", "pavement_03"], "scale": 1, "hue": 1, "base": 0.12 },
         "concrete": { "set": ["concrete016"], "scale": 1, "hue": 1, "base": 0.25 },
@@ -78,7 +78,7 @@
         "grass": { "set": ["grass003"], "scale": 1, "hue": 1, "base": 0.11 },
         "rock": { "set": ["rock041"], "scale": 1, "hue": 1, "base": 0.25 },
         "dirt": { "set": ["ground015"], "scale": 1, "hue": 1, "base": 0.2 },
-        "gravel": { "set": ["gravel013"], "scale": 1, "hue": 1, "base": 0.22 }
+        "gravel": { "set": ["gravel013"], "scale": 1, "hue": 1, "base": 0.13 }
       }
     }
   }
