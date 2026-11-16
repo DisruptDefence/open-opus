@@ -17,14 +17,7 @@ import {
   Vector3,
 } from '../../vendor/three.module.js';
 
-export var PORT_BOUNDS = {
-    min: new Vector3(-40, 0, -30),
-    max: new Vector3(40, 30, 30),
-    groundY: 0,
-    seaY: -1.6,
-    quayX: 30,
-  },
-  SUN = { dir: new Vector3(0.916, 0.225, 0.331).normalize(), color: new Color(1, 0.72, 0.42), intensity: 9 },
+export var SUN = { dir: new Vector3(0.916, 0.225, 0.331).normalize(), color: new Color(1, 0.72, 0.42), intensity: 9 },
   SKY = {
     zenith: new Color(0.055, 0.085, 0.13),
     horizon: new Color(0.95, 0.55, 0.28),

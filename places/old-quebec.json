@@ -1,0 +1,10 @@
+{
+  "id": "old-quebec", "name": "Vieux-Québec",
+  "anchor": { "lat": 46.8118, "lon": -71.2068 },
+  "play": { "halfWidth": 350, "halfHeight": 300 }, "margin": 120,
+  "terrain": { "source": "hrdem", "cell": 2.5 },
+  "vertical": { "datum": "CGVD2013", "geoid_undulation": -27.6 },
+  "style": "quebec-historic", "season": "summer",
+  "ambience": { "tod": 16.5, "day": 200, "haze": 0.3, "cloud": 0.35, "wet": 0 },
+  "enrichers": []
+}

@@ -211,7 +211,6 @@ export var fC = (i, e, t, n, s) => [
     [i, e + s],
   ],
   mi = {
-    name: 'OC-9 carbine',
     muzzle: [0, 0, -0.531],
     eject: [0.023, 0.004, -0.028],
     sightY: 0.069,
@@ -1877,8 +1876,8 @@ export function TC() {
     s = '"IBM Plex Mono", "Courier New", monospace',
     o = '"Big Shoulders Display", "Barlow Condensed", Impact, sans-serif',
     r = 'rgba(196,198,194,0.92)';
-  (t('model', 'PAC-9', `700 78px ${o}`, r),
-    t('maker', 'OPUS TRAINING ARMOURY', `600 30px ${n}`, r),
+  (t('model', '', `700 78px ${o}`, r),
+    t('maker', '', `600 30px ${n}`, r),
     t('cal', 'CAL 5.8\xD740   SN PA-004217', `500 27px ${s}`, r),
     t('prop', 'PROPERTY OF PORT AUTHORITY \u2014 BERTH 4 ARMOURY', `600 28px ${n}`, r),
     t('safe', 'S', `700 30px ${n}`, r, 'center'),
@@ -2243,11 +2242,6 @@ vObjP = position; vONrm = normal; vWNrm = normalize(mat3(modelMatrix) * normal);
 }
 export var gi = Vector3,
   fm = Quaternion,
-  Gv = 30,
-  B_ = 150,
-  O_ = 720,
-  H_ = 26,
-  V_ = 300,
   eu = { p: [0.118, -0.122, -0.275], r: [0.034, 0.085, -0.03] },
   qv = { p: [0, -mi.sightY, -0.135], r: [0, 0, 0] },
   tu = { p: [-0.035, 0.004, 0.03], r: [-0.04, 0.62, 0.26] },
@@ -2264,6 +2258,9 @@ export function ma(i, e, t) {
 }
 export var i0 = (i, e, t, n = 'XYZ') => new fm().setFromEuler(new Euler(i, e, t, n));
 export async function createWeapon(i) {
+  // OPUS: the weapon's numbers and name come from the content pack (docs/CONTENT-PACK.md), not from this file
+  const weaponId = i.content.loadout[0],
+    W = { reserve: 0, range: 300, ...i.content.weapons[weaponId] }; // the pack validator requires only magSize, rpm and damage
   let e = new Group();
   e.name = 'viewmodel-carbine';
   let t = w_(),
@@ -2490,7 +2487,7 @@ export async function createWeapon(i) {
   (e.traverse((Me) => {
     Me.isMesh && se++;
   }),
-    console.log(`[weapon] ${mi.name}: ${Math.round(I)} tris, ${se} meshes (flash only while firing)`));
+    console.log(`[weapon] ${W.name}: ${Math.round(I)} tris, ${se} meshes (flash only while firing)`));
   let ae = i.rng && i.rng.fork ? i.rng.fork() : Math.random,
     k = {
       t: 0,
@@ -2535,15 +2532,16 @@ export async function createWeapon(i) {
     },
     ce = { freeze: !1, reloadT: null, empty: !1, flash: !1, noFire: !1 },
     ve = {
-      name: mi.name,
-      ammo: Gv,
-      magSize: Gv,
-      reserve: B_,
+      id: weaponId,
+      name: W.name,
+      ammo: W.magSize,
+      magSize: W.magSize,
+      reserve: W.reserve,
       state: 'idle',
       ads: 0,
       spread: 0.0125,
-      damage: H_,
-      rpm: O_,
+      damage: W.damage,
+      rpm: W.rpm,
       root: e,
       debug: ce,
       info: { tris: Math.round(I), meshes: se },
@@ -2567,8 +2565,8 @@ export async function createWeapon(i) {
       },
     };
   function _e() {
-    ((ve.ammo = Gv),
-      (ve.reserve = B_),
+    ((ve.ammo = W.magSize),
+      (ve.reserve = W.reserve),
       (ve.state = 'idle'),
       (ve.ads = 0),
       Object.assign(k, {
@@ -2640,9 +2638,9 @@ export async function createWeapon(i) {
       Ie.copy(Me.eye || we.position));
     let ut = null;
     try {
-      ut = i.combat.playerShot(Ie, ze, { damage: H_, range: V_ });
+      ut = i.combat.playerShot(Ie, ze, { damage: W.damage, range: W.range });
     } catch {}
-    (ut && ut.point ? Ne.copy(ut.point) : Ne.copy(Ie).addScaledVector(ze, V_), Re(We));
+    (ut && ut.point ? Ne.copy(ut.point) : Ne.copy(Ie).addScaledVector(ze, W.range), Re(We));
     let nn = i.fx;
     (nn &&
       (nn.tracer && nn.tracer(We, Ne),
@@ -2736,7 +2734,7 @@ export async function createWeapon(i) {
     if (Oe && bt)
       if (ve.ammo > 0) {
         let Je = 0;
-        for (; k.cooldown <= 0 && ve.ammo > 0 && Je < 3; ) (Be(), (k.cooldown += 60 / O_), Je++);
+        for (; k.cooldown <= 0 && ve.ammo > 0 && Je < 3; ) (Be(), (k.cooldown += 60 / W.rpm), Je++);
       } else
         k.dryDone ||
           ((k.dryDone = !0),

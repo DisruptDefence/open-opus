@@ -884,28 +884,6 @@ export function M8(i, e) {
   for (let r = 0; r < n; r++) s[r] += o[r] * 0.12 * (0.6 + 0.4 * Math.sin((vt * 1.5 * r) / i + 2));
   return s;
 }
-export function w8(i, e) {
-  let n = i * 2,
-    s = new Float32Array(n);
-  for (let r = 0; r < n; r++) {
-    let a = r / i,
-      l = vt * 50 * a;
-    s[r] =
-      (Math.sin(l) * 0.5 +
-        Math.sin(2 * l + 0.4) +
-        0.5 * Math.sin(3 * l + 1) +
-        0.3 * Math.sin(4 * l) +
-        0.22 * Math.sin(6 * l + 2) +
-        0.12 * Math.sin(10 * l)) *
-        0.3 *
-        (0.9 + 0.1 * Math.sin(vt * 0.5 * a)) +
-      Math.sin(vt * 4100 * a) * 0.012 * (0.6 + 0.4 * Math.sin(vt * 1 * a)) +
-      Math.sin(vt * 1250 * a + 0.6 * Math.sin(vt * 2 * a)) * 0.02;
-  }
-  let o = Zc(i, 2, e, (r) => tn(r, 'bp', 2100, 1.2, i), 0.25);
-  for (let r = 0; r < n; r++) s[r] += o[r] * 0.16 * Math.pow(0.5 + 0.5 * Math.sin((vt * 100 * r) / i), 3);
-  return s;
-}
 export function E8(i, e, t) {
   let n = St(i, 0.3),
     s = t ? 1.07 : 1,
@@ -1205,37 +1183,6 @@ export function I8(i, e, t) {
   }
   return Wo(ml(n, 0.36), 1.7);
 }
-export function z8(i, e) {
-  let t = St(i, 1.7);
-  Se(t, at(i, e, 0.01, 0.002, { hp: 2500 }), 0, 1, i);
-  let n = Qn(i, 0.5, e);
-  tn(n, 'bp', 3e3, 0.8, i);
-  let s = 1;
-  for (let l = 0; l < n.length; l++) {
-    let c = l / i;
-    (l % 220 === 0 && (s = e() < 0.55 + 0.4 * (1 - c / 0.5) ? 1 : 0),
-      (n[l] =
-        (n[l] * (Math.sin(vt * 100 * c) > -0.2 ? 1 : 0.15) + 0.35 * Math.sign(Math.sin(vt * 100 * c)) * (e() - 0.3)) *
-        s *
-        Math.exp(-c / 0.3)));
-  }
-  Se(t, n, 0.005, 0.8, i);
-  let o = St(i, 1.25),
-    r = 0,
-    a = 0;
-  for (let l = 0; l < o.length; l++) {
-    let c = l / i,
-      u = Math.pow(0.22, c / 1.2);
-    ((r += (vt * 100 * u) / i),
-      (a += (vt * (150 + 1900 * Math.pow(1 - c / 1.25, 2.2))) / i),
-      (o[l] =
-        ((Math.sin(r) + 0.6 * Math.sin(2 * r) + 0.4 * Math.sin(3 * r) + 0.25 * Math.sin(5 * r)) * 0.5 +
-          Math.sin(a) * 0.22) *
-        Math.pow(1 - c / 1.25, 1.2) *
-        (1 - Math.exp(-c / 0.03))));
-  }
-  return (Se(t, o, 0.4, 0.8, i), Se(t, ei(i, 0.12, 140, 60, 0.03, 0.04), 0.4, 0.5, i), Wo(t, 1.3));
-}
 export function* D8(i, e, t) {
   let n = St(i, 6.5),
     s = Qn(i, 6.4, e);
@@ -1261,103 +1208,6 @@ export function* D8(i, e, t) {
   );
 }
 export var jb = [0, 1, 0.435, 0.268, 0.19, 0.145, 0.116, 0.097];
-export function L8(i, e) {
-  let t = St(i, 5),
-    n = t.length;
-  for (let s = 0; s < n; s++) {
-    let o = s / i,
-      r = 0.0025 * Math.sin(vt * 4.3 * o),
-      a = Math.min(1, o / 0.45) * Math.min(1, (5 - o) / 1.5) * (o < 3.2 ? 1 : Math.exp(-(o - 3.2) / 0.7)),
-      l = 0;
-    for (let c = 1; c <= 7; c++) l += Math.sin(vt * 92.5 * c * o * (1 + r) + c) * jb[c];
-    for (let c = 1; c <= 4; c++) l += 0.45 * Math.sin(vt * 138.6 * c * o + c * 2) * jb[c];
-    t[s] = l * a;
-  }
-  return (tn(t, 'lp', 520, 0.7, i), t);
-}
-export function k8(i, e, t) {
-  let n = St(i, 1.4),
-    s = t ? 3 : 4,
-    o = 0.02;
-  for (let r = 0; r < s; r++) {
-    let a = Xt(e, 0.17, 0.26) * (t ? 1.4 : 1),
-      l = Math.round(a * i),
-      c = Math.round(o * i),
-      u = (t ? 1250 : 1550) * (1 - r * 0.04),
-      h = 0;
-    for (let f = 0; f < l && c + f < n.length; f++) {
-      let p = f / l,
-        d = u * (1 + 0.55 * Math.sin(Math.PI * Math.pow(p, 0.6)) - 0.25 * p);
-      h += (vt * d) / i;
-      let v = 1 + 0.3 * Math.sin((vt * 63 * f) / i);
-      n[c + f] +=
-        (Math.sin(h) + 0.6 * Math.sin(2 * h + 0.5) + 0.35 * Math.sin(3 * h) + 0.15 * Math.sin(4 * h)) *
-        v *
-        Math.pow(Math.sin(Math.PI * p), 0.7) *
-        (1 - r * 0.14);
-    }
-    o += a + Xt(e, 0.05, 0.12);
-  }
-  return (tn(n, 'lp', 4200, 0.7, i), n);
-}
-export function F8(i, e, t) {
-  let n = St(i, 1.1),
-    s = t ? 1.19 : 1,
-    o = 0.01,
-    r = t ? 3 : 4;
-  for (let a = 0; a < r; a++)
-    (Se(
-      n,
-      dn(
-        i,
-        0.5,
-        [
-          [2310 * s, Xt(e, 0.06, 0.13), 1],
-          [3740 * s, 0.07, 0.7],
-          [5910 * s, 0.04, 0.5],
-          [8130 * s, 0.025, 0.3],
-          [1012 * s, 0.03, 0.3],
-        ],
-        e,
-      ),
-      o,
-      Xt(e, 0.35, 1),
-      i,
-    ),
-      Se(n, at(i, e, 0.004, 0.001, { hp: 3e3 }), o, 0.3, i),
-      (o += Xt(e, 0.09, 0.26)));
-  return n;
-}
-export function U8(i, e) {
-  let t = St(i, 2.8),
-    n = St(i, 2.2);
-  return (
-    Se(
-      n,
-      dn(
-        i,
-        2.2,
-        [
-          [47, 0.7, 1],
-          [77, 0.55, 0.9],
-          [121, 0.4, 0.7],
-          [163, 0.3, 0.5],
-          [214, 0.22, 0.4],
-          [330, 0.12, 0.25],
-        ],
-        e,
-      ),
-      0,
-      0.5,
-      i,
-    ),
-    Se(n, at(i, e, 0.5, 0.11, { lp: 420 }), 0, 1, i),
-    Se(t, n, 0, 1, i),
-    Se(t, n, 0.36, 0.3, i),
-    Se(t, n, 0.61, 0.12, i),
-    t
-  );
-}
 export function N8(i, e) {
   let t = St(i, 0.09);
   return (
@@ -1702,14 +1552,6 @@ export function* Z8(i) {
   for (let t of [50, 57, 62, 64]) (Se(e, $c(i, Ns(t), 2.2), 0.45, 0.14, i), yield);
   return e;
 }
-export function* j8(i) {
-  let e = St(i, 4.2);
-  (Se(e, ei(i, 1, 73.4, 36.7, 0.1, 0.3, 0.002), 0, 0.9, i), Se(e, ei(i, 1, 73.4, 36.7, 0.1, 0.3, 0.002), 0.6, 0.7, i));
-  for (let t of [50, 57, 62, 65]) (Se(e, $c(i, Ns(t), 1.5), 0, 0.16, i), yield);
-  for (let t of [48, 55, 60, 64]) (Se(e, $c(i, Ns(t), 1.4), 0.6, 0.16, i), yield);
-  for (let t of [50, 57, 62, 65, 69]) (Se(e, $c(i, Ns(t), 2.9), 1.2, 0.17, i), yield);
-  return ([62, 65, 69, 74].forEach((t, n) => Se(e, Pf(i, Ns(t), 2), 1.2 + n * 0.15, 0.4, i)), e);
-}
 export function* J8(i) {
   let e = St(i, 6);
   Se(e, ei(i, 1.4, 73.4, 36.7, 0.15, 0.4, 0.003), 0, 0.9, i);
@@ -1834,21 +1676,14 @@ export var ki = 44100,
     telegraph: { gen: P8, n: 2, sr: Xn, peak: 0.42, bus: 'world', max: 4, pri: 6, ref: 6, roll: 0.6 },
     alert: { gen: C8, n: 2, sr: Xn, peak: 0.5, bus: 'world', max: 3, pri: 6, ref: 8, roll: 0.5 },
     explosion: { gen: I8, n: 2, sr: ki, peak: 0.97, bus: 'world', max: 3, pri: 10, ref: 12, roll: 0.5 },
-    relay_cut: { gen: z8, n: 1, sr: Xn, peak: 0.75, bus: 'world', max: 2, pri: 8, ref: 6, roll: 0.5 },
     thunder: { gen: D8, n: 2, sr: pl, peak: 0.8, bus: 'dry', max: 2, pri: 6 },
-    foghorn: { gen: L8, n: 1, sr: pl, peak: 0.5, bus: 'world', max: 1, pri: 2 },
-    air_cry: { gen: k8, n: 2, sr: pl, peak: 0.4, bus: 'world', max: 2, pri: 1 },
-    halyard: { gen: F8, n: 2, sr: Xn, peak: 0.3, bus: 'world', max: 2, pri: 1 },
-    container_bang: { gen: U8, n: 1, sr: pl, peak: 0.6, bus: 'world', max: 1, pri: 2 },
     ui_click: { gen: N8, n: 1, sr: ki, peak: 0.3, bus: 'dry', max: 2, pri: 9 },
     ui_hover: { gen: B8, n: 1, sr: ki, peak: 0.12, bus: 'dry', max: 2, pri: 9 },
     objective: { gen: Z8, n: 1, sr: Xn, peak: 0.6, bus: 'music', max: 1, pri: 9 },
-    objective_all: { gen: j8, n: 1, sr: Xn, peak: 0.65, bus: 'music', max: 1, pri: 9 },
     complete: { gen: J8, n: 1, sr: Xn, peak: 0.7, bus: 'music', max: 1, pri: 9 },
     death: { gen: K8, n: 1, sr: Xn, peak: 0.75, bus: 'music', max: 1, pri: 9 },
     air_rotor: { gen: _8, n: 1, sr: Xn, peak: 0.6, loop: 1, ref: 5, roll: 0.9 },
     ground_servo: { gen: M8, n: 1, sr: Xn, peak: 0.42, loop: 1, ref: 4, roll: 1 },
-    relay_hum: { gen: w8, n: 1, sr: Xn, peak: 0.4, loop: 1, ref: 2.5, roll: 1.4 },
     rain: { gen: O8, n: 1, sr: Xn, peak: 0.5, loop: 1 },
     rain_interior: { gen: H8, n: 1, sr: Xn, peak: 0.7, loop: 1 },
     wind: { gen: V8, n: 1, sr: pl, peak: 0.5, loop: 1 },
@@ -1937,17 +1772,13 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
   },
   tC = new Set([
     'thunder',
-    'foghorn',
     'objective',
-    'objective_all',
     'complete',
     'death',
     'explosion',
     'rifle_tail_in',
     'air_die',
     'ground_die',
-    'relay_cut',
-    'container_bang',
     'ear_ring',
   ]),
   nC = [
@@ -1983,7 +1814,6 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
     'ui_hover',
     'sea',
     'rain_interior',
-    'relay_hum',
     'air_die',
     'ground_die',
     'explosion',
@@ -1992,15 +1822,9 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
     'music_ost',
     'music_perc',
     'music_brass',
-    'relay_cut',
     'objective',
     'thunder',
-    'objective_all',
     'complete',
-    'air_cry',
-    'halyard',
-    'foghorn',
-    'container_bang',
   ],
   tm = ['music_drone', 'music_ost', 'music_perc', 'music_brass', 'music_motif'];
 export function iC() {
@@ -2439,55 +2263,7 @@ export function u_(i, e, t) {
     },
     pt = 0.4,
     ut = 0.4,
-    nn = 2,
-    bt = { fog: 1 / 0, gull: 1 / 0, hal: 1 / 0, bang: 1 / 0 }; // OPUS: the port's ambience (foghorn, gulls, halyards) is switched off; a scene will bring its own
-  function Os(te, he) {
-    let pe = 1 - 0.7 * P;
-    if ((bt.fog -= te) <= 0) {
-      bt.fog = 40 + s() * 30;
-      let ge = re.z + (s() * 2 - 1) * 250;
-      ze('foghorn', {
-        pos: [re.x + 320, 8, ge],
-        ref: 400,
-        gain: 0.34 * he * pe,
-        pitch: s() < 0.3 ? 0.89 : 1,
-        jitter: 0.01,
-      });
-    }
-    if ((bt.gull -= te) <= 0) {
-      bt.gull = 9 + s() * 16;
-      let ge = s() * 6.283,
-        ye = 35 + s() * 50;
-      ze('air_cry', {
-        pos: [re.x + Math.cos(ge) * ye, 14 + s() * 18, re.z + Math.sin(ge) * ye],
-        ref: ye,
-        roll: 1,
-        gain: (0.16 + s() * 0.16) * he * pe,
-        jitter: 0.1,
-      });
-    }
-    if (
-      ((bt.hal -= te) <= 0 &&
-        ((bt.hal = 6 + s() * 11),
-        ze('halyard', {
-          pos: [29 + s() * 8, 3 + s() * 6, -8 + s() * 32],
-          ref: 16,
-          roll: 0.5,
-          gain: (0.3 + s() * 0.3) * he * pe,
-          jitter: 0.08,
-        })),
-      (bt.bang -= te) <= 0)
-    ) {
-      bt.bang = 28 + s() * 34;
-      let ge = 1.6 + s() * 3.2;
-      ze('container_bang', {
-        pos: [re.x + Math.cos(ge) * 150, 4, re.z + Math.sin(ge) * 150],
-        ref: 150,
-        gain: (0.2 + s() * 0.16) * he * pe,
-        jitter: 0.12,
-      });
-    }
-  }
+    nn = 2;
   let pn = new Map(),
     Ti = 0;
   function ho(te) {
@@ -2498,6 +2274,7 @@ export function u_(i, e, t) {
       pn.set(te, {
         h: null,
         type: te.type === 'ground' ? 'ground' : 'air',
+        loop: voiceOf(te).loop || null,
         lx: te.pos ? te.pos.x : 0,
         ly: te.pos ? te.pos.y : 0,
         lz: te.pos ? te.pos.z : 0,
@@ -2539,8 +2316,8 @@ export function u_(i, e, t) {
       for (let pe = 0; pe < Un.length; pe++) {
         let ge = Un[pe],
           ye = pe < 6 && ge.d < 90;
-        ye && !ge.h
-          ? (ge.h = Be(ge.type === 'air' ? 'air_rotor' : 'ground_servo', {
+        ye && !ge.h && ge.loop
+          ? (ge.h = Be(ge.loop, {
               pos: [ge.lx, ge.ly, ge.lz],
               gain: 0,
               hrtf: !0,
@@ -2567,32 +2344,12 @@ export function u_(i, e, t) {
       }
     }
   }
-  let $i = [];
-  function ya() {
-    for (let he of $i) he.h.stop(0.2);
-    $i = [];
-    let te = i.level && i.level.objectives;
-    Array.isArray(te) &&
-      te.forEach((he, pe) => {
-        he &&
-          he.pos &&
-          $i.push({
-            id: he.id,
-            index: pe,
-            pos: { x: he.pos.x, y: (he.pos.y || 0) + 1.2, z: he.pos.z },
-            h: Be('relay_hum', { pos: [he.pos.x, (he.pos.y || 0) + 1.2, he.pos.z], gain: 0.9 }),
-          });
-      });
-  }
-  function ba(te) {
-    te = te || {};
-    let he = $i.findIndex((pe) => te.id != null && pe.id === te.id);
-    if ((he < 0 && te.index != null && (he = $i.findIndex((pe) => pe.index === te.index)), he >= 0)) {
-      let pe = $i[he];
-      (pe.h.stop(0.08), $i.splice(he, 1), ze('relay_cut', { pos: pe.pos, gain: 1 }));
-    } else ze('relay_cut', { gain: 0.8 });
-  }
-  let Hn = (te) => (te && typeof te.x == 'number' ? te : null);
+  // OPUS: which sounds a threat makes comes from the content pack (docs/CONTENT-PACK.md): its archetype's entry, else its class's
+  let voiceOf = (te) => {
+      let he = (i.content && i.content.sounds && i.content.sounds.threats) || {};
+      return (te && (he[te.archetype] || he[te.type])) || {};
+    },
+    Hn = (te) => (te && typeof te.x == 'number' ? te : null);
   function fo(te) {
     let he = P;
     (he < 0.95 && ze('rifle_tail_out', { gain: te * (1 - he), jitter: 0.03 }),
@@ -2706,30 +2463,31 @@ export function u_(i, e, t) {
       if (he - ve < 0.12) return;
       ve = he;
       let pe = te.enemy || {};
-      ze('alert', { pos: Hn(pe.pos) || Hn(te.pos), variant: pe.type === 'ground' ? 1 : 0, gain: 0.9 });
+      ze('alert', { pos: Hn(pe.pos) || Hn(te.pos), variant: voiceOf(pe).voice || 0, gain: 0.9 });
     }),
     ln('enemy:fire', (te) => {
-      let he = te.type || (te.enemy && te.enemy.type),
+      let he = voiceOf(te.enemy || { type: te.type }),
         pe = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos));
-      (ze(he === 'ground' ? 'ground_fire' : 'air_fire', { pos: pe, gain: 1, jitter: 0.04 }),
+      (he.fire && ze(he.fire, { pos: pe, gain: 1, jitter: 0.04 }),
         (Y = Math.min(1, Math.max(Y, 0.6) + 0.05)));
     }),
     ln('enemy:step', (te) => {
+      let he = voiceOf(te.enemy || { type: te.type });
       if (te.crash) {
-        (ze('ground_step', { pos: Hn(te.pos), gain: 1, pitch: 0.72 }),
+        (he.step && ze(he.step, { pos: Hn(te.pos), gain: 1, pitch: 0.72 }),
           ze('impact_metal', { pos: Hn(te.pos), gain: 0.8, pitch: 0.55 }));
         return;
       }
-      te.type !== 'air' &&
-        ze('ground_step', { pos: Hn(te.pos), gain: pi(0.6 + (+te.speed || 2) * 0.1, 0.6, 1), jitter: 0.06 });
+      he.step &&
+        ze(he.step, { pos: Hn(te.pos), gain: pi(0.6 + (+te.speed || 2) * 0.1, 0.6, 1), jitter: 0.06 });
     }),
     ln('enemy:telegraph', (te) => {
       let he = te.enemy || {},
-        pe = te.type || he.type,
+        pe = voiceOf(he.type ? he : { type: te.type, archetype: he.archetype }),
         ge = pi(+te.time || 0.55, 0.15, 1.5);
       (ze('telegraph', {
         pos: Hn(te.pos) || Hn(he.pos),
-        variant: pe === 'ground' ? 1 : 0,
+        variant: pe.voice || 0,
         pitch: 0.55 / ge,
         gain: te.melee ? 0.7 : 1,
         jitter: 0,
@@ -2737,16 +2495,17 @@ export function u_(i, e, t) {
         (Y = Math.max(Y, 0.6)));
     }),
     ln('enemy:melee', (te) => {
-      let he = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos));
-      (ze('ground_step', { pos: he, gain: 1, pitch: 0.8 }),
+      let he = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos)),
+        pe = voiceOf(te.enemy);
+      (pe.step && ze(pe.step, { pos: he, gain: 1, pitch: 0.8 }),
         ze('impact_metal', { pos: he, gain: 0.9, pitch: 0.7 }),
         ze('hurt', { gain: 0.6 }));
     }),
     ln('enemy:killed', (te) => {
       let he = te.enemy,
-        pe = te.type || (he && he.type),
+        pe = voiceOf(he || { type: te.type }),
         ge = Hn(te.pos) || (he && Hn(he.pos));
-      (he && Rs(he), ze(pe === 'ground' ? 'ground_die' : 'air_die', { pos: ge, gain: 1, jitter: 0.05 }));
+      (he && Rs(he), pe.die && ze(pe.die, { pos: ge, gain: 1, jitter: 0.05 }));
     }),
     ln('explosion', (te) => {
       let he = pi(+te.size || 1, 0.3, 3),
@@ -2766,15 +2525,13 @@ export function u_(i, e, t) {
       ((Y = Math.max(Y, 0.6)), (J = Math.min(J, 0.4)));
     }),
     ln('objective:done', (te) => {
-      (ba(te), ze('objective', { delay: 0.35, gain: 1, jitter: 0 }));
-    }),
-    ln('objective:all', () => ze('objective_all', { delay: 2.2, gain: 1, jitter: 0 })));
+      ze('objective', { delay: 0.35, gain: 1, jitter: 0 });
+    }));
   let Zo = () => {
     let te = e.currentTime;
     te - _e > 6 && ((_e = te), ze('complete', { gain: 1, jitter: 0 }));
   };
-  (ln('extraction:reached', Zo),
-    ln('thunder', (te) => {
+  (ln('thunder', (te) => {
       let he = pi(te.intensity != null ? +te.intensity : 0.6, 0.1, 1);
       ze('thunder', {
         variant: he > 0.6 ? 1 : 0,
@@ -2788,7 +2545,7 @@ export function u_(i, e, t) {
     ln('game:state', (te) => {
       let he = ee;
       if (((ee = te.state || ee), ee === 'playing' && he !== 'paused')) {
-        ((Y = 0), (Z = 0), ya());
+        ((Y = 0), (Z = 0));
         for (let pe of [...pn.keys()]) pe.alive === !1 && Rs(pe);
       }
       (ee === 'complete' && Zo(), ee === 'paused' ? (ue = !0) : he === 'paused' && (ue = !1));
@@ -2877,7 +2634,6 @@ export function u_(i, e, t) {
       Oe.wind.setPitch(0.9 + 0.25 * pt),
       Oe.sea.setGain(fe * (1 - 0.5 * P) * 1),
       Oe.sea.setPos([33, -1, pi(re.z, -28, 26)]),
-      !ue && (ke || ee === 'title' || ee === 'complete') && Os(te, ee === 'title' ? 0.7 : 1),
       ue || zo(te),
       (Y = Math.max(0, Y - te * (pn.size ? 0.045 : 0.14))));
     let ct = ke || ue ? Math.max(V, Re.autoIntensity ? Math.max(0.15, Y) : 0) : 0;
