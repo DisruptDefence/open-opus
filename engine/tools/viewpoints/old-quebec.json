@@ -7,6 +7,9 @@
     { "id": "3-porte-saint-louis", "what": "Porte Saint-Louis and the wall, from inside", "x": -312, "z": 220, "heading": 230, "pitch": 6 },
     { "id": "4-terrasse", "what": "Terrasse Dufferin toward the river and the lower town", "x": 186, "z": 62, "heading": 48, "pitch": -8 },
     { "id": "5-lower-street", "what": "Rue du Petit-Champlain, lower town", "x": 247.8, "z": -40, "heading": 179, "pitch": 5 },
-    { "id": "6-overview", "what": "The town from above the river (not a street view: for the skyline and the cliff)", "x": 420, "z": 60, "y": 110, "heading": 285, "pitch": -14, "fov": 55 }
+    { "id": "6-overview", "what": "The town from above the river (not a street view: for the skyline and the cliff)", "x": 420, "z": 60, "y": 110, "heading": 285, "pitch": -14, "fov": 55 },
+    { "id": "8-frontenac", "what": "The Château Frontenac from Rue du Fort / Place d'Armes: tower, turrets, copper roofs", "x": 126, "z": -104, "heading": 183, "pitch": 16, "fov": 62 },
+    { "id": "9-terrasse", "what": "Terrasse Dufferin along the boardwalk, the Château at the end, the drop to the river on the left", "x": 181, "z": 132, "heading": 343, "pitch": 5, "fov": 70 },
+    { "id": "10-south", "what": "The Château and the terrace from across the river, south-east (far view)", "x": 440, "z": 230, "y": 75, "heading": 300, "pitch": -1, "fov": 45 }
   ]
 }

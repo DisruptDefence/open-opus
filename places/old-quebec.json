@@ -6,5 +6,15 @@
   "vertical": { "datum": "CGVD2013", "geoid_undulation": -27.6 },
   "style": "quebec-historic", "season": "summer",
   "ambience": { "tod": 16.5, "day": 200, "haze": 0.3, "cloud": 0.35, "wet": 0 },
-  "enrichers": []
+  "enrichers": [],
+  "landmarks": [
+    {
+      "id": "chateau-frontenac",
+      "match": { "wikidata": "Q745964" },
+      "source": "Heights, roof shapes and roof colour of the building:part ways are OpenStreetMap (ODbL) and the HRDEM surface model (OGL-Canada). Brick walls with stone dressing, verdigris copper roofs and corner turrets are the look noted in docs/plans/QUEBEC-LOOK.md section 2 (Chateau, gates, churches); that note is the only source for the look. The part of the outline no mapped part covers is filled with parts measured the same way. The round corner turrets (6.0 m across, conical roof 8.5 m, 2.5 m above the eave of the part they stand on) are an estimate: the map has none.",
+      "fill": { "roof": "hipped" },
+      "set": { "facade": "brick", "palette": [4, 5], "roofMat": "copper", "roofColor": "style" },
+      "turrets": { "radius": 3.0, "sides": 16, "cornerDeg": [70, 110], "minEdge": 6, "inset": 0.7, "above": 2.5, "cone": 8.5, "hMax": 60, "max": 14, "look": "turret" }
+    }
+  ]
 }
