@@ -7,7 +7,7 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-from . import buildings, fetch, geo, ground, landmarks, osm, place as place_mod, props, style as style_mod, terrain, trees, walls
+from . import buildings, fetch, geo, ground, landmarks, osm, place as place_mod, props, style as style_mod, terrace, terrain, trees, walls
 from .ctx import Ctx
 
 REPO = Path(__file__).resolve().parent.parent.parent
@@ -47,7 +47,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
 
     osm.classify(ctx, ground.ROAD_WIDTH)
     layers: dict = {}
-    for mod in (ground, walls, trees, props, landmarks):
+    for mod in (ground, walls, terrace, trees, props, landmarks):
         layers.update(mod.build(ctx))
         ctx.layers = layers
     layers.update(buildings.build(ctx))
@@ -73,7 +73,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
         scene["ambience"] = pl.ambience
     scene["style"] = st.client()
     scene.update({"sources": sources, "rules": ctx.rules, "terrain": ter.scene_block()})
-    for k in ("water", "buildings", "roads", "areas", "crossings", "walls", "gates", "green", "trees", "landmarks", "props"):
+    for k in ("water", "buildings", "roads", "areas", "crossings", "walls", "gates", "green", "trees", "landmarks", "props", "terraces"):
         if k in layers:
             scene[k] = layers[k]
 

@@ -231,6 +231,9 @@ builder (`docs/plans/SCENE-DETAIL.md` item 2). An older reader ignores every key
 | `front` | | edges that face a street: where doors and shopfronts go |
 | `gf` | `groundFloor` | 0 plain, 1 shopfronts on the `front` edges, 2 large doors |
 | `mh`, `parts`, `part` | | minimum height of a part; an outline drawn from its parts; a part |
+| `lm` | `look` | a name in `style.looks` (gen/landmark.js): string courses, corbel table, oriel bays, cresting and finials, denser dormers and taller chimneys for this building and its parts. Optional; an old reader ignores it |
+| `syn` | | 1 when a part was not mapped but written by a place's landmark rule (fills the outline's uncovered area; round turrets). Its `hs` is `"rule"` for a turret; `rules.landmarks` lists each estimate |
+| `lmid` | | the id of the place landmark rule that shaped the record (informative) |
 
 Collision is derived, not stored: each part is a prism (ring, `yBase`, `yBase + hEave + hRoof`). Interiors are
 out of scope for version 1; buildings are solid.
@@ -262,9 +265,17 @@ Polylines. Per segment: `class` (`1 city_wall, 2 retaining_wall, 3 wall, 4 fence
 7 barrier_block, 8 gate`), `height`, `thickness`, `material` (façade enum), `flags`: `blocksMove`,
 `blocksShot`, `blocksSight`, `walkableTop` (ramparts), `open` (a gate that is open). Collision: a prism from
 the offset polyline. A fortification wide enough to stand on is modelled as a building part with a flat roof
-or as a landmark, not as a wall. Additions of `formatMinor: 1`: `t` thickness, `m` material, `hp` parapet (a wall that holds ground back; no `h`), `cr` crenels, `rail` (a rail: posts and rails, drawn near), see `docs/plans/SCENE-DETAIL.md` 3.3.
+or as a landmark, not as a wall. Additions of `formatMinor: 1`: `t` thickness, `m` material, `hp` parapet (a wall that holds ground back; no `h`), `cr` crenels, `rail` (a rail kind: `rail_iron` posts and two rails, `balustrade_iron` a cast-iron balustrade with ball posts every 2.4 m, a top and a foot rail and balusters every 0.14 m; drawn near, collides as its thin ring), see `docs/plans/SCENE-DETAIL.md` 3.3.
 
 Cliffs are terrain. Nav closes cells steeper than a rise over run of 1.0 (45°).
+
+### 4.4a Terraces (`terraces`, optional layer, `formatMinor: 1`)
+
+A deck of boards: `[{ "r": [x, z, …], "holes": [[…], …], "d": 0-179 | 255, "bw": 0.14, "n": name }]`. `r` is the platform's outline
+(a mapped `highway=pedestrian` area), `holes` what stands on it (a building, a shelter), `d` the direction the boards run (degrees clockwise from
+grid north; 255 = along the long axis of the outline), `bw` the board width in metres. The reader lays the boards on the ground (gen/terrace.js,
+`near`); the ground under the deck is the terrain's own, so collision is unchanged. The builder writes the balustrade along the edge as wall records
+(4.4) and benches, lamps and shelters (`pavilion`) as props (`docs/plans/SCENE-DETAIL.md` 3.5).
 
 ### 4.5 Vegetation
 

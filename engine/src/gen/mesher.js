@@ -34,6 +34,7 @@ import { passagePieces, passageArch } from './passage.js';
 import { wallRings, wall as drawWall } from './structures.js';
 import { roadRibbons, steps, crossing, liftRaster } from './ground.js';
 import { PROP_KIT } from './props.js';
+import { terraceDeck } from './terrace.js';
 import { tree } from './trees.js';
 
 export const GROUPS = ['base', 'far', 'near'];
@@ -110,6 +111,7 @@ export function cellSoups(cell, group, env) {
       for (const c of cell.crossings) crossing(ground, c, tile, style);
       soups.add(clipSoups(ground, cell));
     }
+    for (const d of cell.terraces || []) terraceDeck(soups, d, tile, cell, style);
     for (const p of cell.props) {
       const kit = PROP_KIT[p.kind];
       if (!kit) { warnOnce(`prop kind "${p.kind}" is not in the kit: skipped`); continue; }

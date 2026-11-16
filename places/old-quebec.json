@@ -15,6 +15,20 @@
       "fill": { "roof": "hipped" },
       "set": { "facade": "brick", "palette": [4, 5], "roofMat": "copper", "roofColor": "style", "look": "chateau" },
       "turrets": { "radius": 3.0, "sides": 16, "cornerDeg": [70, 110], "minEdge": 6, "inset": 0.7, "above": 2.5, "cone": 8.5, "hMax": 60, "max": 14, "look": "turret" }
+    },
+    {
+      "id": "terrasse-dufferin",
+      "match": { "wikidata": "Q3518581" },
+      "source": "OpenStreetMap: the pedestrian area (surface=wood, layer=1) with the funicular station and four shelters cut out, the viewpoint nodes, 68 mapped benches, cannons with their direction, flagpoles; the balustrade along the cliff edge, the board direction and the lamp spacing are the rule's estimate (board width 0.14 m, boards along the walk, rail 1.1 m, a lamp every 24 m, a planter between them)",
+      "terrace": { "boardWidth": 0.14, "dir": 255, "rail": "balustrade_iron", "height": 1.1, "drop": 2.0, "railInset": 0.25,
+                   "lamps": { "kind": "lamp_lantern", "spacing": 24, "offset": 1.0 },
+                   "planters": { "kind": "planter", "spacing": 24, "start": 24, "offset": 1.3 } }
+    },
+    {
+      "id": "champlain-monument",
+      "match": { "wikidata": "Q16665231" },
+      "source": "OpenStreetMap node (historic=monument, wikidata Q16665231); the tall pedestal with a bronze figure is a simple model, no likeness",
+      "prop": { "kind": "monument_tall", "variant": 0 }
     }
   ]
 }

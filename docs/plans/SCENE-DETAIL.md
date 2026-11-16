@@ -1068,6 +1068,18 @@ and its parts have at least 4 distinct heights.
 green roofs; the office tower steps back as it rises. **Done** when the pair shows it. If the data does not
 carry a landmark (no parts, nothing in the surface model), it stays a plain building: say which.
 
+**Built (branch `landmarks`, 2026-11-16): place-level landmark rules.** What the data lacks is written in the place file, not in code:
+`places/<id>.json` → `landmarks: [{ id, match: { osm | wikidata | name }, source, fill, set, turrets, terrace, prop }]`
+(`tools/scene_builder/landmark_rules.py`, `terrace.py`, `props.py`). `fill` makes parts of the area of an outline that no mapped part covers
+(a 0.5 m raster, traced and simplified; measured like any part); `set` gives the building and its parts a façade, palette, roof material,
+the style's roof colours instead of the tagged one, and a `look`; `turrets` adds round corner turrets with conical roofs on the outer square
+corners of the parts (**estimated**: `syn: 1`, `hs: "rule"`, one sentence in `rules.landmarks`); `terrace` turns a mapped pedestrian area into a deck
+with its cliff-side balustrade and lamps; `prop` gives one named node its own prop kind. A `look` is a table in the style pack
+(`client.looks.<name>`, `gen/landmark.js`): string courses, corbel table, oriel bays, ridge cresting, finials, a porte-cochère canopy, a flagpole,
+and overrides of the window bay, dormers and chimneys for that building. A passage through a part belongs to the part (`walls.passages`), and a
+part keeps its measured roof over a passage. The first landmark rule is the one for the Château Frontenac in `places/old-quebec.json`; its
+`source` field lists what is data and what is estimated.
+
 ### Item 10 — Light and air
 
 **Goal.** The place is shown in flattering light by default, from data; what is not real is listed.

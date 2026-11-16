@@ -106,8 +106,8 @@ function canopy(soups, b, pa, groundAt, c, stone) {
   if (l < 1) return;
   const ux = (pa.x2 - pa.x1) / l, uz = (pa.z2 - pa.z1) / l;
   for (const [sgn, px, pz] of [[1, pa.x2, pa.z2], [-1, pa.x1, pa.z1]]) {
-    const f = frame(px, pz, uz * sgn, -ux * sgn), W = pa.w + 1.6, y0 = groundAt(px + ux * sgn * 0.6, pz + uz * sgn * 0.6), top = y0 + Math.max(pa.h, 3.2) + 0.6, tint = b.roofColor || null;
-    slab(T, f, -W / 2, -W / 2 + 0.7, y0, top, 0, c.depth, stone, 'flrf'); slab(T, f, W / 2 - 0.7, W / 2, y0, top, 0, c.depth, stone, 'flrf');
+    const f = frame(px, pz, uz * sgn, -ux * sgn), W = pa.w + 1.6, y0 = groundAt(px + ux * sgn * 0.6, pz + uz * sgn * 0.6), top = y0 + Math.min(Math.max(pa.h - 0.5, 3.2), 4.6), tint = b.roofColor || null;   // a marquee about a storey high, whatever the arch's height
+    slab(T, f, -W / 2, -W / 2 + 0.5, y0, top, c.depth - 0.5, c.depth, stone, 'flrf'); slab(T, f, W / 2 - 0.5, W / 2, y0, top, c.depth - 0.5, c.depth, stone, 'flrf');   // two slim piers at the outer corners
     slab(T, f, -W / 2, W / 2, top, top + 0.5, 0, c.depth, stone, 'fbtlr');
     const a = f.at(-W / 2 - 0.15, top + 0.5, c.depth + 0.15), bb = f.at(W / 2 + 0.15, top + 0.5, c.depth + 0.15), cc = f.at(W / 2 + 0.15, top + 0.5 + c.rise, 0), dd = f.at(-W / 2 - 0.15, top + 0.5 + c.rise, 0);
     quad(R, a, bb, cc, dd, tint);                       // the copper cover, sloping back to the wall
