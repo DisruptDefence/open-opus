@@ -118,7 +118,10 @@ class Style:
         self.storey: float = pack["storeyHeight"]["default"]
 
     def client(self) -> dict:
-        return copy.deepcopy(self.pack["client"])
+        out = copy.deepcopy(self.pack["client"])
+        sw = self.pack.get("street", {}).get("sidewalk", {})  # item 6: the sidewalk the engine draws is the one the builder decided on
+        out.setdefault("sidewalk", {"width": sw.get("width", 1.6), "surface": sw.get("surface", "concrete")})
+        return out
 
     def pitch_deg(self, shape: str) -> float:
         return float(self.pack["roofPitchDeg"].get(shape, 40))

@@ -73,7 +73,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
         scene["ambience"] = pl.ambience
     scene["style"] = st.client()
     scene.update({"sources": sources, "rules": ctx.rules, "terrain": ter.scene_block()})
-    for k in ("water", "buildings", "roads", "areas", "walls", "gates", "green", "trees", "landmarks", "props"):
+    for k in ("water", "buildings", "roads", "areas", "crossings", "walls", "gates", "green", "trees", "landmarks", "props"):
         if k in layers:
             scene[k] = layers[k]
 
