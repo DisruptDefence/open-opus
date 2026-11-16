@@ -8,7 +8,6 @@
 // Objectives, the extraction point and threat spawns are NOT here: by the format they are the host's (anchors.json)
 // and arrive as scenario commands through the world API.
 import { Group, Mesh, PlaneGeometry, Vector3 } from '../../vendor/three.module.js';
-import { CHUNK } from '../scene/source.js';
 import { installChunk, uninstallChunk } from '../scene/install.js';
 import { buildTerrain, buildStructures, buildFarTile, disposeGroup } from './build.js';
 
@@ -17,15 +16,15 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   const farRoot = new Group(); farRoot.name = 'far'; root.add(farRoot);
   const far = await source.far();
   G.terrain.setFar(far.grid);
-  const key = (cx, cz) => cx + ',' + cz;
+  const grid = m.grid, key = grid.key;
   const state = new Map(); // key -> { cx, cz, phase: 'fetching' | 'decoded' | 'live', data, groups, far }
   const farTiles = new Map();
   const stats = { chunksLive: 0, chunksTotal: m.chunks.length, tris: 0, buildMs: 0, lastBuildMs: 0, fetched: 0, released: 0 };
 
   // far ring: one coarse tile per chunk cell, hulls bucketed by the cell of their first vertex
   const hullsBy = new Map();
-  for (const h of far.hulls) { const k = key(Math.floor(h.ring[0] / CHUNK), Math.floor(h.ring[1] / CHUNK)); if (!hullsBy.has(k)) hullsBy.set(k, []); hullsBy.get(k).push(h); }
-  for (const c of m.chunks) { const t = buildFarTile(G, far, c.cx, c.cz, hullsBy.get(key(c.cx, c.cz)) || []); farTiles.set(key(c.cx, c.cz), t); farRoot.add(t); }
+  for (const h of far.hulls) { const k = key(grid.ce(h.ring[0]), grid.cn(h.ring[1])); if (!hullsBy.has(k)) hullsBy.set(k, []); hullsBy.get(k).push(h); }
+  for (const c of m.chunks) { const t = buildFarTile(G, far, c.ce, c.cn, grid.x0(c.ce), grid.z0(c.cn), hullsBy.get(key(c.ce, c.cn)) || []); farTiles.set(key(c.ce, c.cn), t); farRoot.add(t); }
 
   // water: one sheet at the scene's water level
   if (m.water && m.water.level != null) {
@@ -35,9 +34,9 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
 
   const groundAt = (x, z) => { const h = G.terrain.height(x, z); return Number.isNaN(h) ? 0 : h; };
 
-  async function fetchChunk(cx, cz) {
-    const k = key(cx, cz), s = { cx, cz, phase: 'fetching', data: null, groups: [] }; state.set(k, s);
-    try { s.data = await source.chunk(cx, cz); stats.fetched++; if (state.get(k) === s) s.phase = 'decoded'; }
+  async function fetchChunk(ce, cn) {
+    const k = key(ce, cn), s = { ce, cn, phase: 'fetching', data: null, groups: [] }; state.set(k, s);
+    try { s.data = await source.chunk(ce, cn); stats.fetched++; if (state.get(k) === s) s.phase = 'decoded'; }
     catch (e) { state.delete(k); console.error(`[scene] chunk ${k} failed: ${(e && e.message) || e}`); }
   }
   function goLive(s) {
@@ -45,34 +44,34 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     installChunk(G.physics, G.terrain, s.data); // collision and height first: the simulation never waits for a mesh
     const terrain = buildTerrain(G, s.data), structures = buildStructures(G, s.data, groundAt);
     root.add(terrain, structures); s.groups = [terrain, structures]; s.tris = terrain.userData.tris + structures.userData.tris;
-    const f = farTiles.get(key(s.cx, s.cz)); if (f) f.visible = false;
+    const f = farTiles.get(key(s.ce, s.cn)); if (f) f.visible = false;
     s.phase = 'live'; s.data = null; // the tile and the solids hold what is still needed
     stats.chunksLive++; stats.tris += s.tris; stats.lastBuildMs = performance.now() - t0; stats.buildMs += stats.lastBuildMs;
-    G.events.emit('scene:chunk', { cx: s.cx, cz: s.cz, live: true, ms: stats.lastBuildMs });
+    G.events.emit('scene:chunk', { ce: s.ce, cn: s.cn, live: true, ms: stats.lastBuildMs });
   }
   function release(s) {
     for (const g of s.groups) disposeGroup(g);
-    uninstallChunk(G.physics, G.terrain, s.cx, s.cz);
-    const f = farTiles.get(key(s.cx, s.cz)); if (f) f.visible = true;
-    state.delete(key(s.cx, s.cz)); stats.chunksLive--; stats.tris -= s.tris; stats.released++;
-    G.events.emit('scene:chunk', { cx: s.cx, cz: s.cz, live: false });
+    uninstallChunk(G.physics, G.terrain, s.ce, s.cn);
+    const f = farTiles.get(key(s.ce, s.cn)); if (f) f.visible = true;
+    state.delete(key(s.ce, s.cn)); stats.chunksLive--; stats.tris -= s.tris; stats.released++;
+    G.events.emit('scene:chunk', { ce: s.ce, cn: s.cn, live: false });
   }
 
   /** Bring the window round (x, z) up to date. Returns true when every chunk in it is live. */
   function stream(x, z, budget = 1) {
-    const pcx = Math.floor(x / CHUNK), pcz = Math.floor(z / CHUNK);
+    const pce = grid.ce(x), pcn = grid.cn(z);
     let pending = 0, meshed = 0;
     // nearest first
     const want = [];
-    for (let dz = -radius; dz <= radius; dz++) for (let dx = -radius; dx <= radius; dx++) if (source.has(pcx + dx, pcz + dz)) want.push([pcx + dx, pcz + dz, Math.max(Math.abs(dx), Math.abs(dz))]);
+    for (let dn = -radius; dn <= radius; dn++) for (let de = -radius; de <= radius; de++) if (source.has(pce + de, pcn + dn)) want.push([pce + de, pcn + dn, Math.max(Math.abs(de), Math.abs(dn))]);
     want.sort((a, b) => a[2] - b[2]);
-    for (const [cx, cz] of want) {
-      const s = state.get(key(cx, cz));
-      if (!s) { fetchChunk(cx, cz); pending++; }
+    for (const [ce, cn] of want) {
+      const s = state.get(key(ce, cn));
+      if (!s) { fetchChunk(ce, cn); pending++; }
       else if (s.phase === 'fetching') pending++;
       else if (s.phase === 'decoded') { if (meshed < budget) { goLive(s); meshed++; } else pending++; }
     }
-    for (const s of [...state.values()]) if (s.phase === 'live' && Math.max(Math.abs(s.cx - pcx), Math.abs(s.cz - pcz)) > radius + 1) release(s);
+    for (const s of [...state.values()]) if (s.phase === 'live' && Math.max(Math.abs(s.ce - pce), Math.abs(s.cn - pcn)) > radius + 1) release(s);
     return pending === 0;
   }
   /** Load the whole window round a point before play begins. */

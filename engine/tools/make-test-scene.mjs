@@ -1,13 +1,17 @@
 // Builds the engine's own test scene: one square kilometre with a hill, a cliff with a ramp down it, a river, a grid
 // of streets, a cobbled square, buildings, a staircase, a low wall and trees. Deterministic: same code, same bytes.
 //   node engine/tools/make-test-scene.mjs            writes engine/scenes/test/
-// The package follows docs/SCENE-FORMAT.md: client.json, far.<hash>.bin, chunks/<cx>_<cz>.<hash>.bin, anchors.json.
+// The package follows docs/SCENE-FORMAT.md: client.json (georeference as in 2.2), far.<hash>.bin,
+// chunks/<ce>_<cn>.<hash>.bin on the absolute UTM chunk grid (3.1), anchors.json.
+// The anchor is deliberately NOT on a chunk corner, as a real scene's never is: the content box [-500, 500) is cut
+// by the grid into 25 chunks, and a reader that numbered chunks from the anchor would read this scene wrongly.
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeContainer, quantiseHeights } from '../src/scene/container.js';
 import { createGeoref } from '../src/geo/georef.js';
+import { chunkGrid } from '../src/scene/grid.js';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'scenes', 'test');
 const CHUNK = 250, STEP = 2, SSTEP = 1, HALF = 500; // 1 km2: x, z in [-500, 500)
@@ -108,59 +112,66 @@ for (let i = 0; i < 260; i++) {
 }
 
 // ---- write -------------------------------------------------------------------------------------------------------
+// Georeference: a fictional anchor on a whole metre in UTM zone 19T (near Québec, so MGRS reads 19T CM ...).
+const E0 = 340100, N0 = 5190050, grid = chunkGrid(E0, N0);
 rmSync(OUT, { recursive: true, force: true }); mkdirSync(join(OUT, 'chunks'), { recursive: true });
 const sha = (buf) => createHash('sha256').update(Buffer.from(buf)).digest('hex');
 const bbox = (ring) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < ring.length; i += 2) { x0 = Math.min(x0, ring[i]); x1 = Math.max(x1, ring[i]); z0 = Math.min(z0, ring[i + 1]); z1 = Math.max(z1, ring[i + 1]); } return { x0, x1, z0, z1 }; };
-const owner = (ring) => { const b = bbox(ring); return [Math.floor((b.x0 + b.x1) / 2 / CHUNK), Math.floor((b.z0 + b.z1) / 2 / CHUNK)]; };
+const owner = (ring) => { const b = bbox(ring); return [grid.ce((b.x0 + b.x1) / 2), grid.cn((b.z0 + b.z1) / 2)]; }; // the chunk of the bounding box's centre
 const rel = (ring, ox, oz) => ring.map((v, i) => +(v - (i % 2 ? oz : ox)).toFixed(2));
 const chunkIndex = [];
 const n = CHUNK / STEP + 1, m = CHUNK / SSTEP;
-for (let cz = -HALF / CHUNK; cz < HALF / CHUNK; cz++) for (let cx = -HALF / CHUNK; cx < HALF / CHUNK; cx++) {
-  const ox = cx * CHUNK, oz = cz * CHUNK, h = new Float32Array(n * n), s = new Uint8Array(m * m), walk = new Uint8Array(Math.ceil((m * m) / 8));
+const ce0 = grid.ce(-HALF), ce1 = grid.ce(HALF - 0.01), cn0 = grid.cn(HALF - 0.01), cn1 = grid.cn(-HALF);
+for (let cn = cn0; cn <= cn1; cn++) for (let ce = ce0; ce <= ce1; ce++) {
+  const ox = grid.x0(ce), oz = grid.z0(cn), h = new Float32Array(n * n), s = new Uint8Array(m * m);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) h[j * n + i] = height(ox + i * STEP, oz + j * STEP);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) s[j * m + i] = surface(ox + (i + 0.5) * SSTEP, oz + (j + 0.5) * SSTEP);
   const { q, yMin, yScale } = quantiseHeights(h);
-  const mine = (ring) => { const [a, b] = owner(ring); return a === cx && b === cz; };
-  const bs = buildings.filter((b) => mine(b.ring)), ws = walls.filter((w) => mine(w.ring));
-  const ts = trees.filter((t) => Math.floor(t.x / CHUNK) === cx && Math.floor(t.z / CHUNK) === cz);
+  const mine = (ring) => { const [a, b] = owner(ring); return a === ce && b === cn; };
+  const here = (p) => grid.ce(p.x) === ce && grid.cn(p.z) === cn;
+  const bs = buildings.filter((b) => mine(b.ring)), ws = walls.filter((w) => mine(w.ring)), ts = trees.filter(here);
   const spill = { minX: 0, maxX: CHUNK, minZ: 0, maxZ: CHUNK };
   for (const r of [...bs, ...ws]) { const b = bbox(r.ring); spill.minX = Math.min(spill.minX, b.x0 - ox); spill.maxX = Math.max(spill.maxX, b.x1 - ox); spill.minZ = Math.min(spill.minZ, b.z0 - oz); spill.maxZ = Math.max(spill.maxZ, b.z1 - oz); }
-  const header = { kind: 'chunk', cx, cz, step: STEP, surfaceStep: SSTEP, yMin, yScale, spill,
+  for (const k of Object.keys(spill)) spill[k] = +spill[k].toFixed(2);
+  const header = { kind: 'chunk', ce, cn, step: STEP, surfaceStep: SSTEP, yMin, yScale, spill,
     buildings: bs.map((b) => ({ ...b, ring: rel(b.ring, ox, oz), holes: [] })),
     walls: ws.map((w) => ({ ...w, ring: rel(w.ring, ox, oz) })),
     trees: ts.map((t) => ({ ...t, x: +(t.x - ox).toFixed(1), z: +(t.z - oz).toFixed(1) })),
-    water: [], landmarks: landmarks.filter((l) => Math.floor(l.x / CHUNK) === cx && Math.floor(l.z / CHUNK) === cz).map((l) => ({ ...l, x: l.x - ox, z: l.z - oz })) };
+    water: [], landmarks: landmarks.filter(here).map((l) => ({ ...l, x: l.x - ox, z: l.z - oz })) };
   const buf = writeContainer(header, [{ layer: 'height', type: 'u16', data: q }, { layer: 'surface', type: 'u8', data: s }]);
-  const hsh = sha(buf), name = `chunks/${cx}_${cz}.${hsh.slice(0, 16)}.bin`;
+  const hsh = sha(buf), name = `chunks/${ce}_${cn}.${hsh.slice(0, 16)}.bin`;
   writeFileSync(join(OUT, name), Buffer.from(buf));
-  chunkIndex.push({ cx, cz, name, hash: hsh, size: buf.byteLength, spill, y: [+yMin.toFixed(2), +(yMin + 65535 * yScale).toFixed(2)], buildings: bs.length });
+  chunkIndex.push({ ce, cn, name, hash: hsh, size: buf.byteLength, spill, y: [+yMin.toFixed(2), +(yMin + 65535 * yScale).toFixed(2)], buildings: bs.length });
 }
-// far: the whole scene at 10 m, and one hull per building
-const FSTEP = 10, fn = (HALF * 2) / FSTEP + 1, fh = new Float32Array(fn * fn);
+// what the chunks cover: the content box grown to whole chunks
+const extent = { minX: grid.x0(ce0), maxX: grid.x0(ce1 + 1), minZ: grid.z0(cn1), maxZ: grid.z0(cn0 - 1) };
+// far: the whole extent at 10 m, and one hull per building
+const FSTEP = 10, fnx = (extent.maxX - extent.minX) / FSTEP + 1, fnz = (extent.maxZ - extent.minZ) / FSTEP + 1, fh = new Float32Array(fnx * fnz);
 let hMin = Infinity;
-for (let j = 0; j < fn; j++) for (let i = 0; i < fn; i++) { fh[j * fn + i] = height(-HALF + i * FSTEP, -HALF + j * FSTEP); hMin = Math.min(hMin, fh[j * fn + i]); }
+for (let j = 0; j < fnz; j++) for (let i = 0; i < fnx; i++) { fh[j * fnx + i] = height(extent.minX + i * FSTEP, extent.minZ + j * FSTEP); hMin = Math.min(hMin, fh[j * fnx + i]); }
 const fq = quantiseHeights(fh);
-const farBuf = writeContainer({ kind: 'far', step: FSTEP, nx: fn, nz: fn, minX: -HALF, minZ: -HALF, yMin: fq.yMin, yScale: fq.yScale,
+const farBuf = writeContainer({ kind: 'far', step: FSTEP, nx: fnx, nz: fnz, minX: extent.minX, minZ: extent.minZ, yMin: fq.yMin, yScale: fq.yScale,
   hulls: buildings.map((b) => ({ ring: b.ring, yBase: b.yBase, top: +(b.yBase + b.hEave + b.hRoof).toFixed(1), facade: b.facade, roofMat: b.roofMat, palette: b.palette })) },
   [{ layer: 'height', type: 'u16', data: fq.q }]);
 const farHash = sha(farBuf), farName = `far.${farHash.slice(0, 16)}.bin`;
 writeFileSync(join(OUT, farName), Buffer.from(farBuf));
 
-// Georeference: a fictional anchor on a whole kilometre in UTM zone 19T (near Québec, so MGRS reads 19T CM ...).
-const georefBlock = { crs: 'EPSG:32619', utm: { zone: 19, hemisphere: 'N', band: 'T' }, anchor: { e0: 340000, n0: 5190000, h0: 0 },
-  vertical: { datum: 'none (synthetic)', geoidUndulation: -27.6 }, scaleFactor: 0.9997,
-  bounds: { minX: -HALF, maxX: HALF, minZ: -HALF, maxZ: HALF }, walkable: { minX: -470, maxX: 470, minZ: -470, maxZ: 470 } };
-const geo = createGeoref(georefBlock);
-georefBlock.anchorGeo = { lat: +geo.anchorGeo.lat.toFixed(7), lon: +geo.anchorGeo.lon.toFixed(7) };
-georefBlock.convergenceDeg = +geo.convergenceDeg.toFixed(4);
-georefBlock.checks = [[0, 0], [250, -250], [-400, 300], [470, 470], [-470, -470]].map(([x, z]) => { const p = geo.toGeo(x, z), g = geo.toMGRS(x, z); return { x, z, lat: +p.lat.toFixed(8), lon: +p.lon.toFixed(8), mgrs: g.zone + g.square + g.easting + g.northing }; });
+// The block of SCENE-FORMAT.md 2.2. The check points are computed here with the engine's own geo module, so they pin
+// the manifest to this code, not to an outside truth; test/georef.test.js checks that module against known values.
+const georef = { crs: 'EPSG:32619', projection: 'utm', zone: 19, band: 'T', hemisphere: 'N', easting: E0, northing: N0, h0: 0,
+  vertical: { datum: 'none (synthetic)', geoid_undulation: -27.6 } };
+const geo = createGeoref(georef);
+georef.anchor = { lat: +geo.anchorGeo.lat.toFixed(8), lon: +geo.anchorGeo.lon.toFixed(8) };
+georef.convergence_deg = +geo.convergenceDeg.toFixed(4);
+georef.checks = [[0, 0], [250, -250], [-400, 300], [470, 470], [-470, -470]].map(([x, z]) => { const p = geo.toGeo(x, z), g = geo.toMGRS(x, z); return { x, z, lat: +p.lat.toFixed(8), lon: +p.lon.toFixed(8), mgrs: g.zone + g.square + g.easting + g.northing }; });
 
-const client = { format: 'opus-scene/1', formatMinor: 0, scene_id: 'test', version: '2026-11-15.' + farHash.slice(0, 7), name: 'Engine test scene',
-  georef: georefBlock, chunkSize: CHUNK, chunks: chunkIndex, far: { name: farName, hash: farHash, size: farBuf.byteLength },
+const client = { format: 'opus-scene/1', formatMinor: 0, packaging: 'chunked', scene_id: 'test', version: '2026-11-15.' + farHash.slice(0, 7), name: 'Engine test scene',
+  georef, play: { minX: -470, maxX: 470, minZ: -470, maxZ: 470 }, extent,
+  chunks: chunkIndex, far: { name: farName, hash: farHash, size: farBuf.byteLength },
   water: { level: WATER }, season: 'summer', zones: [{ name: 'High town', ring: [-110, -300, 500, -300, 500, 300, -110, 300] }, { name: 'Low town', ring: [-400, -300, -130, -300, -130, 300, -400, 300] }],
   credits: ['Synthetic test scene generated by engine/tools/make-test-scene.mjs. No map data.'] };
 writeFileSync(join(OUT, 'client.json'), JSON.stringify(client, null, 1));
-// Host-only by the format (4.9): the dev page plays the reference host and reads this file.
+// Host-only by the format (4.9). Nothing reads it yet: the development scenarios carry their own positions.
 const y = (x, z) => +height(x, z).toFixed(2);
 const anchors = [
   { id: 'a-start', kind: 'player_start', x: 20, y: y(20, 26), z: 26, yaw: 0, radius: 1, zone: 'High town' },

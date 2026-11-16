@@ -1,14 +1,13 @@
 // Puts a decoded chunk into the simulation: its height tile into the terrain, its solids into the physics.
 // Pure code, shared by the loader (browser) and the tests (node). One record feeds collision, nav and rendering.
 import { createGrid } from '../terrain/heightfield.js';
-import { CHUNK } from './source.js';
 
 const FACADE_SURFACE = ['concrete', 'concrete', 'concrete', 'brick', 'concrete', 'wood', 'concrete', 'glass', 'metal', 'concrete', 'concrete'];
-export const chunkTag = (cx, cz) => `chunk:${cx},${cz}`;
+export const chunkTag = (ce, cn) => `chunk:${ce},${cn}`;
 
 export function installChunk(physics, terrain, c) {
-  const tag = chunkTag(c.cx, c.cz);
-  terrain.addTile(c.cx, c.cz, createGrid({ nx: c.n, nz: c.n, cell: c.step, minX: c.cx * CHUNK, minZ: c.cz * CHUNK, data: c.heights, surface: c.surface, surfaceCell: c.surfaceStep }));
+  const tag = chunkTag(c.ce, c.cn);
+  terrain.addTile(c.ce, c.cn, createGrid({ nx: c.n, nz: c.n, cell: c.step, minX: c.hx0, minZ: c.hz0, data: c.heights, surface: c.surface, surfaceCell: c.surfaceStep, surfaceN: c.sn }));
   for (const b of c.buildings) {
     if (b.flags & 2) continue; // noCollide
     // a building is solid from below its lowest ground to the top of its roof (SCENE-FORMAT 4.2: collision is derived)
@@ -21,4 +20,4 @@ export function installChunk(physics, terrain, c) {
   }
   return tag;
 }
-export function uninstallChunk(physics, terrain, cx, cz) { physics.removeTag(chunkTag(cx, cz)); terrain.removeTile(cx, cz); }
+export function uninstallChunk(physics, terrain, ce, cn) { physics.removeTag(chunkTag(ce, cn)); terrain.removeTile(ce, cn); }

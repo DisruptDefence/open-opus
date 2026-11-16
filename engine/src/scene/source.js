@@ -5,23 +5,31 @@
 //                        250 m chunks in memory, and its roads and areas are burnt into a surface raster here
 //                        (in the full format the pipeline does that and the client never rasterises a polygon)
 //
-// Both return { manifest, far(), chunk(cx, cz) }. A decoded chunk is:
-//   { cx, cz, step, n, heights: Float32Array(n*n), surfaceStep, surface: Uint8Array, buildings, walls, trees, water, landmarks }
-// with every coordinate in game metres (the container stores them relative to the chunk corner).
+// Both return { manifest, far(), has(ce, cn), chunk(ce, cn) }. Chunks are numbered on the absolute UTM grid
+// (scene/grid.js, SCENE-FORMAT.md 3.1). A decoded chunk is:
+//   { ce, cn, x0, z0, hx0, hz0, step, n, heights: Float32Array(n*n), surfaceStep, sn, surface: Uint8Array(sn*sn),
+//     buildings, walls, trees, water, landmarks }
+// (x0, z0) is its minimum corner in game metres. The rasters run from (hx0, hz0), row by row from minimum z: in a
+// package that is the chunk corner; in a single file it is the scene's own terrain sample at or before the corner,
+// so the ground is the file's samples and nothing is resampled. Every record coordinate is in game metres (the
+// container stores them relative to the chunk corner).
+// manifest: { id, name, version, georef, grid, bounds (the format's `extent`), walkable (its `play`), chunks, water, credits, zones }
 // No three.js here: this file runs under node --test.
 
 import { readContainer, dequantiseHeights } from './container.js';
 import { createGrid } from '../terrain/heightfield.js';
+import { CHUNK, gridOf } from './grid.js';
 
-export const CHUNK = 250;
+export { CHUNK };
 
 const abs = (ring, ox, oz) => ring.map((v, i) => v + (i % 2 ? oz : ox));
 
-export function decodeChunk(buf) {
+export function decodeChunk(buf, grid) {
   const { header: h, layers } = readContainer(buf);
-  const ox = h.cx * CHUNK, oz = h.cz * CHUNK, n = Math.round(CHUNK / h.step) + 1;
+  if (!Number.isInteger(h.ce) || !Number.isInteger(h.cn)) throw new Error('scene: a chunk header needs `ce` and `cn` (SCENE-FORMAT.md 3.1)');
+  const ox = grid.x0(h.ce), oz = grid.z0(h.cn), n = Math.round(CHUNK / h.step) + 1;
   return {
-    cx: h.cx, cz: h.cz, step: h.step, n, heights: dequantiseHeights(layers.height, h.yMin, h.yScale),
+    ce: h.ce, cn: h.cn, x0: ox, z0: oz, hx0: ox, hz0: oz, sn: Math.round(CHUNK / (h.surfaceStep || h.step)), step: h.step, n, heights: dequantiseHeights(layers.height, h.yMin, h.yScale),
     surfaceStep: h.surfaceStep || h.step, surface: layers.surface || null, walk: layers.walk || null,
     buildings: (h.buildings || []).map((b) => ({ ...b, ring: abs(b.ring, ox, oz), holes: (b.holes || []).map((r) => abs(r, ox, oz)) })),
     walls: (h.walls || []).map((w) => ({ ...w, ring: abs(w.ring, ox, oz) })),
@@ -40,13 +48,15 @@ export async function packageSource(base, fetchFn = (u) => fetch(u)) {
   const get = async (name, as) => { const r = await fetchFn(base + name); if (!r.ok) throw new Error(`scene: ${base + name} answered ${r.status}`); return as === 'json' ? r.json() : r.arrayBuffer(); };
   const manifest = await get('client.json', 'json');
   if (!/^opus-scene\/1$/.test(manifest.format)) throw new Error(`scene: format "${manifest.format}" is not read by this engine (opus-scene/1)`);
-  const byKey = new Map(manifest.chunks.map((c) => [c.cx + ',' + c.cz, c]));
+  if (manifest.packaging !== 'chunked') throw new Error(`scene: ${base}client.json has packaging "${manifest.packaging}"; a package is "chunked"`);
+  if (!manifest.extent) throw new Error('scene: client.json needs `extent` (SCENE-FORMAT.md 2.2)');
+  const grid = gridOf(manifest.georef), byKey = new Map(manifest.chunks.map((c) => [grid.key(c.ce, c.cn), c]));
   return {
-    manifest: { id: manifest.scene_id, name: manifest.name, georef: manifest.georef, chunkSize: manifest.chunkSize || CHUNK, bounds: manifest.georef.bounds, walkable: manifest.georef.walkable || manifest.georef.bounds,
-      chunks: manifest.chunks.map((c) => ({ cx: c.cx, cz: c.cz })), water: manifest.water || null, credits: manifest.credits || [], zones: manifest.zones || [], version: manifest.version },
+    manifest: { id: manifest.scene_id, name: manifest.name, georef: manifest.georef, grid, bounds: manifest.extent, walkable: manifest.play || manifest.extent,
+      chunks: manifest.chunks.map((c) => ({ ce: c.ce, cn: c.cn })), water: manifest.water || null, credits: manifest.credits || [], zones: manifest.zones || [], version: manifest.version },
     far: async () => decodeFar(await get(manifest.far.name)),
-    has: (cx, cz) => byKey.has(cx + ',' + cz),
-    chunk: async (cx, cz) => decodeChunk(await get(byKey.get(cx + ',' + cz).name)),
+    has: (ce, cn) => byKey.has(grid.key(ce, cn)),
+    chunk: async (ce, cn) => decodeChunk(await get(byKey.get(grid.key(ce, cn)).name), grid),
   };
 }
 
@@ -108,7 +118,8 @@ export function lineToRings(pts, thickness) {
 }
 
 export function jsonSource(scene) {
-  const t = scene.terrain, ext = scene.extent, play = scene.play || ext;
+  if (scene.packaging !== undefined && scene.packaging !== 'single') throw new Error(`scene: packaging "${scene.packaging}" is not a single file`);
+  const t = scene.terrain, ext = scene.extent, play = scene.play || ext, cg = gridOf(scene.georef);
   const q = b64ToU16(t.data), all = new Float32Array(q.length);
   for (let i = 0; i < q.length; i++) all[i] = q[i] * t.unit;
   const grid = createGrid({ nx: t.nx, nz: t.nz, cell: t.cell, minX: t.minX, minZ: t.minZ, data: all });
@@ -122,7 +133,7 @@ export function jsonSource(scene) {
   for (const w of (scene.water && scene.water.polygons) || []) ras.polygon(w.r, 14);
   if (waterLevel != null) for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (grid.height(grid.minX + i + 0.5, grid.minZ + j + 0.5) < waterLevel + 0.8) ras.data[j * W + i] = 14;
 
-  const own = (x0, x1, z0, z1) => Math.floor((x0 + x1) / 2 / CHUNK) + ',' + Math.floor((z0 + z1) / 2 / CHUNK);
+  const own = (x0, x1, z0, z1) => cg.key(cg.ce((x0 + x1) / 2), cg.cn((z0 + z1) / 2)); // the chunk of the bounding box's centre (3.1)
   const bucket = new Map(), put = (k, kind, rec) => { let b = bucket.get(k); if (!b) bucket.set(k, (b = { buildings: [], walls: [], trees: [], landmarks: [] })); b[kind].push(rec); };
   const box = (r) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); z0 = Math.min(z0, r[i + 1]); z1 = Math.max(z1, r[i + 1]); } return [x0, x1, z0, z1]; };
   let id = 1;
@@ -145,10 +156,10 @@ export function jsonSource(scene) {
   for (const l of scene.landmarks || []) put(own(l.x, l.x, l.z, l.z), 'landmarks', { kind: l.k, x: l.x, z: l.z, name: l.n, mapLabel: l.n });
 
   const chunks = [];
-  for (let cz = Math.floor(grid.minZ / CHUNK); cz <= Math.floor((grid.maxZ - 0.01) / CHUNK); cz++) for (let cx = Math.floor(grid.minX / CHUNK); cx <= Math.floor((grid.maxX - 0.01) / CHUNK); cx++) chunks.push({ cx, cz });
+  for (let cn = cg.cn(grid.maxZ - 0.01); cn <= cg.cn(grid.minZ + 0.01); cn++) for (let ce = cg.ce(grid.minX + 0.01); ce <= cg.ce(grid.maxX - 0.01); ce++) chunks.push({ ce, cn });
   const g = scene.georef;
   return {
-    manifest: { id: scene.id, name: scene.name, georef: g, chunkSize: CHUNK, bounds: ext, walkable: play, chunks, water: scene.water ? { level: waterLevel } : null,
+    manifest: { id: scene.id, name: scene.name, georef: g, grid: cg, bounds: ext, walkable: play, chunks, water: scene.water ? { level: waterLevel } : null,
       credits: (scene.sources || []).map((s) => s.attribution), zones: [], version: 'single-file' },
     far: async () => {
       // every fourth sample of the terrain, and a hull per building
@@ -157,13 +168,19 @@ export function jsonSource(scene) {
       const hulls = []; for (const b of bucket.values()) for (const r of b.buildings) hulls.push({ ring: r.ring, yBase: r.yBase, top: r.yBase + r.hEave + r.hRoof, facade: r.facade, roofMat: r.roofMat, palette: r.palette });
       return { grid: createGrid({ nx, nz, cell: t.cell * k, minX: t.minX, minZ: t.minZ, data: d }), hulls };
     },
-    has: (cx, cz) => chunks.some((c) => c.cx === cx && c.cz === cz),
-    chunk: async (cx, cz) => {
-      const step = t.cell, n = Math.round(CHUNK / step) + 1, ox = cx * CHUNK, oz = cz * CHUNK, heights = new Float32Array(n * n), surface = new Uint8Array(CHUNK * CHUNK);
-      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) heights[j * n + i] = grid.height(ox + i * step, oz + j * step);
-      for (let j = 0; j < CHUNK; j++) for (let i = 0; i < CHUNK; i++) surface[j * CHUNK + i] = ras.at(ox + i + 0.5, oz + j + 0.5) || 4;
-      const b = bucket.get(cx + ',' + cz) || { buildings: [], walls: [], trees: [], landmarks: [] };
-      return { cx, cz, step, n, heights, surfaceStep: 1, surface, walk: null, buildings: b.buildings, walls: b.walls, trees: b.trees, water: [], landmarks: b.landmarks };
+    has: (ce, cn) => chunks.some((c) => c.ce === ce && c.cn === cn),
+    chunk: async (ce, cn) => {
+      // The tile is the file's own samples: from the one at or before the chunk's corner to the one at or after its
+      // far edge. A scene's terrain grid starts at its extent, not on a chunk corner, and resampling it would move
+      // the ground. Neighbouring tiles overlap by under one cell and agree there, being the same samples.
+      const step = t.cell, ox = cg.x0(ce), oz = cg.z0(cn);
+      const i0 = Math.floor((ox - t.minX) / step), j0 = Math.floor((oz - t.minZ) / step), n = Math.ceil((ox + CHUNK - t.minX) / step) - i0 + 1;
+      const hx0 = t.minX + i0 * step, hz0 = t.minZ + j0 * step, heights = new Float32Array(n * n), sn = Math.ceil((n - 1) * step), surface = new Uint8Array(sn * sn);
+      const clampI = (i) => Math.min(t.nx - 1, Math.max(0, i)), clampJ = (j) => Math.min(t.nz - 1, Math.max(0, j)); // beyond the extent the edge is held
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) heights[j * n + i] = all[clampJ(j0 + j) * t.nx + clampI(i0 + i)];
+      for (let j = 0; j < sn; j++) for (let i = 0; i < sn; i++) surface[j * sn + i] = ras.at(hx0 + i + 0.5, hz0 + j + 0.5) || 4;
+      const b = bucket.get(cg.key(ce, cn)) || { buildings: [], walls: [], trees: [], landmarks: [] };
+      return { ce, cn, x0: ox, z0: oz, hx0, hz0, sn, step, n, heights, surfaceStep: 1, surface, walk: null, buildings: b.buildings, walls: b.walls, trees: b.trees, water: [], landmarks: b.landmarks };
     },
   };
 }

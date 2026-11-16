@@ -1,7 +1,7 @@
 // Turns a decoded chunk into three.js geometry: the client generates meshes from semantic data (SCENE-FORMAT.md,
 // principle 1). Everything of one material in a chunk is one mesh, so a chunk costs a handful of draw calls.
 import { BufferAttribute, BufferGeometry, Color, Group, Mesh, ShapeUtils, Vector2 } from '../../vendor/three.module.js';
-import { CHUNK } from '../scene/source.js';
+import { CHUNK } from '../scene/grid.js';
 import { SURFACE_MATERIAL, FACADE_MATERIAL, WALL_MATERIAL, ROOF_MATERIAL, PALETTE } from '../materials/outdoor.js';
 
 const ROCK_SLOPE = 1.05; // ground steeper than this is drawn as rock whatever the raster says
@@ -35,7 +35,7 @@ const mesh = (geo, mat, cast = true) => { const m = new Mesh(geo, mat); m.castSh
  * coarser neighbour or the far ring never shows a gap. Triangles are grouped by surface class.
  */
 export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
-  const n = c.n, step = c.step * stride, m = Math.floor((n - 1) / stride) + 1, ox = c.cx * CHUNK, oz = c.cz * CHUNK;
+  const n = c.n, step = c.step * stride, m = Math.floor((n - 1) / stride) + 1, ox = c.hx0, oz = c.hz0;
   const H = (i, j) => c.heights[Math.min(n - 1, j * stride) * n + Math.min(n - 1, i * stride)];
   const pos = new Float32Array(m * m * 3), nrm = new Float32Array(m * m * 3);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) {
@@ -45,7 +45,7 @@ export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
     const sz = (H(i, Math.min(m - 1, j + 1)) - H(i, Math.max(0, j - 1))) / ((Math.min(m - 1, j + 1) - Math.max(0, j - 1)) * step);
     const l = Math.hypot(sx, 1, sz); nrm[k] = -sx / l; nrm[k + 1] = 1 / l; nrm[k + 2] = -sz / l;
   }
-  const sn = c.surface ? Math.round(CHUNK / c.surfaceStep) : 0;
+  const sn = c.surface ? c.sn : 0;
   const classOf = (i, j) => {
     const h00 = H(i, j), h10 = H(i + 1, j), h01 = H(i, j + 1), h11 = H(i + 1, j + 1);
     if (Math.max(Math.abs(h10 - h00), Math.abs(h01 - h00), Math.abs(h11 - h10), Math.abs(h11 - h01)) / step > ROCK_SLOPE) return 'rock';
@@ -59,7 +59,7 @@ export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
     const a = j * m + i, b = a + 1, d = a + m, e = d + 1;
     idx.push(a, d, b, b, d, e);
   }
-  const group = new Group(); group.name = `terrain ${c.cx},${c.cz}`;
+  const group = new Group(); group.name = `terrain ${c.ce},${c.cn}`;
   const pAttr = new BufferAttribute(pos, 3), nAttr = new BufferAttribute(nrm, 3);
   let tris = 0;
   for (const [cls, idx] of byClass) {
@@ -143,7 +143,7 @@ export function buildStructures(G, c, groundAt) {
     const s = get('wall:' + (WALL_MATERIAL[w.material] || 'stone'));
     wallsOf(s, w.ring, w.yBase, w.yTop, null); cap(s, w.ring, [], w.yTop, null);
   }
-  const group = new Group(); group.name = `structures ${c.cx},${c.cz}`;
+  const group = new Group(); group.name = `structures ${c.ce},${c.cn}`;
   let tris = 0;
   for (const [key, s] of soups) {
     if (!s.pos.length) continue;
@@ -183,9 +183,9 @@ function buildTrees(G, trees, groundAt) {
 }
 
 /** The far ring for one chunk cell: coarse ground and plain hulls, drawn until the chunk itself is in. */
-export function buildFarTile(G, far, cx, cz, hulls) {
-  const g = far.grid, step = g.cell, ox = cx * CHUNK, oz = cz * CHUNK, m = Math.round(CHUNK / step) + 1;
-  const c = { cx, cz, n: m, step, heights: new Float32Array(m * m), surface: null, surfaceStep: step };
+export function buildFarTile(G, far, ce, cn, x0, z0, hulls) {
+  const g = far.grid, step = g.cell, ox = x0, oz = z0, m = Math.round(CHUNK / step) + 1;
+  const c = { ce, cn, x0, z0, hx0: x0, hz0: z0, n: m, step, heights: new Float32Array(m * m), surface: null, surfaceStep: step };
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) c.heights[j * m + i] = g.height(ox + i * step, oz + j * step) - 0.4; // a little low, so detail always wins
   const group = buildTerrain(G, c, { skirt: 10 });
   if (hulls.length) {
@@ -193,7 +193,7 @@ export function buildFarTile(G, far, cx, cz, hulls) {
     for (const h of hulls) { const t = tintOf(h.palette || 0); wallsOf(s, h.ring, h.yBase - 3, h.top, t); cap(s, h.ring, [], h.top, t); }
     group.add(mesh(s.geometry(), G.mats.get('stucco', { triplanar: true, vertexColors: true }), false));
   }
-  group.name = `far ${cx},${cz}`;
+  group.name = `far ${ce},${cn}`;
   return group;
 }
 

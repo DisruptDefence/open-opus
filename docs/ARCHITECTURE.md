@@ -41,13 +41,16 @@ commands when they happen, and the engine applies them through `apply()`.
 
 ```
 engine/
+  README.md             how to run and test the engine, the development page's switches
   index.js              the only file a host page imports
   src/<module>/         one folder per module (table below)
   vendor/               three.js r180, with its licence
   test/                 node --test: the pure modules, threats, the direction of imports, the world API contract
   scenes/test/          a generated scene package for tests (tools/make-test-scene.mjs)
   host/, dev.html       the development host page, and a stand-in mission host with two development scenarios
+                        (host/play.js is the player's page, play.html at the repository root)
   tools/                engine tools
+play.html               the page a player opens: choose a mission, deploy, play
 scenes/                 published scenes (old-quebec.json)
 tools/build-scene.py    the scene builder, standard library only
 docs/

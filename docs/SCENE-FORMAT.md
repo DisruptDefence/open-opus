@@ -8,18 +8,18 @@ Values marked **(inferred)** or **(computed)** were not read from code or measur
 
 ## Status, 2026-11-15
 
-This document is the format. Three things write or read it today and none matches it fully:
+This document is the format. Three things write or read it today:
 
 | | Matches | Differs |
 |---|---|---|
-| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | Section 2.2 field names (`easting`, `northing`, `convergence_deg`, `play`, `extent`), the layers | No `packaging`, `h0` or `checks`; `vertical` is a sentence and the geoid offset sits in `anchor.hae`. Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale` |
-| `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The container (3.2), raster layers, `checks`, hashed names, `anchors.json` | The georeference is spelt differently (`utm: {…}`, `anchor: { e0, n0, h0 }`, `anchorGeo`, `convergenceDeg`, `vertical.geoidUndulation`, `bounds`, `walkable`). Chunks are numbered from the scene's anchor, not on the absolute UTM grid of 3.1. Vector layers are JSON in the chunk header, not binary records |
-| The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads both files above | Given a block written exactly as 2.2, it ignores `h0` and `vertical.geoid_undulation`, so heights above the ellipsoid come out wrong by the undulation with no error |
+| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks`; `packaging`; `play`, `extent`; the layers | Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. The file was not rebuilt for 2.2: only its georeference block was rewritten (`build-scene.py --georef-only`) |
+| `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The georeference of 2.2, `play`, `extent`; chunks on the absolute grid of 3.1 (the anchor is deliberately off a chunk corner); the container (3.2), raster layers, hashed names, `anchors.json` | Vector layers are JSON in the chunk header, not binary records |
+| The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads 2.2 exactly as written and refuses a block without `vertical.geoid_undulation`; numbers chunks as 3.1 (`engine/src/scene/grid.js`); both tested against the check points of both scenes | Cuts a single file into chunks itself and burns its roads into a surface raster (the format gives that to the pipeline). Each tile of a single file keeps the file's own terrain samples, so it starts up to one cell before the chunk corner |
 
-To settle, in this order: the reader accepts 2.2 as written (with a test on a 2.2 block); the test-scene tool
-writes 2.2; the builder writes `h0`, `vertical` as an object and `checks`. Chunk numbering (absolute grid or
-anchor-relative) must be one or the other before a second chunked scene exists; 3.1 says absolute and gives the
-reason. Changing 2.2 or 3.1 instead is a maintainer decision.
+The check points of both scenes are **not** computed with a reference library, as 2.2 asks: none is installed
+where they were built. Old Quebec's come from the builder's own UTM series (Python) and the engine's independent
+implementation (JavaScript) is tested against them, so the two agree to 0.1 m; the test scene's come from the
+engine itself. Checking either against a reference library is still to do.
 
 Not built at all: overhead tiles and ATAK overlays (5), nav masks and the route graph (4.8), `attribution.json`
 and the share-alike sidecar as files (6), grants (9).
@@ -74,9 +74,8 @@ y =   H − H0        up            H: orthometric height, metres
 "extent": { "minX": -470, "maxX": 470, "minZ": -420, "maxZ": 420 }
 ```
 
-The field names and values are those of the Old Quebec scene file as built, except `h0`,
-`vertical` as an object, and `checks`, which it does not have yet. The MGRS string is **computed by hand** and
-must be replaced by the builder's.
+The field names and values are those of the Old Quebec scene file, which carries seven check points written
+by the builder; one is shown.
 
 | Field | Meaning |
 |---|---|

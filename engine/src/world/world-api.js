@@ -6,6 +6,8 @@
 // Headings that cross the door are degrees clockwise from grid north (what snapshot().self.heading reports); the
 // engine's own yaw (radians, positive to the left) stays inside.
 // open.js publishes this object behind a facade that exists while the scene is still loading.
+import { ScenarioCommandError } from '../director/command-error.js';
+
 const SLOW = 0.08, LOOK_DOWN = -0.95, TILT_S = 0.32;
 const round = (v, d = 100) => Math.round(v * d) / d;
 const yawOf = (headingDeg) => (-(+headingDeg || 0) * Math.PI) / 180;
@@ -30,7 +32,7 @@ export function createWorldApi(engine, emit) {
   G.events.on('director:reached', (e) => emit('interact', { id: e.id, kind: e.kind, action: 'reached', time: round(e.time) }));
   G.events.on('director:say', (e) => emit('say', { text: e.text }));
   G.events.on('weapon:fire', () => emit('shot', { ammo: G.weapon.ammo }));
-  G.events.on('scene:chunk', (e) => emit('chunk', { cx: e.cx, cz: e.cz, live: e.live }));
+  G.events.on('scene:chunk', (e) => emit('chunk', { ce: e.ce, cn: e.cn, live: e.live }));
 
   // ---- holding ---------------------------------------------------------------------------------------------------
   // The view tilts down to the phone and back in real time, on the engine's frame: the clock is stopped under a hold.
@@ -98,7 +100,7 @@ export function createWorldApi(engine, emit) {
       const at = opts.at ? { x: +opts.at.x, z: +opts.at.z, y: opts.at.y, yaw: yawOf(opts.at.heading) } : null;
       if (at && !(Number.isFinite(at.x) && Number.isFinite(at.z))) throw new Error('start: `at` needs x and z in game metres');
       try { G.audio.resume(); } catch { /* no audio */ }
-      G.input.requestLock(); G.game.start({ quick: !!opts.quick, at });
+      G.input.requestLock(); G.game.start({ at });
     },
     pause: () => G.game.pause(), resume: () => G.game.resume(),
 
@@ -124,7 +126,11 @@ export function createWorldApi(engine, emit) {
     },
     scene: () => ({ id: man.id, name: man.name, version: man.version, bounds: { ...man.bounds }, walkable: { ...(man.walkable || man.bounds) }, credits: [...(man.credits || [])] }),
     overhead,
-    /** Scenario commands, for the director's caller only: place, spawn, despawn, say, mark, unmark, end, time, weather. */
-    apply(cmd) { G.director.apply(JSON.parse(JSON.stringify(cmd))); },
+    /** Scenario commands (director/director.js). Throws a ScenarioCommandError, and only that, when one cannot be applied. */
+    apply(cmd) {
+      let copy;
+      try { copy = JSON.parse(JSON.stringify(cmd)); } catch { throw new ScenarioCommandError('invalid', cmd && cmd.op, 'a command is plain data'); }
+      try { G.director.apply(copy); } catch (e) { throw e instanceof ScenarioCommandError ? e : new ScenarioCommandError('invalid', copy && copy.op, String((e && e.message) || e)); }
+    },
   };
 }

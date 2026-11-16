@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open OPUS — play</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d0f; color: #e8ece6; overflow: hidden; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #app { position: fixed; inset: 0; }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #ui { position: absolute; inset: 0; pointer-events: none; }
+  #panel { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(11, 13, 15, .88); overflow: auto; }
+  #panel.clear { background: rgba(11, 13, 15, .55); }
+  #panel[hidden] { display: none; }
+  #card { width: min(620px, calc(100% - 48px)); padding: 26px 30px; background: #14181b; border: 1px solid #333c42; }
+  h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; } h1 small { font-weight: 400; color: #8f9a93; font-size: 14px; }
+  p { margin: 10px 0; color: #c3ccc5; } .dim { color: #8f9a93; font-size: 13px; }
+  button { font: inherit; color: #e8ece6; background: #1f262b; border: 1px solid #5a646a; padding: 10px 16px; cursor: pointer; text-align: left; }
+  button:hover, button:focus-visible { background: #2a333a; border-color: #9fb0a6; outline: none; }
+  button.go { background: #2f5d43; border-color: #58a57c; padding: 10px 26px; }
+  .list { display: grid; gap: 10px; margin: 16px 0 6px; } .list button b { display: block; font-weight: 600; } .list button span { color: #a9b3ac; font-size: 13px; }
+  table { border-collapse: collapse; margin: 12px 0; font-size: 14px; } td { padding: 2px 16px 2px 0; color: #c3ccc5; } td:first-child { color: #e8ece6; white-space: nowrap; }
+  code, pre { font: 13px ui-monospace, Menlo, Consolas, monospace; background: #0b0d0f; border: 1px solid #333c42; } code { padding: 1px 5px; } pre { padding: 10px 12px; margin: 8px 0; overflow: auto; }
+  #bar { height: 3px; background: #23282c; margin-top: 14px; } #fill { height: 100%; width: 0; background: #58a57c; transition: width .2s; }
+  .bad { color: #ffb4a8; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="view"></canvas>
+  <div id="ui"></div>
+  <div id="panel"><div id="card"><h1>Open OPUS</h1><p id="first">Starting…</p></div></div>
+</div>
+<script>
+// This part is a plain script on purpose: it runs even where the game cannot, so the page never stays blank.
+(function () {
+  var card = document.getElementById('card');
+  function say(html) { card.innerHTML = '<h1>Open OPUS</h1>' + html; }
+  window.__opusSay = say;
+  if (location.protocol === 'file:') {
+    window.__opusBlocked = 'file';
+    say('<p><b>This page was opened as a file.</b> A browser does not let a page opened from the disk load the game\'s modules or its map, so the game cannot start this way.</p>'
+      + '<p>Serve the folder instead. In a terminal, in the folder that holds this file:</p><pre>python3 -m http.server 8000 --bind 127.0.0.1</pre>'
+      + '<p>then open <code>http://127.0.0.1:8000/play.html</code> in this browser.</p>'
+      + '<p class="dim">Python 3 is all that is needed. Nothing is installed and nothing is built; the command only hands these files to the browser, on this computer alone.</p>');
+    return;
+  }
+  var gl = null; try { gl = document.createElement('canvas').getContext('webgl2'); } catch (e) { /* none */ }
+  if (!gl) {
+    window.__opusBlocked = 'webgl2';
+    say('<p><b>This browser cannot draw the game.</b> Open OPUS needs WebGL 2, which this browser does not offer here (it may be switched off, or the graphics driver may be blocked).</p><p class="dim">A current Chrome, Edge or Firefox on a computer with a graphics card will do.</p>');
+    return;
+  }
+  import('./engine/host/play.js').catch(function (e) {
+    window.__fatal = String((e && e.stack) || e);
+    say('<p class="bad"><b>The game could not start.</b></p><pre>' + String((e && e.message) || e).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) + '</pre><p class="dim">Was the whole repository served, from its root folder?</p>');
+  });
+})();
+</script>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;color:#e8ece6">Open OPUS needs JavaScript.</p></noscript>
+</body>
+</html>

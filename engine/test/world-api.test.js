@@ -5,9 +5,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { packageSource } from '../src/scene/source.js';
+import { packageSource, jsonSource } from '../src/scene/source.js';
+import { ScenarioCommandError } from '../index.js';
 import { runMission } from '../host/mission.js';
-import { ROOT, fileFetch } from './helpers.js';
+import { ROOT, fileFetch, oldQuebec } from './helpers.js';
 import { openHeadlessWorld } from './headless.js';
 
 const source = () => packageSource(join(ROOT, 'scenes', 'test') + '/', fileFetch);
@@ -20,6 +21,7 @@ test('the world exists while the scene loads, then is ready in the title state',
   assert.equal(world.state(), 'loading');
   assert.equal(world.held(), null); assert.equal(world.canHold(), false); assert.equal(world.hold('pause'), false);
   assert.throws(() => world.snapshot(), /still loading/);
+  assert.throws(() => world.start(), /still loading/);
   const seen = []; world.on('state', (e) => seen.push(e));
   await world.ready();
   assert.equal(world.state(), 'title');
@@ -84,7 +86,7 @@ test('scene() describes the place, pause and resume stop and restart play, chunk
   world.apply({ op: 'place', x: -400, z: -400, now: true });
   for (let i = 0; i < 20; i++) { run(0.1); await new Promise((r) => setTimeout(r, 2)); } // chunk files are read between frames
   assert.ok(Math.abs(world.snapshot().self.x - -400) < 3);
-  assert.ok(chunks.every((c) => Number.isInteger(c.cx) && Number.isInteger(c.cz) && typeof c.live === 'boolean'));
+  assert.ok(chunks.every((c) => Number.isInteger(c.ce) && Number.isInteger(c.cn) && typeof c.live === 'boolean'));
   assert.ok(chunks.some((c) => c.live) && chunks.some((c) => !c.live), JSON.stringify(chunks));
   off(); const n = chunks.length;
   world.apply({ op: 'place', x: 20, z: 18, now: true });
@@ -92,17 +94,102 @@ test('scene() describes the place, pause and resume stop and restart play, chunk
   assert.equal(chunks.length, n, 'a listener that was removed hears nothing');
 });
 
-test('apply refuses what it cannot do', async () => {
+test('apply refuses what it cannot do with a ScenarioCommandError, and a refused command changes nothing', async () => {
   const { world } = openHeadlessWorld(source());
+  const refusal = (cmd) => { try { world.apply(cmd); } catch (e) { return e; } return null; };
+  // before the world is ready a command is refused like any other, not with a different kind of error
+  const early = refusal({ op: 'say', text: 'x' });
+  assert.ok(early instanceof ScenarioCommandError); assert.equal(early.code, 'not-ready'); assert.equal(early.op, 'say');
   await world.ready();
-  assert.throws(() => world.apply({ op: 'teleport' }), /unknown command/);
-  assert.throws(() => world.apply({ op: 'spawn', id: 'x', kind: 'dragon', x: 0, z: 0 }), /archetype/);
-  assert.throws(() => world.apply({ op: 'spawn', id: 'x', kind: 'sentry' }), /x and z/);
-  assert.throws(() => world.apply({ op: 'mark', id: 'm', kind: 'prize', x: 0, z: 0 }), /objective or extraction/);
-  assert.throws(() => world.apply({ op: 'end', result: 'won' }), /complete or dead/);
-  world.apply({ op: 'spawn', id: 'x', kind: 'sentry', x: 60, z: -80 });
-  assert.throws(() => world.apply({ op: 'spawn', id: 'x', kind: 'sentry', x: 60, z: -80 }), /already/);
-  assert.equal(world.snapshot().entities.length, 1);
+  world.apply({ op: 'spawn', id: 's', kind: 'sentry', x: 60, z: -80 });
+  world.apply({ op: 'mark', id: 'm', kind: 'objective', x: 20, z: 9 });
+  const before = world.snapshot().entities;
+  for (const [cmd, code, says] of [
+    [{ op: 'teleport' }, 'unknown-op', /no such command/],
+    [{ op: 'constructor' }, 'unknown-op', /no such command/],
+    [{ x: 1 }, 'unknown-op', /no such command/],
+    [null, 'invalid', /object/], ['spawn', 'invalid', /object/], [[{ op: 'say' }], 'invalid', /object/],
+    [{ op: 'spawn', id: 'x', kind: 'dragon', x: 0, z: 0 }, 'unknown-kind', /archetype "dragon"/],
+    [{ op: 'spawn', id: 'x', kind: 'toString', x: 0, z: 0 }, 'unknown-kind', /archetype/],
+    [{ op: 'spawn', id: 'x', kind: 'sentry' }, 'invalid', /x and z/],
+    [{ op: 'spawn', id: 'x', kind: 'sentry', x: '12', z: 0 }, 'invalid', /x and z/],
+    [{ op: 'spawn', id: 'x', kind: 'sentry', x: 0, z: 0, route: [[1, 2], 'there'] }, 'invalid', /route/],
+    [{ op: 'spawn', kind: 'sentry', x: 0, z: 0 }, 'invalid', /id/],
+    [{ op: 'spawn', id: 'm', kind: 'sentry', x: 0, z: 0 }, 'invalid', /is a mark/],
+    [{ op: 'spawn', id: 's', kind: 'dragon', x: 0, z: 0 }, 'unknown-kind', /archetype/], // refused: the sentry "s" stays
+    [{ op: 'mark', id: 'p', kind: 'prize', x: 0, z: 0 }, 'invalid', /objective or extraction/],
+    [{ op: 'mark', id: 's', kind: 'objective', x: 0, z: 0 }, 'invalid', /is a threat/],
+    [{ op: 'mark', id: 'm', kind: 'objective', x: 0, z: 0, radius: -1 }, 'invalid', /radius/], // refused: the mark "m" stays
+    [{ op: 'place', x: 0 }, 'invalid', /x and z/],
+    [{ op: 'place', x: 0, z: 0, heading: 'north' }, 'invalid', /heading/],
+    [{ op: 'end', result: 'won' }, 'invalid', /complete or dead/],
+    [{ op: 'time', hour: 30 }, 'invalid', /hour/],
+  ]) {
+    const e = refusal(cmd);
+    assert.ok(e instanceof ScenarioCommandError, `${JSON.stringify(cmd)} is refused`);
+    assert.equal(e.name, 'ScenarioCommandError'); assert.equal(e.code, code, JSON.stringify(cmd)); assert.match(e.message, says);
+    assert.equal(e.op, cmd && typeof cmd.op === 'string' ? cmd.op : undefined);
+  }
+  const cyclic = { op: 'say' }; cyclic.self = cyclic;
+  assert.equal(refusal(cyclic).code, 'invalid');
+  assert.deepEqual(world.snapshot().entities, before, 'nothing changed');
+  assert.equal(world.state(), 'title');
+});
+
+test('standing commands are idempotent: a host can send what stands again on a redeploy or a return', async () => {
+  const standing = [
+    { op: 'place', x: 20, z: 18, heading: 45 },
+    { op: 'time', hour: 17 }, { op: 'weather', wet: 0.5 },
+    { op: 'mark', id: 'obj', kind: 'objective', label: 'A', x: 20, z: 9, radius: 2 },
+    { op: 'spawn', id: 's1', kind: 'sentry', x: 60, z: -80, heading: 180, route: [[60, -80], [20, -80]] },
+    { op: 'spawn', id: 'q1', kind: 'quadcopter', x: 90, z: -60 },
+  ];
+  const picture = (w) => { const s = w.snapshot(); return { self: s.self, entities: [...s.entities].sort((a, b) => a.id.localeCompare(b.id)) }; };
+  const once = openHeadlessWorld(source()), twice = openHeadlessWorld(source());
+  await once.world.ready(); await twice.world.ready();
+  for (const c of standing) once.world.apply(c);
+  for (const c of standing) twice.world.apply(c);
+  for (const c of standing) twice.world.apply(c);
+  assert.deepEqual(picture(twice.world), picture(once.world));
+  assert.equal(picture(once.world).entities.length, 3);
+  assert.equal(picture(once.world).self.heading, 45);
+  // ... and so is taking things away
+  for (const w of [once.world, twice.world]) { w.apply({ op: 'despawn', id: 'q1' }); w.apply({ op: 'unmark', id: 'obj' }); }
+  twice.world.apply({ op: 'despawn', id: 'q1' }); twice.world.apply({ op: 'unmark', id: 'obj' }); twice.world.apply({ op: 'despawn', id: 'never-there' });
+  assert.deepEqual(picture(twice.world), picture(once.world));
+
+  // a return in mid-play: the world has moved on (the sentry walked, the mark was reached), the host sends what
+  // stands, at the places it holds, and the world is that again
+  const { world, run } = once;
+  for (const c of standing) world.apply(c);
+  world.start(); run(3);
+  const walked = world.snapshot().entities.find((e) => e.id === 's1');
+  assert.ok(Math.hypot(walked.x - 60, walked.z + 80) > 1);
+  const seen = []; world.on('entity', (e) => seen.push(`${e.change}:${e.id}`));
+  world.apply({ op: 'clear' });
+  assert.deepEqual(world.snapshot().entities, []);
+  world.apply({ op: 'clear' }); // nothing left: nothing happens
+  assert.deepEqual(seen.sort(), ['despawn:obj', 'despawn:q1', 'despawn:s1']);
+  for (const c of standing) world.apply(c);
+  const back = world.snapshot().entities.find((e) => e.id === 's1');
+  assert.deepEqual([back.x, back.z, back.alive, back.state], [60, -80, true, 'patrol']);
+  assert.deepEqual(world.snapshot().entities.map((e) => e.id), ['obj', 's1', 'q1']);
+  assert.equal(world.state(), 'playing', 'the standing commands do not end or restart play');
+});
+
+test('end with result dead is the player dying: one player:dead event, state dead, health gone', async () => {
+  const { world, run } = openHeadlessWorld(source());
+  await world.ready();
+  const seen = []; world.on('player:dead', () => seen.push('player:dead')); world.on('state', (e) => seen.push(e.state));
+  world.start({ at: { x: 20, z: 18 } }); run(0.2);
+  world.apply({ op: 'end', result: 'dead' });
+  assert.deepEqual(seen, ['playing', 'dead', 'player:dead']);
+  assert.equal(world.state(), 'dead'); assert.equal(world.snapshot().self.health, 0);
+  world.apply({ op: 'end', result: 'dead' }); world.apply({ op: 'end', result: 'complete' }); run(0.5);
+  assert.deepEqual(seen, ['playing', 'dead', 'player:dead'], 'a run ends once');
+  // deploying again brings the player back whole
+  world.start({ at: { x: 20, z: 18 } }); run(0.2);
+  assert.equal(world.state(), 'playing'); assert.equal(world.snapshot().self.health, 100);
 });
 
 test('geo: the anchor, a round trip, MGRS and true heading agree with the scene georeference', async () => {
@@ -122,8 +209,8 @@ test('geo: the anchor, a round trip, MGRS and true heading agree with the scene 
   const m = world.geo.toMGRS(0, 0);
   assert.deepEqual(Object.keys(m).sort(), ['easting', 'northing', 'square', 'zone']);
   assert.equal(m.easting.length, 5); assert.equal(world.geo.toMGRS(0, 0, 3).easting, m.easting.slice(0, 3));
-  assert.ok(Math.abs(world.geo.headingTrue(90) - (90 + ref.convergenceDeg)) < 1e-9);
-  assert.ok(Math.abs(world.geo.headingTrue(0) - (360 + ref.convergenceDeg)) < 1e-9, 'wraps into 0..360');
+  assert.ok(Math.abs(world.geo.headingTrue(90) - (90 + ref.convergence_deg)) < 1e-9);
+  assert.ok(Math.abs(world.geo.headingTrue(0) - (360 + ref.convergence_deg)) < 1e-9, 'wraps into 0..360');
 });
 
 test('hold freezes or slows the game and release gives it back', async () => {
@@ -154,6 +241,7 @@ test('hold freezes or slows the game and release gives it back', async () => {
   assert.deepEqual(holds, ['pause', 'slow', null]);
   // a run that ends under a hold ends the hold
   world.hold('pause'); world.apply({ op: 'end', result: 'complete' });
+  assert.deepEqual(holds.slice(-2), ['pause', null], 'the listeners are told');
   assert.equal(world.held(), null); assert.equal(world.state(), 'complete');
 });
 
@@ -162,6 +250,8 @@ test('a mission plays from start to complete through the world API only', async 
   await world.ready();
   const states = [], reached = [];
   world.on('state', (e) => states.push(e.state)); world.on('interact', (e) => reached.push(e.id));
+  const seenStates = new Set([world.state()]), seenKinds = new Set(), note = () => { seenStates.add(world.state()); for (const e of world.snapshot().entities) seenKinds.add(e.kind); };
+  world.on('state', note); world.on('entity', note); world.on('interact', note);
   const mission = runMission(world, scenario());
   mission.start();
   assert.equal(world.state(), 'playing');
@@ -173,6 +263,8 @@ test('a mission plays from start to complete through the world API only', async 
   assert.equal(world.state(), 'complete');
   assert.deepEqual(reached, ['obs', 'pickup']);
   assert.deepEqual(states, ['playing', 'complete']);
+  for (const s of seenStates) assert.ok(['loading', 'title', 'playing', 'paused', 'dead', 'complete'].includes(s), s);
+  for (const k of seenKinds) assert.ok(['objective', 'threat', 'extraction'].includes(k), k);
   assert.ok(end.self.z < 5 && end.self.z > -1 && Math.abs(end.self.x - 20) < 0.5, `the player walked north to the pick-up: ${JSON.stringify(end.self)}`);
   assert.ok(end.time > 3 && end.time < 8, `at walking pace: ${end.time} s`);
   const moved = (id) => { const a = before.entities.find((e) => e.id === id), b = end.entities.find((e) => e.id === id); return Math.hypot(a.x - b.x, a.z - b.z); };
@@ -186,6 +278,23 @@ test('a mission plays from start to complete through the world API only', async 
   assert.ok(Math.abs(world.snapshot().self.z - 18) < 0.01);
 });
 
+test('the same mission plays on the published Old Quebec scene, loaded from its single file', async () => {
+  const sc = JSON.parse(readFileSync(join(ROOT, 'host', 'scenarios', 'old-quebec.json'), 'utf8'));
+  const { world, keys, run } = openHeadlessWorld(jsonSource(oldQuebec()), { x: sc.start.x, z: sc.start.z });
+  await world.ready();
+  assert.equal(world.scene().name, 'Vieux-Québec');
+  const reached = []; world.on('interact', (e) => reached.push(e.id));
+  runMission(world, sc).start();
+  const first = world.snapshot().self, grid = world.geo.toMGRS(first.x, first.z);
+  assert.deepEqual([grid.zone, grid.square, grid.easting, grid.northing], ['19T', 'CM', '31641', '86675'], 'the grid a TAK client shows 60 m north of the anchor');
+  assert.ok(Math.abs(world.geo.toGeo(first.x, first.z, first.y).hae - (first.y - 27.6)) < 1e-9, 'and the height it is fed');
+  keys.move.y = 1;
+  for (let i = 0; i < 40 && world.state() === 'playing'; i++) run(0.5);
+  assert.equal(world.state(), 'complete'); assert.deepEqual(reached, ['obs', 'pickup']);
+  const end = world.snapshot().self;
+  assert.ok(end.z < -70 && end.z > -76 && Math.abs(end.x) < 0.5 && Math.abs(end.y - first.y) < 1.5, JSON.stringify(end));
+});
+
 test('the player dies under fire: state dead, player:dead, and the host can read it', async () => {
   const { world, run } = openHeadlessWorld(source());
   await world.ready();
@@ -196,7 +305,7 @@ test('the player dies under fire: state dead, player:dead, and the host can read
   for (let i = 0; i < 120 && world.state() === 'playing'; i++) run(0.5);
   assert.equal(world.state(), 'dead');
   assert.ok(hits > 3, 'hits were reported');
-  assert.deepEqual([...seen].sort(), ['dead', 'player:dead', 'playing'], JSON.stringify(seen));
+  assert.deepEqual(seen, ['playing', 'dead', 'player:dead'], 'the same events, in the same order, as an end with result dead');
   assert.ok(world.snapshot().self.health <= 0);
   assert.ok(world.snapshot().entities.some((e) => e.state === 'engage'), 'the sentries were engaging');
 });

@@ -15,8 +15,8 @@ What it reads
 What it writes
   One JSON file in real UTM metres (zone 19T, WGS 84): game x = easting − anchor easting, game z = −(northing −
   anchor northing), game y = height above the vertical datum (CGVD2013). A grid reference read off the scene is
-  the true grid of the place. The scene holds the place only; where a mission starts and what its objectives are
-  is in the level file beside it (scenes/<id>.level.json), written by hand.
+  the true grid of the place (docs/SCENE-FORMAT.md 2). The scene holds the place only: where a mission starts and
+  what its objectives are belongs to a scenario, which a session host holds.
 
 Rules where OpenStreetMap is silent are stated in RULES below and copied into the scene file.
 """
@@ -70,7 +70,7 @@ SMALL = {"garage", "garages", "shed", "hut", "roof", "kiosk", "carport", "servic
 TALL = {"church", "cathedral", "chapel"}
 CIVIC = {"hotel", "civic", "school", "university", "government", "public", "college", "hospital"}
 
-# ── WGS 84 / UTM (Snyder, the same series as atak/geo.js) ───────────────────────────────────────────────────────
+# ── WGS 84 / UTM (Snyder's series; the engine's geo module implements the same independently) ───────────────────────────────────────────────────────
 WGS_A, WGS_F, K0 = 6378137.0, 1 / 298.257223563, 0.9996
 E2 = WGS_F * (2 - WGS_F)
 EP2 = E2 / (1 - E2)
@@ -109,6 +109,56 @@ def from_utm(e: float, n: float) -> tuple[float, float]:
     lon = LON0 + (d - (1 + 2 * t1 + c1) * d ** 3 / 6
                   + (5 - 2 * c1 + 28 * t1 - 3 * c1 * c1 + 8 * EP2 + 24 * t1 * t1) * d ** 5 / 120) / c
     return math.degrees(lat), math.degrees(lon)
+
+
+def mgrs(e: float, n: float, lat: float, digits: int = 5) -> str:
+    """MGRS straight from UTM (docs/SCENE-FORMAT.md 2.3): 100 km square letters from the zone, digits truncated."""
+    cols = ("STUVWXYZ", "ABCDEFGH", "JKLMNPQR")[ZONE % 3]
+    rows = "ABCDEFGHJKLMNPQRSTUV"
+    band = "CDEFGHJKLMNPQRSTUVWXX"[int((lat + 80) // 8)]
+    col = cols[int(e // 100000) - 1]
+    row = rows[(int(n // 100000) + (5 if ZONE % 2 == 0 else 0)) % 20]
+    cut = lambda v: str(int(v % 100000) // 10 ** (5 - digits)).zfill(digits)  # noqa: E731
+    return f"{ZONE}{band}{col}{row}{cut(e)}{cut(n)}"
+
+
+def georef_block(e0: int, n0: int, play: dict, ext: dict) -> dict:
+    """The georeference exactly as docs/SCENE-FORMAT.md 2.2 writes it, with its check points.
+
+    The check points are computed with this file's own UTM series, not with a reference library (the builder is
+    standard library only). They pin the engine's independent implementation to this one.
+    """
+    lat0, lon0 = from_utm(e0, n0)
+    conv = math.degrees(math.atan(math.tan(math.radians(lon0) - LON0) * math.sin(math.radians(lat0))))
+    points = [(0.0, 0.0)] + [(play[a], play[b]) for a in ("minX", "maxX") for b in ("minZ", "maxZ")] \
+        + [(ext["minX"], ext["minZ"]), (ext["maxX"], ext["maxZ"])]
+    checks = []
+    for x, z in points:
+        lat, lon = from_utm(e0 + x, n0 - z)
+        checks.append({"x": x, "z": z, "lat": round(lat, 8), "lon": round(lon, 8), "mgrs": mgrs(e0 + x, n0 - z, lat)})
+    return {
+        "crs": "EPSG:32619", "projection": "utm", "zone": ZONE, "band": "T", "hemisphere": "N",
+        "easting": e0, "northing": n0, "h0": 0,
+        "anchor": {"lat": round(lat0, 8), "lon": round(lon0, 8)},
+        # heights are metres above CGVD2013 (HRDEM); GEOID_SEP is an approximate geoid height for Québec
+        "vertical": {"datum": "CGVD2013", "geoid_undulation": GEOID_SEP},
+        "convergence_deg": round(conv, 4),
+        "checks": checks,
+    }
+
+
+def regeoref(path: Path) -> None:
+    """Rewrite only the georeference of an existing scene file (no download): for a change of spelling."""
+    scene = json.loads(path.read_text(encoding="utf-8"))
+    g = scene["georef"]
+    scene["georef"] = georef_block(g["easting"], g["northing"], scene["play"], scene["extent"])
+    out = {}
+    for k, v in scene.items():  # `packaging` goes right after `format`
+        out[k] = v
+        if k == "format":
+            out["packaging"] = "single"
+    path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    print(json.dumps(out["georef"], ensure_ascii=False, indent=1))
 
 
 # ── Canada Atlas Lambert (EPSG:3979), the HRDEM mosaic's own grid ───────────────────────────────────────────────
@@ -580,21 +630,14 @@ def build(cache: Path | None, offline: bool, out: Path) -> None:
     for p in parts:
         p["part"] = 1
 
-    conv = math.degrees(math.atan(math.tan(math.radians(lon0) - LON0) * math.sin(math.radians(lat0))))
+    play = {"minX": -HALF_W, "maxX": HALF_W, "minZ": -HALF_H, "maxZ": HALF_H}
     scene = {
         "format": "opus-scene/1",
+        "packaging": "single",
         "id": SCENE_ID,
         "name": SCENE_NAME,
-        "georef": {
-            "crs": "EPSG:32619", "projection": "utm", "zone": ZONE, "band": "T", "hemisphere": "N",
-            "easting": e0, "northing": n0,
-            "anchor": {"lat": round(lat0, 8), "lon": round(lon0, 8), "hae": GEOID_SEP},
-            "convergence_deg": round(conv, 4),
-            "vertical": "game y = metres above CGVD2013 (HRDEM); ellipsoid height = y + anchor.hae, where anchor.hae is "
-                        "an approximate geoid height for Québec",
-            "frame": "game x = easting - georef.easting; game z = -(northing - georef.northing); -z is GRID north",
-        },
-        "play": {"minX": -HALF_W, "maxX": HALF_W, "minZ": -HALF_H, "maxZ": HALF_H},
+        "georef": georef_block(e0, n0, play, ext),
+        "play": play,
         "extent": ext,
         "sources": [
             {"name": "OpenStreetMap", "via": "Overpass API", "licence": "ODbL 1.0", "attribution": "© OpenStreetMap contributors",
@@ -634,5 +677,9 @@ if __name__ == "__main__":
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent.parent / "scenes" / f"{SCENE_ID}.json")
     ap.add_argument("--cache", type=Path, help="directory for the raw downloads (osm.json, hrdem.tif)")
     ap.add_argument("--offline", action="store_true", help="use the cache only")
+    ap.add_argument("--georef-only", action="store_true", help="rewrite the georeference block of the existing --out file, nothing else")
     a = ap.parse_args()
-    build(a.cache, a.offline, a.out)
+    if a.georef_only:
+        regeoref(a.out)
+    else:
+        build(a.cache, a.offline, a.out)
