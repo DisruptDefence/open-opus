@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bays, facadeFar, facadeNear } from '../src/gen/facade.js';
 import { createSoups } from '../src/gen/soup.js';
-import { resolveStyle } from '../src/gen/style.js';
+import { resolveStyle, SOUP } from '../src/gen/style.js';
 import { vertices, building } from './helpers.js';
 
 const style = resolveStyle(), flat = () => 30, info = { slots: [], ridge: [], parapet: 0 };
@@ -54,24 +54,24 @@ const near = (b, st = fixedBays) => { const soups = createSoups(); facadeNear(so
 const quads = (soups, key) => (soups.map.get(key) ? soups.map.get(key).pos.length / 18 : 0);
 
 test('a 10 m wall of 3 storeys: 9 window quads, and the wall plus the windows fill 10 x 9 m', () => {
-  const soups = near(wallOnly()), glass = soups.map.get('window|vn');
-  assert.equal(quads(soups, 'window|vn'), 9);
+  const soups = near(wallOnly()), glass = soups.map.get(SOUP.window);
+  assert.equal(quads(soups, SOUP.window), 9);
   const wall = area(soups.map.get('wall_stone|tv'), inPlane), win = area(glass);
   assert.ok(Math.abs(wall + win - 90) < 0.9, `wall ${wall} + windows ${win}`);
   const d = vertices(soups).filter(([, , z]) => z < 1).map(([, , z]) => -z); // outward distance from the wall z = 0 (the other walls are blind)
   assert.ok(Math.max(...d) <= style.cornice.depth + 0.15 && Math.min(...d) >= -(style.window.reveal + 0.01) - 1e-9, `reveal and cornice stay within their depths: ${Math.min(...d)} .. ${Math.max(...d)}`);
 });
 test('the front edge: a door on the ground storey, or shop panes with fascia and a door', () => {
-  const plain = near(wallOnly({ front: new Set([0]) })); assert.equal(quads(plain, 'window|vn'), 8); assert.equal(quads(plain, 'door|vn'), 1);
-  const shop = near(wallOnly({ front: new Set([0]), groundFloor: 1 })); assert.equal(quads(shop, 'window|vn'), 6 + 2, '6 casements above, 2 shop panes and a door below'); assert.equal(quads(shop, 'door|vn'), 1);
+  const plain = near(wallOnly({ front: new Set([0]) })); assert.equal(quads(plain, SOUP.window), 8); assert.equal(quads(plain, SOUP.door), 1);
+  const shop = near(wallOnly({ front: new Set([0]), groundFloor: 1 })); assert.equal(quads(shop, SOUP.window), 6 + 2, '6 casements above, 2 shop panes and a door below'); assert.equal(quads(shop, SOUP.door), 1);
   assert.ok(shop.map.get('stucco|tvn'), 'the fascia is in the trim soup');
-  const big = near(wallOnly({ front: new Set([0]), groundFloor: 2 })); assert.equal(quads(big, 'door|vn'), 1);
-  const rear = near(wallOnly({ groundFloor: 1 })); assert.equal(quads(rear, 'door|vn'), 0, 'a wall that faces no street has no door');
+  const big = near(wallOnly({ front: new Set([0]), groundFloor: 2 })); assert.equal(quads(big, SOUP.door), 1);
+  const rear = near(wallOnly({ groundFloor: 1 })); assert.equal(quads(rear, SOUP.door), 0, 'a wall that faces no street has no door');
 });
 test('a blind edge and a 2 m edge are one quad of wall, with no window', () => {
-  const all = building(RING, { blind: new Set([0, 1, 2, 3]) }), soups = near(all); assert.equal(quads(soups, 'window|vn'), 0);
+  const all = building(RING, { blind: new Set([0, 1, 2, 3]) }), soups = near(all); assert.equal(quads(soups, SOUP.window), 0);
   assert.equal(soups.map.get('wall_stone|tv').pos.length / 9, 8, 'two triangles an edge');
-  const thin = near(building([0, 0, 2, 0, 2, 8, 0, 8], { blind: new Set([1, 2, 3]) })); assert.equal(quads(thin, 'window|vn'), 0);
+  const thin = near(building([0, 0, 2, 0, 2, 8, 0, 8], { blind: new Set([1, 2, 3]) })); assert.equal(quads(thin, SOUP.window), 0);
   assert.equal(area(thin.map.get('wall_stone|tv'), inPlane) > 0 && thin.map.get('wall_stone|tv').pos.length / 9 >= 8, true);
   let n = 0; const s = thin.map.get('wall_stone|tv'); for (let i = 0; i < s.pos.length; i += 9) if (inPlane(s.pos.slice(i, i + 9))) n++; assert.equal(n, 2);
 });
@@ -82,32 +82,57 @@ test('far and near agree: the painted windows lie where the modelled ones are cu
   assert.ok(found, 'one far quad spans the bays, u = 0 .. n'); assert.equal(found.v, 3, 'v counts storeys');
   assert.ok(Math.abs(Math.min(...found.x) - 1.25) < 1e-9 && Math.abs(Math.max(...found.x) - 8.75) < 1e-9, 'it covers the bays 1.25 .. 8.75 m, so window i lies at 1.25 + 2.5 (i + 0.5)');
   // and a modelled window of that bay is centred there
-  const g = near(wallOnly()).map.get('window|vn'); const xs = []; for (let i = 0; i < g.pos.length; i += 18) xs.push((g.pos[i] + g.pos[i + 3] + g.pos[i + 6]) / 3);
+  const g = near(wallOnly()).map.get(SOUP.window); const xs = []; for (let i = 0; i < g.pos.length; i += 18) xs.push((g.pos[i] + g.pos[i + 3] + g.pos[i + 6]) / 3);
   for (const c of [2.5, 5, 7.5]) assert.ok(xs.some((x) => Math.abs(x - c) < 0.6 && Math.abs(x - c) < 0.2), `a window near ${c}`);
 });
 test('two buildings differ in tint or bay width, the same one never', () => {
   let differ = 0; for (let k = 1; k <= 5; k++) if (bays(20, style, k).width !== bays(20, style, k + 100).width) differ++;
   assert.ok(differ >= 1);
-  const a = near(building(RING, { id: 11 })), b = near(building(RING, { id: 11 })); assert.deepEqual(a.map.get('window|vn').pos, b.map.get('window|vn').pos);
+  const a = near(building(RING, { id: 11 })), b = near(building(RING, { id: 11 })); assert.deepEqual(a.map.get(SOUP.window).pos, b.map.get(SOUP.window).pos);
 });
 test('dormers and chimneys are drawn once, with piece 0', () => {
   const roofInfo = { slots: [{ ox: 10, oz: 0, ex: -1, ez: 0, len: 10, y: 39, slope: 1, edge: 0 }], ridge: [{ x: 1, z: 4, y: 41 }, { x: 9, z: 4, y: 41 }], parapet: 0 };
   const on = (piece) => { const soups = createSoups(); facadeNear(soups, building(RING, { piece, roofShape: 3, blind: new Set([0, 1, 2, 3]) }), flat, { ...style, chimneys: { ...style.chimneys, perBuilding: [2, 2] } }, roofInfo); return soups; };
   const p0 = on(0), p1 = on(1);
-  assert.ok(quads(p0, 'window|vn') >= 2, 'a dormer window'); assert.equal(quads(p1, 'window|vn'), 0, 'a second piece draws none');
+  assert.ok(quads(p0, SOUP.window) >= 2, 'a dormer window'); assert.equal(quads(p1, SOUP.window), 0, 'a second piece draws none');
   assert.ok(p0.map.get('wall_brick|tv') || p0.map.get('wall_stone|tv'), 'chimney stacks'); assert.ok(p0.triangles() > p1.triangles());
 });
 
 test('window types come from the style: arched heads, bricked-up windows, round windows, and a different mix per building and storey', () => {
   const mixed = (m) => ({ ...fixedBays, window: { ...fixedBays.window, mix: { ground: m, upper: m, top: m } } });
   const arched = near(wallOnly(), mixed({ arched: 1 })), flatW = near(wallOnly());
-  assert.ok(arched.map.get('window|vn').pos.length > flatW.map.get('window|vn').pos.length * 3, 'an arched head adds a fan of glass');
+  assert.ok(arched.map.get(SOUP.window).pos.length > flatW.map.get(SOUP.window).pos.length * 3, 'an arched head adds a fan of glass');
   for (const v of vertices(arched)) assert.ok(v.every(Number.isFinite), 'no NaN');
-  assert.equal(quads(near(wallOnly(), mixed({ blind: 1 })), 'window|vn'), 0, 'a bricked-up window has no glass');
-  assert.ok(near(wallOnly(), mixed({ roundel: 1 })).map.get('window|vn').pos.length > 0, 'a roundel is glass set on the wall');
+  assert.equal(quads(near(wallOnly(), mixed({ blind: 1 })), SOUP.window), 0, 'a bricked-up window has no glass');
+  assert.ok(near(wallOnly(), mixed({ roundel: 1 })).map.get(SOUP.window).pos.length > 0, 'a roundel is glass set on the wall');
   const panels = new Set(), heads = new Set();
-  for (let id = 1; id <= 80; id++) { const g = near(wallOnly({ id, hEave: 12, levels: 4 }), { ...style, window: { ...style.window, bay: [2.5, 2.5] } }).map.get('window|vn'); for (let i = 0; i < g.uv.length; i += 2) panels.add(Math.floor(g.uv[i])); heads.add(g.pos.length); }
+  for (let id = 1; id <= 80; id++) { const g = near(wallOnly({ id, hEave: 12, levels: 4 }), { ...style, window: { ...style.window, bay: [2.5, 2.5] } }).map.get(SOUP.window); for (let i = 0; i < g.uv.length; i += 2) panels.add(Math.floor(g.uv[i])); heads.add(g.pos.length); }
   assert.ok(panels.size >= 4, `glazing patterns seen: ${[...panels]}`); assert.ok(heads.size > 5, 'buildings differ');
   const custom = { ...fixedBays, window: { ...fixedBays.window, types: { ...fixedBays.window.types, tall: { w: 0.8, h: 2.4, glaze: 'french' } }, mix: { ground: { tall: 1 }, upper: { tall: 1 }, top: { tall: 1 } } } };
   assert.ok(Math.max(...vertices(near(wallOnly(), custom)).map((v) => v[1])) > 0, 'a type added by data is drawn');
+});
+test('glass and doors cast shadows: neither soup key carries the n flag', () => {
+  for (const key of [SOUP.window, SOUP.door]) assert.ok(!key.split('|')[1].includes('n'), key);
+});
+
+// ---- the plinth: low, tinted, every primitive coloured ----------------------------------------------------------------
+const fall = (x) => 30 - x * 0.2;
+test('the plinth soup is tinted: a colour for every vertex, none missing, stone differs from stucco; far and near agree', () => {
+  assert.equal(SOUP.plinth, 'stone|tv');
+  const tints = {};
+  for (const [name, facade] of [['stone', 1], ['stucco', 4]]) for (const fn of [facadeFar, facadeNear]) {
+    const soups = createSoups(); fn(soups, building(RING, { facade }), fall, style, info);
+    const s = soups.map.get(SOUP.plinth); assert.ok(s && s.pos.length > 0, 'a plinth where the ground falls away');
+    assert.equal(s.col.length, s.pos.length, 'one colour triple per vertex'); for (const c of s.col) assert.ok(Number.isFinite(c), 'no NaN');
+    const key = s.col.slice(0, 3).join(); assert.ok(s.col.every((c, i) => c === s.col[i % 3]), 'one tint for the whole plinth');
+    if (tints[name]) assert.equal(tints[name], key, 'far and near use the same tint'); tints[name] = key;
+  }
+  assert.notEqual(tints.stone, tints.stucco);
+});
+test('the plinth top is the highest ground along the edge plus 0.4 with the default style; an old style without colour still draws', () => {
+  const soups = createSoups(); facadeNear(soups, building(RING, { facade: 4 }), fall, style, info);
+  const ys = soups.map.get(SOUP.plinth).pos.filter((_, i) => i % 3 === 1);
+  assert.ok(Math.abs(Math.max(...ys) - (30 + 0.4)) < 1e-3, `top ${Math.max(...ys)}`);
+  const old = { ...style, plinth: { height: 0.4, depth: 0.04 } }, s2 = createSoups(); facadeNear(s2, building(RING, { facade: 4 }), fall, old, info);
+  assert.equal(s2.map.get(SOUP.plinth).col.slice(0, 3).join(), soups.map.get(SOUP.plinth).col.slice(0, 3).join(), 'the default colour');
 });

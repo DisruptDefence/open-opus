@@ -30,7 +30,7 @@
 //   Budget    near: <= 180 000 triangles and <= 30 ms for the densest cell of a town; far: 6 triangles an edge.
 //   Must not  read the DOM or three.js, keep state between calls, or draw the roof (roof.js does).
 import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.js';
-import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor } from './style.js';
+import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor } from './style.js';
 import { signedArea, obb } from './poly.js';
 
 const MARGIN = 0.45, DARK = [0.012, 0.012, 0.013];
@@ -62,13 +62,18 @@ function profile(e, groundAt) {
   for (let s = 0; s <= k; s++) { const u = (e.len * s) / k, p = e.f.at(u, 0, 0); us.push(u); gs.push(groundAt(p[0], p[2])); }
   return { us, gs, max: Math.max(...gs), min: Math.min(...gs) };
 }
+/** The tint of a building's plinth: the style's colour, mixed with the wall's own tint for a stone house. */
+function plinthTint(b, style) {
+  const pc = parseColor((style.plinth && style.plinth.color) || '#a39d92') || parseColor('#a39d92');
+  return b.facade === 1 || b.facade === 2 ? shade(mixTint(b.tint, pc, 0.5), 0.9) : pc;
+}
 /** The stone foot of a wall: from the ground (a little below it) up to the plinth height, along the ground's profile. */
-function plinth(s, e, pr, base, style) {
+function plinth(s, e, pr, base, style, tint) {
   const h = style.plinth.height, d = style.plinth.depth, top = base + h;
   for (let k = 0; k + 1 < pr.us.length; k++) {
     const u0 = pr.us[k], u1 = pr.us[k + 1], b0 = Math.min(pr.gs[k], base) - 0.3, b1 = Math.min(pr.gs[k + 1], base) - 0.3;
-    quad(s, e.f.at(u0, b0, d), e.f.at(u1, b1, d), e.f.at(u1, top, d), e.f.at(u0, top, d));
-    quad(s, e.f.at(u0, top, d), e.f.at(u1, top, d), e.f.at(u1, top, 0), e.f.at(u0, top, 0)); // the weathering above it
+    quad(s, e.f.at(u0, b0, d), e.f.at(u1, b1, d), e.f.at(u1, top, d), e.f.at(u0, top, d), tint);
+    quad(s, e.f.at(u0, top, d), e.f.at(u1, top, d), e.f.at(u1, top, 0), e.f.at(u0, top, 0), tint); // the weathering above it
   }
 }
 
@@ -101,10 +106,10 @@ function eachEdge(b, fn) {
 }
 
 export function facadeFar(soups, b, groundAt, style, roofInfo) {
-  const parapet = (roofInfo && roofInfo.parapet) || 0, wall = soups.get(FACADE_FAR_SOUP[b.facade] || FACADE_FAR_SOUP[0]), pl = soups.get(SOUP.plinth);
+  const parapet = (roofInfo && roofInfo.parapet) || 0, wall = soups.get(FACADE_FAR_SOUP[b.facade] || FACADE_FAR_SOUP[0]), pl = soups.get(SOUP.plinth), pt = plinthTint(b, style);
   eachEdge(b, (e, hole) => {
     const pr = profile(e, groundAt), L = wallLimits(b, groundAt, pr, parapet); if (!L.ok) return;
-    if (!L.floats) plinth(pl, e, pr, L.base, style);
+    if (!L.floats) plinth(pl, e, pr, L.base, style, pt);
     const st = storeysOf(b, L.base, L.eave), v1 = st.n * (L.top - L.base) / (L.eave - L.base), bl = !hole && b.blind && b.blind.has(e.i), by = bays(e.len, style, b.id);
     const q = (u0, u1, t0, t1) => quad(wall, e.f.at(u0, L.base, 0), e.f.at(u1, L.base, 0), e.f.at(u1, L.top, 0), e.f.at(u0, L.top, 0), b.tint, [t0, 0, t1, v1]);
     if (bl || by.n === 0 || st.h < 2.3) { q(0, e.len, 0.04, 0.04 + Math.min(0.26, e.len / 3)); return; }
@@ -221,7 +226,7 @@ function border(T, f, o, d, w, tint) {
 function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
   const parapet = (roofInfo && roofInfo.parapet) || 0, pr = profile(e, groundAt), L = wallLimits(b, groundAt, pr, parapet); if (!L.ok) return;
   const W = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[0]), T = soups.get(SOUP.trim), G = soups.get(SOUP.window), wd = style.window, gfl = style.groundFloor, f = e.f, len = e.len;
-  if (!L.floats) plinth(soups.get(SOUP.plinth), e, pr, L.base, style);
+  if (!L.floats) plinth(soups.get(SOUP.plinth), e, pr, L.base, style, plinthTint(b, style));
   const blind = !e.hole && b.blind && b.blind.has(e.i), front = !e.hole && b.front && b.front.has(e.i), by = bays(len, style, b.id), st = storeysOf(b, L.base, L.eave);
   const tint = b.tint, inner = lk.inShadow, stone = b.facade >= 1 && b.facade <= 3;
   const cornice = style.cornice, ext0 = e.convLeft ? cornice.depth : 0, ext1 = e.convRight ? cornice.depth : 0;

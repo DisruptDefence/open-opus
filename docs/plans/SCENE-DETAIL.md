@@ -172,13 +172,15 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
     "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.12,
                 "panes": [2, 4] },
     "groundFloor": { "doorWidth": 1.05, "doorHeight": 2.25, "shopPier": 0.45, "shopSill": 0.5, "fascia": 0.55, "awning": 0.4 },
-    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.6, "depth": 0.05 },
+    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a8a092" },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
     "kerb": 0.14, "season": "summer"
   }
 }
 ```
+
+`client.plinth` is `{ height, depth, color }`: a low base (0.3 to 0.45 m) in a warm grey; a stone house mixes `color` with its own wall tint. An old scene without `color` gets the default `#a39d92`.
 
 **`client.bayWindows`** (added with wall variation, `gen/wallvar.js`, `materials/facades.js`): the windows the far façade
 draws in its material, as data. `types` names each type with its `shape` (`rect`, `segmental`, `round`, `circle`,
