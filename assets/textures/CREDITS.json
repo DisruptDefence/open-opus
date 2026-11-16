@@ -1,0 +1,203 @@
+{
+ "note": "Open-licensed textures only. Every entry is CC0. No private look-reference is used here.",
+ "files": [
+  {
+   "file": "stone_ashlar.jpg",
+   "slot": "stone_ashlar",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Bricks113A",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "stone_rubble.jpg",
+   "slot": "stone_rubble",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Bricks102",
+   "modifications": "colour map only; halved to 512x256 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "stone_rubble_b.jpg",
+   "slot": "stone_rubble_b",
+   "author": "Charlotte Baglioni (Poly Haven)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://polyhaven.com/a/old_stone_wall",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "brick.jpg",
+   "slot": "brick",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Bricks097",
+   "modifications": "colour map only; halved to 512x256 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "brick_b.jpg",
+   "slot": "brick_b",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Bricks101",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "slate.jpg",
+   "slot": "slate",
+   "author": "Rob Tuytel (Poly Haven)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://polyhaven.com/a/grey_roof_tiles_02",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "slate_dark.jpg",
+   "slot": "slate_dark",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=RoofingTiles003",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "copper_patina.jpg",
+   "slot": "copper_patina",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Metal058C",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "copper_new.jpg",
+   "slot": "copper_new",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Metal047A",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "cobble_sett.jpg",
+   "slot": "cobble_sett",
+   "author": "Charlotte Baglioni (Poly Haven)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://polyhaven.com/a/cobblestone_pavement",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "cobble_round.jpg",
+   "slot": "cobble_round",
+   "author": "Rob Tuytel (Poly Haven)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://polyhaven.com/a/cobblestone_floor_01",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "cobble_fan.jpg",
+   "slot": "cobble_fan",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=PavingStones047",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "asphalt.jpg",
+   "slot": "asphalt",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Asphalt031",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "plaster.jpg",
+   "slot": "plaster",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Plaster006",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "plaster_b.jpg",
+   "slot": "plaster_b",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Plaster001",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "wood_painted.jpg",
+   "slot": "wood_painted",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Planks028",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "wood_weathered.jpg",
+   "slot": "wood_weathered",
+   "author": "ambientCG contributors (ambientcg.com)",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://ambientcg.com/view?id=Planks027A",
+   "modifications": "colour map only; halved to 512x512 JPEG q82 (tiling preserved)",
+   "licenceBasis": "provider-wide CC0 policy (neither API returns a per-file licence field)",
+   "class": "A"
+  },
+  {
+   "file": "stone_ashlar_quebec.jpg",
+   "slot": "stone_ashlar_quebec",
+   "author": "Wilfredor",
+   "licence": "CC0 1.0",
+   "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://commons.wikimedia.org/wiki/File:Stone_rampart_wall_with_buttresses,_Quebec_City.jpg",
+   "modifications": "cropped a 1290 px patch of the wall face (no buttress, no shadow), made seamless by a half-offset cross-fade, resized to 512x512 JPEG q82",
+   "licenceBasis": "Commons API extmetadata LicenseShortName = CC0",
+   "class": "A"
+  }
+ ]
+}
