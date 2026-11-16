@@ -16,12 +16,7 @@ export const WORDS = ['saltline', 'harbormaster', 'foghorn', 'halyard', 'quay', 
 
 // word -> [file under engine/src, the item that clears it]
 const PENDING = {
-  'foghorn': [['audio/audio.js', 'E (sound as data, branch gp-data)']],
-  'halyard': [['audio/audio.js', 'E (sound as data, branch gp-data)']],
-  'relay_': [['audio/audio.js', 'E (sound as data, branch gp-data)']],
-  'gull': [['audio/audio.js', 'E (sound as data, branch gp-data)']],
   'berth': [['weapons/weapon.js', 'D (weapon as data, branch gp-data)']],
-  'PAC-9': [['weapons/weapon.js', 'D (weapon as data, branch gp-data)']],
   // a comment about the first scene's format, in a file the mesher owns
   'quebec': [['scene/source.js', 'SCENE-DETAIL item 3 (the reader and the mesher, branch mesher)']],
 };
