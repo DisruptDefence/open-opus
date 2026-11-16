@@ -67,7 +67,7 @@ test('outside code uses the door only: the public entry reads the door, hosts re
   const bad = [];
   // index.js is the door's public face: the world, the error its apply() throws, the scene sources a host hands it,
   // the HUD seam a host fills
-  const ENTRY = ['src/world/open.js', 'src/director/command-error.js', 'src/scene/source.js', 'src/content/default.js', 'src/hud/dev-hud.js', 'src/hud/hooks.js', 'src/hud/hud.js'];
+  const ENTRY = ['src/world/open.js', 'src/director/command-error.js', 'src/scene/source.js', 'src/content/default.js', 'src/hud/dev-hud.js', 'src/hud/hooks.js', 'src/hud/hud.js', 'host/boot.js'];
   for (const spec of importsOf(readFileSync(join(ROOT, 'index.js'), 'utf8'))) if (!ENTRY.includes(relative(ROOT, resolve(ROOT, spec)))) bad.push(`index.js: exports ${spec}`);
   for (const file of files(join(ROOT, 'host'))) for (const spec of importsOf(readFileSync(file, 'utf8'))) {
     const target = relative(ROOT, resolve(dirname(file), spec));

@@ -102,5 +102,21 @@ export const DEFAULT_PACK = {
     elements: ['markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
     words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' },
   },
+  // The loading screen's words (host/boot.js), by language; a product's pack may replace any of them. `phases` names the
+  // steps the engine reports (engine.js step labels and G.progress phases, see boot.js STEP_IDS); `tips` rotate under the bar.
+  loader: {
+    en: {
+      title: 'Loading', error: 'The mission could not load', retry: 'Retry', slow: 'Taking longer than usual', tip: 'Tip', ready: 'Ready',
+      phases: { download: 'Downloading the scene', renderer: 'Starting the renderer', materials: 'Preparing materials', textures: 'Loading textures', scene: 'Reading the map',
+        terrain: 'Building the town', effects: 'Preparing effects', audio: 'Loading sound', weapon: 'Issuing equipment', light: 'Lighting', phone: 'Connecting the phone' },
+      tips: ['Hold forward at a low wall to climb it.', 'Crouch to lower your profile and steady your aim.', 'Press Esc to pause and free the mouse.', 'Check your phone for the objective and the map.'],
+    },
+    fr: {
+      title: 'Chargement', error: 'La mission n’a pas pu se charger', retry: 'Réessayer', slow: 'Plus long que d’habitude', tip: 'Conseil', ready: 'Prêt',
+      phases: { download: 'Téléchargement de la scène', renderer: 'Démarrage du rendu', materials: 'Préparation des matériaux', textures: 'Chargement des textures', scene: 'Lecture de la carte',
+        terrain: 'Construction de la ville', effects: 'Préparation des effets', audio: 'Chargement du son', weapon: 'Distribution de l’équipement', light: 'Éclairage', phone: 'Connexion du téléphone' },
+      tips: ['Avancez contre un muret pour l’escalader.', 'Accroupissez-vous pour être moins visible et mieux viser.', 'Échap met en pause et libère la souris.', 'Votre téléphone montre l’objectif et la carte.'],
+    },
+  },
   marks: { objective: { color: '#ffb020' }, extraction: { color: '#30ff90' } },
 };

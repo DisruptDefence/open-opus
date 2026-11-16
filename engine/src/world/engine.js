@@ -50,7 +50,10 @@ const RADIUS = { test: 1, low: 1, medium: 1, high: 2, ultra: 2 }; // chunks of f
 export async function createEngine({ source, params = {}, modules = {}, content, onProgress = () => {} }) {
   const F = { ...DEFAULT_MODULES, ...modules }, clock = createClock();
   const G = { THREE, params, events: createEvents(), rng: createRng(+(params.seed || 4207)), time: clock.time, clock, quality: pickQuality(params.q || ''), hold: { mode: null }, photo: null };
-  const step = async (label, k, fn) => { onProgress(label, k); await new Promise((r) => setTimeout(r, 0)); return fn(); };
+  let lastK = 0;
+  const step = async (label, k, fn) => { lastK = k; onProgress(label, k); await new Promise((r) => setTimeout(r, 0)); return fn(); };
+  /** Real progress inside a step, for any module: `G.progress('textures', done, total)` (host/boot.js shows it; phases in docs/WORLD-API.md). */
+  G.progress = (phase, done, total) => { try { onProgress(phase, lastK, { phase, done, total }); } catch (e) { console.error('[engine] onProgress threw: ' + e); } };
   const vec = (x, y, z) => new THREE.Vector3(x, y, z);
   const m = source.manifest;
 
@@ -77,11 +80,18 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   G.nav = createNav({ physics: G.physics, terrain: G.terrain, vec }); G.physics.nav = G.nav;
   G.input = F.input(G);
 
-  const scene = await step('scene', 0.3, () => createSceneLoader(G, source, { radius: +(params.radius || RADIUS[G.quality.name] || 1) }));
+  const radius = +(params.radius || RADIUS[G.quality.name] || 1);
+  const scene = await step('scene', 0.3, () => createSceneLoader(G, source, { radius }));
   G.level = scene.level; G.ground = scene.ground; G.backdrop = scene.backdrop;
   // a start: the middle of the walkable box until the host places the player
   const sx = +(params.x ?? (w.minX + w.maxX) / 2), sz = +(params.z ?? (w.minZ + w.maxZ) / 2);
-  await step('terrain and buildings', 0.45, () => G.level.preload(sx, sz));
+  await step('terrain and buildings', 0.45, async () => { // chunks fetched + meshed over twice the window, +2 for the near cells built in one go at the end
+    const g = m.grid, pce = g.ce(sx), pcn = g.cn(sz); let need = 0;
+    for (let dn = -radius; dn <= radius; dn++) for (let de = -radius; de <= radius; de++) if (source.has(pce + de, pcn + dn)) need++;
+    const total = 2 * need + 2, poll = () => { const s = G.level.stats(); G.progress('terrain and buildings', Math.min(total - 2, s.fetched + s.chunksLive), total); }, timer = setInterval(poll, 40);
+    try { await G.level.preload(sx, sz); } finally { clearInterval(timer); }
+    G.progress('terrain and buildings', total, total);
+  });
   G.level.playerStart.pos.set(sx, G.physics.groundHeight(sx, sz), sz); G.level.playerStart.yaw = +(params.yaw || 0);
   G.nav.recenter(sx, sz, true);
 
