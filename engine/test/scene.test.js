@@ -99,7 +99,10 @@ test('the Old Quebec single file is cut into the same absolute chunks, with the 
     for (let i = 0; i < b.ring.length; i += 2) { x0 = Math.min(x0, b.ring[i]); x1 = Math.max(x1, b.ring[i]); z0 = Math.min(z0, b.ring[i + 1]); z1 = Math.max(z1, b.ring[i + 1]); }
     assert.deepEqual([g.ce((x0 + x1) / 2), g.cn((z0 + z1) / 2)], [c.ce, c.cn]);
   }
-  assert.equal(n, scene.buildings.filter((b) => b.r && b.r.length >= 6 && b.k !== 'roof').length);
+  // not the `roof` kind, and, from formatMinor 1, not an outline whose parts draw it (the reader skips it: item 3)
+  const drawn = (b) => b.r && b.r.length >= 6 && b.k !== 'roof' && !(b.parts && scene.formatMinor >= 1);
+  assert.equal(n, scene.buildings.filter(drawn).length);
+  assert.ok(scene.buildings.some((b) => b.parts) && n < scene.buildings.filter((b) => b.r && b.r.length >= 6 && b.k !== 'roof').length, 'the scene has outlines with parts, and they are in no chunk');
 });
 
 // ---- the records of docs/plans/SCENE-DETAIL.md section 3, read with defaults --------------------------------------
