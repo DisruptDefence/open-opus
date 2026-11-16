@@ -1,0 +1,12 @@
+<?xml version='1.0' standalone='yes'?>
+<!-- Tells ATAK that its TAK server is the local gateway. __GATEWAY__ is filled in by run.sh: 10.0.2.2 on the
+     emulator (how an emulated phone reaches the machine it runs on), 127.0.0.1 on a USB device (through
+     `adb reverse`). ATAK loads the file /sdcard/atak/config/prefs/defaults when it starts. -->
+<preferences>
+  <preference version="1" name="cot_streams">
+    <entry key="count" class="class java.lang.Integer">1</entry>
+    <entry key="description0" class="class java.lang.String">OPUS</entry>
+    <entry key="enabled0" class="class java.lang.Boolean">true</entry>
+    <entry key="connectString0" class="class java.lang.String">__GATEWAY__:8087:tcp</entry>
+  </preference>
+</preferences>

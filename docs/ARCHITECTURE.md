@@ -18,8 +18,9 @@
 ```
 
 In this repository today: the engine, the world API, a development host page with an in-page stand-in for a
-session host, one scene and its builder. Not here yet: a mission client, a phone host, a session host that
-speaks the protocol.
+session host, one scene and its builder, and the phone (`phone/`): a host on the world API, a placeholder screen,
+a viewer for a real ATAK, and the local gateway that streams one. Not here yet: a mission client and a session
+host that speak the protocol.
 
 ## Three rules
 
@@ -51,13 +52,21 @@ engine/
                         (host/play.js is the player's page, play.html at the repository root)
   tools/                engine tools
 play.html               the page a player opens: choose a mission, deploy, play
+phone/                  the in-game phone, outside the engine (phone/README.md)
+  core.js, host.js      the phone host: T raises the phone through world.hold(), feeds the screen, relays its reports
+  placeholder-screen.js the default screen: an empty phone that says so
+  stream-screen.js      a real ATAK on a local Android device, shown live; either-screen.js switches between the two
+  reports.js            how a mission host hears the phone (the `phone` event, with the host's own places)
+  demo.html, demo.js    a host page with the phone; scenarios/ holds its development scenario
+  local/                run.sh, gateway.py, android/: the local Android + ATAK + gateway stack (Python, adb)
+  test/, tools/         node --test "phone/test/*.test.js"; a headless check of the demo page
 scenes/                 published scenes (old-quebec.json)
 tools/build-scene.py    the scene builder, standard library only
 docs/
 ```
 
 Plain ES modules that a browser loads as they are. No TypeScript, no bundler, no build step, no `node_modules`.
-Tests are `cd engine && node --test`. The TypeScript in `WORLD-API.md` is notation for the contract, not source.
+Tests are `cd engine && node --test` and `node --test "phone/test/*.test.js"`. The TypeScript in `WORLD-API.md` is notation for the contract, not source.
 
 ## Modules and the direction of imports
 
@@ -70,7 +79,8 @@ Tests are `cd engine && node --test`. The TypeScript in `WORLD-API.md` is notati
 | Outside | host pages, mission client, phone host, session hosts, tools | `engine/index.js` to boot, then the world API only |
 
 Imports go down the table, never up; a module talks upward through events. `engine/test/imports.test.js`
-enforces it.
+enforces it. `phone/test/imports.test.js` enforces the phone's side: phone code imports only phone code, the
+engine imports nothing of the phone, and only the host page's script (`phone/demo.js`) takes `engine/index.js`.
 
 A product replaces a module without editing the engine by passing its own factory to `openWorld`
 (`modules: { hud: … }`).
@@ -89,8 +99,20 @@ reference and heading shown in the game are the ones a TAK client computes for t
 
 ## Dependencies
 
-three.js, and nothing else at run time. Before adding a package, write the small thing yourself; security
+three.js, and nothing else at run time in the browser. The local phone gateway (`phone/local/`, a developer's
+tool, not part of a page) is Python with the `websockets` package, uses `adb`, and downloads the scrcpy server
+(Genymobile, Apache-2.0) instead of keeping it here. Before adding a package, write the small thing yourself; security
 primitives and parsers of hostile input are the exception.
+
+## The phone
+
+The phone is real ATAK or nothing: this repository holds no imitation of ATAK's screen. Pressing T raises a phone
+frame over the held game. Out of the box its glass shows the placeholder screen. A developer who runs
+`phone/local/run.sh` gets an Android device (a virtual one, or later one on USB) with their own copy of ATAK, and a
+gateway on `ws://127.0.0.1:9741`; the page finds it by itself and the glass shows that ATAK, live. What the trainee
+shares in ATAK reaches the gateway as Cursor-on-Target (ATAK's TAK server is the gateway) and the page's mission
+host as the `phone` event. In the in-page stand-in the browser relays that report; a hardened session host takes
+it from the phone side itself (`SESSION-PROTOCOL.md` 4, rule 5).
 
 ## Open points
 

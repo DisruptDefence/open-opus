@@ -134,10 +134,63 @@ Over the session protocol the mission client catches it and answers `refused` wi
 
 ## PhoneScreen
 
-The second, smaller contract: what a phone host drives, whichever screen is behind it (a stream of a real TAK
-client, or a fallback): `open()`, `close()`, `back()`, `update(snapshot)`, `on(fn)`, `setModeBadge(mode)`,
-`openTools()`, `onCloseRequest`, `onModeChange`, `capturesKeys`, `items`. No phone host or screen is in this
-repository yet; the list is what a product's phone host uses today and will be specified when one lands here.
+The second, smaller contract: what the phone host (`phone/host.js`, logic in `phone/core.js`) drives, whichever
+screen is behind it. The host owns the frame, the key that raises the phone, the pause / slow-motion switch and
+every call to the world API; a screen owns the glass and never sees the world.
+
+```ts
+interface PhoneScreen {
+  readonly id: string;                    // 'placeholder' | 'tak-stream' | …
+  readonly title?: string;                // the word on the button that raises the phone
+  mount(glass: HTMLElement, context: PhoneContext): void;   // once: build the screen inside the glass
+  open(view: PhoneView): void;            // the phone came up (the game is held)
+  close(): void;                          // it went down
+  back(): boolean;                        // Escape: undo one thing; false when there is nothing to undo (the host then lowers)
+  update(view: PhoneView): void;          // every frame while the phone is up
+  on(fn: (type: string, data: object) => void): () => void;   // what was done on the phone; plain values only
+
+  // optional
+  readonly capturesKeys?: boolean;        // a real device: every key but Escape and Tab is its own, T included
+  key?(k: { key: string; code: string }): boolean;            // a key for the device; true when it took it
+  background?(view: PhoneView): void;     // twice a second while play goes on with the phone down (a device's GPS)
+  readonly buttons?: Array<{ id: string; label: string; title?: string; run(): void; shown?(): boolean }>;   // drawn beside the phone
+  available?(): boolean;                  // for eitherScreen(first, second): show `first` while this is true
+  onCloseRequest: null | (() => void);    // set by the host: the screen asks to be put away
+  onAspect: null | ((width: number | null, height?: number) => void);   // set by the host: the screen gives the glass its shape
+}
+
+type PhoneView = {                        // world.snapshot(), plus the player's place on the Earth
+  time: number; mode: 'pause' | 'slow' | null;
+  self: { x; y; z; heading; headingTrue; speed; health;       // as in snapshot()
+          lat: number; lon: number; hae: number;              // world.geo.toGeo
+          mgrs: { zone; square; easting; northing } };        // world.geo.toMGRS, 1 m
+  entities: Snapshot['entities'];
+};
+type PhoneContext = {                     // all a screen may ask of the game
+  geo: WorldApi['geo']; scene(): ReturnType<WorldApi['scene']>;
+  map(opts?): ReturnType<WorldApi['overhead']>;               // the overhead picture
+  mode(): 'pause' | 'slow' | null;
+};
+```
+
+Keys, decided by the host: **T** or **Tab** raises the phone when `canHold()`; while it is up **Escape** calls
+`back()` and lowers the phone when that returns false, **Tab** lowers it, and **T** lowers it unless the screen
+captures keys. Raising is `world.hold(mode)`, lowering is `world.release()`; when the hold ends under the phone
+(the `hold` event with `mode: null`) the phone goes down without resuming play.
+
+Reports: the host passes each `on` report to its own listeners (`phone.on((action, data) => …)`) and adds the place
+both ways: `x`, `z` in game metres when the report had `lat`, `lon`, and the reverse, plus `mgrs`. A mission host
+hears them as the event `phone` through `withPhoneReports(world, phone, places)` (`phone/reports.js`), with `near`
+set to the id of each of the host's own places the report lies within. This is the `phone` message of
+`SESSION-PROTOCOL.md`; the places never reach the engine or the screen.
+
+Screens in this repository:
+
+| Screen | File | What it is |
+|---|---|---|
+| Placeholder | `phone/placeholder-screen.js` | An empty phone that says so: "No phone connected", the player's grid reference, position and true heading, and how to connect a real ATAK. Needs nothing. It imitates no application |
+| Real ATAK, streamed | `phone/stream-screen.js` | Live video of an Android device running ATAK on the developer's own machine, through `phone/local/gateway.py`; taps and keys go back, the player's position is the device's GPS, the overhead picture becomes a map overlay, and what ATAK shares comes back as the report `cot` (`uid`, `type`, `how`, `callsign`, `lat`, `lon`, `self`). See `phone/README.md` |
+| Either | `phone/either-screen.js` | The first while it is `available()`, otherwise the second: real ATAK when the gateway answers, the placeholder until then |
 
 ## Status, 2026-11-15
 
@@ -160,3 +213,4 @@ Known gaps:
 - A `mark` is always drawn. A host must not mark a place the player is meant to find (`SESSION-PROTOCOL.md` 4).
 
 The contract test is `engine/test/world-api.test.js`: it runs the real simulation under Node without a screen.
+The phone host and its screens are tested the same way, on the same world, in `phone/test/`.

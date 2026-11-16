@@ -22,7 +22,7 @@ test('phone code imports only phone code; the host page takes the engine\'s publ
       if (target.startsWith('phone/')) continue;
       if (!(PAGE[name] || []).includes(target)) bad.push(`${name}: imports ${target}`);
     }
-    if (!PAGE[name] && /engineOf|__OPUS_WORLD|__OPUS_DEBUG/.test(readFileSync(file, 'utf8'))) bad.push(`${name}: reaches for the game other than through the world it is handed`);
+    if (!PAGE[name] && !name.startsWith('phone/tools/') && /engineOf|__OPUS_WORLD|__OPUS_DEBUG/.test(readFileSync(file, 'utf8'))) bad.push(`${name}: reaches for the game other than through the world it is handed`);
   }
   assert.deepEqual(bad, []);
 });

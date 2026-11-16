@@ -4,3 +4,5 @@ dist/
 *.apk
 .atak/
 .env
+phone/local/vendor/
+__pycache__/

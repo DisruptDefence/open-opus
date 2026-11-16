@@ -39,8 +39,15 @@ stand-in mission.
 - `scenes/old-quebec.json` — the first map: Old Quebec in real UTM metres, from OpenStreetMap (ODbL,
   © OpenStreetMap contributors) and Natural Resources Canada's HRDEM terrain (Open Government Licence – Canada).
 - `tools/build-scene.py` — the builder that produced it; standard library only.
-- No mission client, phone host or session host is here yet. The missions `play.html` offers are run in the page
-  by a throwaway stand-in (`engine/host/mission.js`), and their scenario shape is not a format.
+- `phone/` — the in-game phone, outside the engine and on the world API only. Press **T** in `phone/demo.html`:
+  the game is held and a phone comes up. Out of the box its screen is a placeholder that says no phone is
+  connected and shows the player's true grid reference and heading. A developer who runs `phone/local/run.sh`
+  gets a real ATAK on a local Android device, shown live on that phone, fed the player's position as its GPS, and
+  a scenario can score what the trainee shares from it (`phone/README.md`). There is no imitation of ATAK here.
+  To try it, serve the folder as above and open `/phone/demo.html`. `play.html` does not have the phone yet.
+- No mission client or session host that speaks the session protocol is here yet. The missions are run in the
+  page by a throwaway stand-in (`engine/host/mission.js`), and their scenario shape is not a format.
+
 
 | Read | For |
 |---|---|
@@ -48,12 +55,17 @@ stand-in mission.
 | `docs/WORLD-API.md` | The contract everything outside the engine codes against |
 | `docs/SESSION-PROTOCOL.md` | `opus-session/1` (draft): what a mission client and a session host say to each other |
 | `docs/SCENE-FORMAT.md` | `opus-scene/1`: how a real place is packaged |
+| `phone/README.md` | The phone: the placeholder, running a real ATAK locally, scoring from what ATAK shares |
 | `AGENTS.md` | How to work here, for people and for coding agents |
 
 ## Licence
 
 Not chosen yet. Until a licence file is added, all rights are reserved and outside contributions cannot be
 merged. Map data used by scenes keeps its own licence and attribution (see the scene format, section 6).
+
+Parts under other terms, whatever is chosen: three.js in `engine/vendor/` (MIT, licence beside it). The scrcpy
+server used by the local phone gateway (Genymobile, Apache-2.0) is downloaded by `phone/local/fetch-scrcpy-server.sh`
+and is not in this repository. Nothing here is derived from ATAK's source code.
 
 ATAK is not part of this project's code. The unmodified ATAK-CIV 5.8.0 and plugin APKs used by the in-game
 phone are attached to the `atak-5.8.0-civ` release as downloads; they remain the work of their authors

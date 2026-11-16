@@ -17,8 +17,9 @@ first change. Where it and another document disagree, this file wins and the oth
 
 Open OPUS is a browser game engine and SDK for tactical training: a first-person game in real places, where
 the trainee completes objectives with a real TAK client on an in-game phone. This repository is the open side:
-engine (`engine/`), world API, scene format, the scene builder (`tools/build-scene.py`), scenes (`scenes/`), and
-later a reference host. Read, in this order:
+engine (`engine/`), world API, scene format, the scene builder (`tools/build-scene.py`), scenes (`scenes/`), the
+in-game phone (`phone/`: host, placeholder screen, viewer and local gateway for a real ATAK), and later a
+reference host. Read, in this order:
 
 1. `README.md`
 2. `docs/ARCHITECTURE.md` — the three rules, the layout and the direction of imports
@@ -66,7 +67,8 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
 
 - **One topic per branch**, branched from `main`. Several agents at once: each in its own git worktree, each
   owning its own paths; never edit a path another agent owns. Say which paths you own before you start.
-- **Verify by running, not by reading.** Unit tests for pure modules (`node --test`). For anything visible,
+- **Verify by running, not by reading.** Unit tests for pure modules (`cd engine && node --test`; for the phone
+  `node --test "phone/test/*.test.js"` and `python3 -m unittest phone/local/test_gateway.py`). For anything visible,
   load it in a headless browser, take a screenshot and look at it before you say it works.
 - **A fix has a test** that fails without it. Test behaviour, not names.
 - **One heavy job at a time** on a shared machine (test suites, builds, headless browsers).
