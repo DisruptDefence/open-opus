@@ -145,6 +145,9 @@ const CSS = [
   --amber:#ffb020;--signal:#ffb347;--alarm:#ff5a40;--bone:#e8e4da;--dim:rgba(232,228,218,.64);--faint:rgba(232,228,218,.24);--back:rgba(8,10,12,.52);
   --f-display:'Big Shoulders Display','Impact','Haettenschweiler','Arial Narrow',sans-serif;--f-label:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;--f-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   padding:max(20px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));box-sizing:border-box}`,
+  `.ob.dock{inset:auto 0 0 0;z-index:85;display:block;background:#0b0d0f;border-top:2px solid var(--amber);padding:10px max(24px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));box-shadow:0 -14px 28px rgba(0,0,0,.6)}`,
+  `.ob.dock .ob-bg,.ob.dock .ob-brand,.ob.dock .ob-title,.ob.dock .ob-sub,.ob.dock .ob-tip{display:none}.ob.dock .ob-in{gap:0}.ob.dock .ob-main{margin-top:0;align-items:center}`,
+  `.ob.dock .ob-pct{font-size:clamp(30px,6vh,52px);min-width:2.2ch}.ob.dock .ob-step{font-size:clamp(14px,2.2vh,19px)}.ob.dock .ob-bar{height:clamp(10px,1.6vh,14px)}`,
   `.ob.out{opacity:0;pointer-events:none}.ob[hidden]{display:none}.ob *{box-sizing:border-box}`,
   `.ob-bg{position:absolute;inset:0;background:radial-gradient(120% 90% at 18% 100%,rgba(255,176,32,.10),transparent 60%),repeating-linear-gradient(0deg,rgba(232,228,218,.035) 0 1px,transparent 1px 4px),#0b0d0f}`,
   `.ob-bg::after{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--amber);opacity:.85}`,
@@ -202,6 +205,7 @@ export function createBoot(opts = {}) {
   const model = createModel({ phases: opts.phases || PHASES, stallMs: opts.stallMs });
   for (const p of opts.extraPhases || []) model.add(p);
   const now = () => performance.now();
+  let dockObs = null;
 
   const root = make('div', 'ob'), brand = make('div', 'ob-brand', opts.brand || 'OPUS'), title = make('h1', 'ob-title', opts.title || ''), sub = make('p', 'ob-sub', opts.subtitle || '');
   const pct = make('div', 'ob-pct'), pctN = make('span', '', '0'), pctU = make('small', '', '%'); pct.append(pctN, pctU);
@@ -267,6 +271,14 @@ export function createBoot(opts = {}) {
     addPhase(p) { model.add(p); },
     /** fetch + parse a JSON file with bytes reported as the 'download' phase; the scene file's way in. */
     fetchJson(url) { boot.start('download'); return fetchJsonProgress(url, (got, total) => boot.report('download', got, total, 'bytes')).then((j) => { boot.complete('download'); return j; }); },
+    /** Dock the loader as a compact opaque strip along the bottom edge, above a mission screen, instead of a full screen under it.
+     *  The parent gets --boot-h (the strip's height, px) so the screen above can leave room and never run under the bar. */
+    dock(on = true) {
+      root.classList.toggle('dock', !!on);
+      if (!on) { parent.style.removeProperty('--boot-h'); return; }
+      const set = () => parent.style.setProperty('--boot-h', root.classList.contains('dock') && !root.classList.contains('out') ? Math.ceil(root.getBoundingClientRect().height) + 'px' : '0px');
+      set(); if (typeof ResizeObserver === 'function') { if (!dockObs) dockObs = new ResizeObserver(set); dockObs.observe(root); }
+    },
     setMission({ title: ti, subtitle: su, brand: br } = {}) { if (ti !== undefined) title.textContent = ti; if (su !== undefined) sub.textContent = su; if (br !== undefined) brand.textContent = br; },
     setTips(list) { tips = (list || []).slice(); tipAt = 0; showTip(); },
     /** Stop on an error: the message and a Retry button. */
@@ -281,7 +293,7 @@ export function createBoot(opts = {}) {
     done() {
       if (failed || finished) return donePromise;
       finished = true; model.finish(now()); clearInterval(tipTimer); kick();
-      const gone = () => { cancelAnimationFrame(raf); root.hidden = true; root.remove(); doneRes(); };
+      const gone = () => { cancelAnimationFrame(raf); if (dockObs) dockObs.disconnect(); parent.style.removeProperty('--boot-h'); root.hidden = true; root.remove(); doneRes(); };
       if (reduce) { shown = 1; render(now()); gone(); } else setTimeout(() => { root.classList.add('out'); setTimeout(gone, 480); }, 260);
       return donePromise;
     },
