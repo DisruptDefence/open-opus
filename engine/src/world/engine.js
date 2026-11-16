@@ -13,7 +13,7 @@
 import * as THREE from '../../vendor/three.module.js';
 import { createEvents, createRng, pickQuality } from '../shared/lifted.js';
 import { createClock } from '../core/clock.js';
-import { atmosphereAt } from '../core/atmosphere.js';
+import { atmosphereAt, resolveLook, parseLookParam, ambienceOf } from '../core/atmosphere.js';
 import { createSession } from '../core/session.js';
 import { createGeoref } from '../geo/georef.js';
 import { createTerrain } from '../terrain/heightfield.js';
@@ -66,18 +66,21 @@ export async function createEngine({ source, params = {}, modules = {}, content,
 
   G.georef = createGeoref(m.georef);
   // the sky is set before anything captures it (environment, fx)
-  const atmosphere = (hour) => atmosphereAt({ lat: G.georef.anchorGeo.lat, day: +(params.day || 172), hour, haze: +(params.haze ?? 0.4), cloud: +(params.cloud ?? 0.4), convergenceDeg: G.georef.convergenceDeg });
-  let hour = +(params.tod ?? 10);
+  const amb = ambienceOf(params, m.ambience); // a host switch wins over the scene's ambience, which wins over the default
+  const look = G.look = resolveLook(m.ambience && m.ambience.look, parseLookParam(params.look));
+  const atmosphere = (hour) => atmosphereAt({ lat: G.georef.anchorGeo.lat, day: amb.day, hour, haze: amb.haze, cloud: amb.cloud, convergenceDeg: G.georef.convergenceDeg, look });
+  let hour = amb.tod;
 
   await step('renderer', 0.05, async () => { G.render = await F.render(G); });
   G.renderer = G.render.renderer; G.scene = G.render.scene; G.camera = G.render.camera; G.viewCamera = G.render.viewCamera;
+  G.render.setLook && G.render.setLook(look);
   G.render.setAtmosphere(atmosphere(hour));
   await step('materials', 0.15, async () => { G.mats = await F.mats(G); });
   if (G.mats.setDetail && !params.nodetail) { // image layer: loads in the background, procedural until then (a photo waits for it)
     const dp = G.mats.setDetail(m.style && m.style.detail).catch((e) => console.warn('[detail] ' + ((e && e.message) || e)));
     if (params.shot) await dp;
   }
-  G.mats.uniforms.wet.value = +(params.wet ?? 0); G.render.post.wet = G.mats.uniforms.wet.value;
+  G.mats.uniforms.wet.value = amb.wet; G.render.post.wet = G.mats.uniforms.wet.value;
 
   const w = m.walkable || m.bounds;
   G.terrain = createTerrain({ grid: m.grid });
