@@ -12,16 +12,19 @@ community needs to contribute places (scenes) and missions (scenarios).
 - `engine/` — the engine as plain ES modules, with three.js r180 vendored in `engine/vendor/` (its only library).
   Georeference, terrain, physics, navigation and the scene container are ours and unit-tested
   (`cd engine && node --test`). Render, materials, effects, audio, input, player, combat and weapon are lifted
-  from a stand-in game and not yet wired into a playable page.
+  from a stand-in game and are to be rewritten. The world API and a development host page (`engine/dev.html`)
+  are landing now.
 - `scenes/old-quebec.json` — the first map: Old Quebec in real UTM metres, from OpenStreetMap (ODbL,
   © OpenStreetMap contributors) and Natural Resources Canada's HRDEM terrain (Open Government Licence – Canada).
 - `tools/build-scene.py` — the builder that produced it; standard library only.
-- The engine does not yet play a mission. That is the current work.
+- No mission client, phone host or session host is here yet, so a mission is not played end to end. That is
+  the current work.
 
 | Read | For |
 |---|---|
 | `docs/ARCHITECTURE.md` | The shape: modules, the one door, what runs where |
 | `docs/WORLD-API.md` | The contract everything outside the engine codes against |
+| `docs/SESSION-PROTOCOL.md` | `opus-session/1` (draft): what a mission client and a session host say to each other |
 | `docs/SCENE-FORMAT.md` | `opus-scene/1`: how a real place is packaged |
 | `AGENTS.md` | How to work here, for people and for coding agents |
 

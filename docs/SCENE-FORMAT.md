@@ -4,8 +4,25 @@ Design, 2026-11-15, written beside the first real scene (Old Quebec). A scene is
 built from open data in UTM metres from a real anchor. This is the package a scene builder writes and the
 engine's scene loader reads (`docs/ARCHITECTURE.md`). Everything else depends on it.
 
-Values marked **(inferred)** or **(computed)** were not read from code or measured. Of this document, only
-the single-file packaging exists; the rest is the target.
+Values marked **(inferred)** or **(computed)** were not read from code or measured.
+
+## Status, 2026-11-15
+
+This document is the format. Three things write or read it today and none matches it fully:
+
+| | Matches | Differs |
+|---|---|---|
+| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | Section 2.2 field names (`easting`, `northing`, `convergence_deg`, `play`, `extent`), the layers | No `packaging`, `h0` or `checks`; `vertical` is a sentence and the geoid offset sits in `anchor.hae` |
+| `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The container (3.2), raster layers, `checks`, hashed names, `anchors.json` | The georeference is spelt differently (`utm: {…}`, `anchor: { e0, n0, h0 }`, `anchorGeo`, `convergenceDeg`, `vertical.geoidUndulation`, `bounds`, `walkable`). Chunks are numbered from the scene's anchor, not on the absolute UTM grid of 3.1. Vector layers are JSON in the chunk header, not binary records |
+| The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads both files above | Given a block written exactly as 2.2, it ignores `h0` and `vertical.geoid_undulation`, so heights above the ellipsoid come out wrong by the undulation with no error |
+
+To settle, in this order: the reader accepts 2.2 as written (with a test on a 2.2 block); the test-scene tool
+writes 2.2; the builder writes `h0`, `vertical` as an object and `checks`. Chunk numbering (absolute grid or
+anchor-relative) must be one or the other before a second chunked scene exists; 3.1 says absolute and gives the
+reason. Changing 2.2 or 3.1 instead is a maintainer decision.
+
+Not built at all: overhead tiles and ATAK overlays (5), nav masks and the route graph (4.8), `attribution.json`
+and the share-alike sidecar as files (6), grants (9).
 
 Side: the format, the client manifest and a basic builder (`tools/build-scene.py`) belong to Open OPUS,
 so that a community can contribute scenes. The production pipeline, the scene store and its links belong to
@@ -380,7 +397,7 @@ Limits the builder enforces:
   `overhead` index, `zones`, string tables, `season`, `credits`, the content packs the scene's classes need.
   It never contains `anchors`, source ids, `build`, or the sidecar. A test asserts that.
 
-## 11. Open points
+## 10. Open points
 
 | # | Point | Recommendation |
 |---|---|---|

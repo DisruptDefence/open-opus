@@ -21,9 +21,10 @@ engine (`engine/`), world API, scene format, the scene builder (`tools/build-sce
 later a reference host. Read, in this order:
 
 1. `README.md`
-2. `docs/ARCHITECTURE.md` — the three rules and the direction of imports
+2. `docs/ARCHITECTURE.md` — the three rules, the layout and the direction of imports
 3. `docs/WORLD-API.md` — the contract
 4. `docs/SCENE-FORMAT.md` — `opus-scene/1`
+5. `docs/SESSION-PROTOCOL.md` — `opus-session/1` (draft): mission client and session host
 
 ## Priorities now (2026-11-15)
 
