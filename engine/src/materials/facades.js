@@ -144,9 +144,9 @@ void lvWeather(inout vec3 c, inout float h, inout float ao, float x, float y, fl
   c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), lvNz(vec2(x, y) * vec2(0.07, 0.07), sd + 9.0));
   float st = lvNz(vec2(x, y) * vec2(0.5, 0.45), sd + 3.0) * 0.6 + lvNz(vec2(x, y) * vec2(1.3, 1.1), sd + 1.0) * 0.4;
   c *= 1.0 - smoothstep(0.52, 0.72, st) * 0.22 * gr;
-  float sx = lvNz(vec2(x * 6.0, y * 0.45), sd) * lvNz(vec2(x * 21.0, y * 0.8), sd + 3.0);
+  float sx = lvNz(vec2(x * 2.6, y * 0.4), sd) * lvNz(vec2(x * 8.0, y * 0.7), sd + 3.0);
   float sm = smoothstep(0.35, 0.65, lvNz(vec2(x * 0.55, y * 0.12), sd + 8.0));
-  c *= 1.0 - smoothstep(0.14, 0.4, sx) * sm * 0.2 * gr;
+  c *= 1.0 - smoothstep(0.14, 0.4, sx) * sm * 0.14 * gr;
   if (base >= 0.0){
     float dm = 1.0 - smoothstep(0.1, 1.15, base + (lvNz(vec2(x, y) * vec2(1.7, 1.7), sd + 2.0) - 0.5) * 0.7);
     c *= 1.0 - dm * 0.26 * gr; c.g *= 1.0 + dm * 0.05;
@@ -214,7 +214,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
   else if (hood == 3){ float yy = q.y - (hh + sw + 0.01); hd = step(abs(q.x), hx + 0.1) * smoothstep(-aa, aa, yy) * (1.0 - smoothstep(-aa, aa, yy - 0.13)); }
   float dress = max(max(mSur, lint), max(sil, hd));
   dress *= 1.0 - mOpen;
-  flatN = max(flatN, dress * 0.8);
+  flatN = max(flatN, dress);
   col = mix(col, trimA, dress); h = mix(h, 0.02 + sil * 0.03 + hd * 0.015, dress); rough = mix(rough, 0.8, dress); ao = mix(ao, 1.0, dress);
   ao *= 1.0 - 0.45 * (1.0 - dress) * (1.0 - mOpen) * smoothstep(0.16, 0.0, -(q.y + sw + 0.07)) * step(q.y, -sw - 0.07) * step(abs(q.x), a + 0.1) * T2.z;
   // inside the opening
@@ -265,7 +265,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
     float slat = 1.0 - smoothstep(0.004, 0.004 + aa, abs(fract(q.y / 0.04) - 0.5) * 0.04 - 0.008);
     float split = closed * (1.0 - smoothstep(0.004, 0.006 + aa, abs(q.x)));
     vec3 sc = shutC * (1.0 - 0.28 * slat - 0.4 * split);
-    flatN = max(flatN, sm * 0.7); col = mix(col, sc, sm); h = mix(h, 0.03 - slat * 0.006, sm); rough = mix(rough, 0.7, sm); ao = mix(ao, 0.9 - 0.2 * slat, sm); em = mix(em, vec3(0.0), sm);
+    flatN = max(flatN, sm); col = mix(col, sc, sm); h = mix(h, 0.03 - slat * 0.006, sm); rough = mix(rough, 0.7, sm); ao = mix(ao, 0.9 - 0.2 * slat, sm); em = mix(em, vec3(0.0), sm);
   }
 }
 
@@ -300,7 +300,7 @@ void slLiveApply(inout vec4 samp, inout vec4 orm, vec3 tint, vec3 pos, vec3 a, b
       float band = smoothstep(2.99 - aa, 3.02 + aa, ys) * 1.0;
       vec3 trimC = uBwTr[int(lvU(lvH(bid, 64u)) * uBwN.y)] * (0.93 + 0.1 * lvU(lvH(bid, 66u)));
       abs0 = mix(abs0, trimC, band); h0 = mix(h0, 0.035 + smoothstep(3.14, 3.17, ys) * 0.0, band); r0 = mix(r0, 0.8, band);
-      ao0 *= 1.0 - 0.45 * smoothstep(2.74, 3.0, ys) * (1.0 - band); flatN = max(flatN, band * 0.8);
+      ao0 *= 1.0 - 0.45 * smoothstep(2.74, 3.0, ys) * (1.0 - band); flatN = max(flatN, band);
     }
     fin = abs0; h = h0; ao = ao0; rough = r0;
   }
