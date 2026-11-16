@@ -8,15 +8,16 @@ import { ScenarioCommandError } from '../director/command-error.js';
 /**
  * @param source   a scene source (scene/source.js), or a promise of one
  * @param params   switches: q (quality), tod, wet, haze, seed, noaudio, dt (fixed step), radius, x, z
+ * @param content  a content pack (opus-content/1, docs/CONTENT-PACK.md) or a promise of one, merged over the default pack
  * @param modules  factories that replace an engine module, e.g. { hud: createDevHud }
  * @param onProgress  (label, fraction) while loading
  */
-export function openWorld({ source, params = {}, modules = {}, onProgress } = {}) {
+export function openWorld({ source, params = {}, modules = {}, content, onProgress } = {}) {
   const listeners = new Map();
   const emit = (name, e) => { for (const fn of [...(listeners.get(name) || [])]) { try { fn(e); } catch (err) { console.error(`[world] listener for "${name}" threw`, err); } } };
   let api = null, engine = null;
   const boot = Promise.resolve(source)
-    .then((src) => createEngine({ source: src, params, modules, onProgress }))
+    .then((src) => createEngine({ source: src, params, modules, content, onProgress }))
     .then(async (e) => { engine = e; const inner = createWorldApi(e, emit); await e.whenDrawn(); api = inner; emit('state', { state: api.state(), from: 'loading' }); });
   boot.catch(() => {}); // the caller sees the failure through ready()
   const need = (name) => { if (!api) throw new Error(`world.${name}(): the world is still loading; await ready() first`); return api; };

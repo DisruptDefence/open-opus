@@ -7,7 +7,7 @@ import { openWorld, engineOf } from '../src/world/open.js';
 const nothing = () => {};
 export const STEP = 1 / 60;
 
-export function openHeadlessWorld(source, params = {}) {
+export function openHeadlessWorld(source, params = {}, { content } = {}) {
   let loop = null;
   const keys = { move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, ads: false, sprint: false, crouch: false, locked: false, gameplay: false, mode: 'lock' };
   const input = () => Object.assign(keys, {
@@ -21,7 +21,7 @@ export function openHeadlessWorld(source, params = {}) {
   };
   const hudCalls = [];
   const hud = () => ({ show: (on) => hudCalls.push(['show', on]), message: (t) => hudCalls.push(['message', t]), setObjective: nothing, setPrompt: nothing, warn: nothing, hitmarker: nothing, update: nothing });
-  const world = openWorld({ source, params: { dt: STEP, noaudio: 1, q: 'low', ...params }, modules: {
+  const world = openWorld({ source, content, params: { dt: STEP, noaudio: 1, q: 'low', ...params }, modules: {
     render, input, hud,
     mats: () => ({ uniforms: { wet: { value: 0 } }, get: () => material, update: nothing }),
     fx: () => ({ update: nothing, muzzleFlash: nothing, tracer: nothing }),

@@ -10,7 +10,7 @@ import { ROOT } from './helpers.js';
 // The table. `level` (meshes a decoded chunk), `shared` (helpers the lifted modules have in common) are engine-layer
 // modules; the composition root lives in `world`.
 const LAYER = {
-  geo: 0, terrain: 0, physics: 0, nav: 0, scene: 0,
+  geo: 0, terrain: 0, physics: 0, nav: 0, scene: 0, content: 0,
   core: 1, render: 1, materials: 1, input: 1, fx: 1, audio: 1, hud: 1, level: 1, shared: 1,
   player: 2, combat: 2, weapons: 2, threats: 2, director: 2,
   world: 3,
@@ -66,7 +66,7 @@ test('outside code uses the door only: the public entry reads the door, hosts re
   const bad = [];
   // index.js is the door's public face: the world, the error its apply() throws, the scene sources a host hands it,
   // the HUD seam a host fills
-  const ENTRY = ['src/world/open.js', 'src/director/command-error.js', 'src/scene/source.js', 'src/hud/dev-hud.js', 'src/hud/hooks.js'];
+  const ENTRY = ['src/world/open.js', 'src/director/command-error.js', 'src/scene/source.js', 'src/content/default.js', 'src/hud/dev-hud.js', 'src/hud/hooks.js'];
   for (const spec of importsOf(readFileSync(join(ROOT, 'index.js'), 'utf8'))) if (!ENTRY.includes(relative(ROOT, resolve(ROOT, spec)))) bad.push(`index.js: exports ${spec}`);
   for (const file of files(join(ROOT, 'host'))) for (const spec of importsOf(readFileSync(file, 'utf8'))) {
     const target = relative(ROOT, resolve(dirname(file), spec));
