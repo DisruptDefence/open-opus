@@ -171,7 +171,7 @@ const CSS = [
   `.ob-err pre{margin:0;max-height:28vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:500 clamp(11px,1.8vh,14px)/1.4 var(--f-mono);color:var(--bone)}`,
   `.ob-err button{justify-self:start;min-height:44px;padding:0 28px;font:700 18px/1 var(--f-label);letter-spacing:.2em;text-transform:uppercase;color:#0b0d0f;background:var(--amber);border:0;cursor:pointer;touch-action:manipulation}`,
   `.ob-err button:hover,.ob-err button:focus-visible{background:#ffc654;outline:2px solid var(--bone);outline-offset:2px}`,
-  `.ob.fail .ob-fill{background:var(--alarm)}.ob.fail .ob-fill::after,.ob.fail .ob-name::after{display:none}.ob.fail .ob-pct small{color:var(--alarm)}.ob.fail .ob-meta .ob-slow{display:none}`,
+  `.ob.fail .ob-step{display:none}.ob.fail .ob-fill{background:var(--alarm)}.ob.fail .ob-fill::after,.ob.fail .ob-name::after{display:none}.ob.fail .ob-pct small{color:var(--alarm)}.ob.fail .ob-meta .ob-slow{display:none}`,
   `@keyframes ob-blink{to{visibility:hidden}}@keyframes ob-sheen{from{left:-30%}to{left:100%}}`,
   `@media (max-width:560px){.ob-main{grid-template-columns:1fr;gap:8px}.ob-pct{text-align:left}.ob-step{letter-spacing:.1em}}`,
   `@media (max-height:430px){.ob{align-items:center}.ob-in{gap:6px}.ob-tip{margin-top:0;padding-top:6px;min-height:0}.ob-main{margin-top:0}}`,
@@ -231,7 +231,7 @@ export function createBoot(opts = {}) {
     const whole = finished ? 100 : Math.min(99, Math.floor(shown * 100));
     fill.style.transform = `scaleX(${shown.toFixed(4)})`;
     if (pctN.textContent !== String(whole)) { pctN.textContent = whole; root.setAttribute('aria-valuenow', String(whole)); }
-    const p = model.current(), text = failed ? words.error || '' : finished ? words.ready || '' : phaseName(p) || words.title || '', d = failed || finished ? '' : detail(p);
+    const p = model.current(), text = failed ? '' : finished ? words.ready || '' : phaseName(p) || words.title || '', d = failed || finished ? '' : detail(p);
     if (text !== lastText) { name.textContent = lastText = text; root.setAttribute('aria-valuetext', text); }
     if (d !== lastDet) det.textContent = lastDet = d;
     el.textContent = formatElapsed(t - t0);
