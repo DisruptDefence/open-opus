@@ -19,7 +19,7 @@ test('real catalogue parses with no problems and every file exists', () => {
   const f = new URL('../../assets/textures/catalogue.json', import.meta.url);
   const c = parseCatalogue(JSON.parse(readFileSync(f, 'utf8')));
   assert.equal(c.problems.length, 0); assert.ok(c.sets.size > 100);
-  for (const name of ['bricks076a', 'cobblestone_floor_04']) {
+  for (const name of ['bricks076a', 'pavingstones119']) {
     const e = c.sets.get(name); assert.ok(e, name);
     for (const p of Object.values(setFiles(c, e, new URL('../../assets/textures/', import.meta.url).pathname))) assert.ok(readFileSync(p).length > 100, p);
   }
