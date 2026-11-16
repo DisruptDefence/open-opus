@@ -2,34 +2,44 @@
 // outdoor.js: a GLSL `surf(uv)` calling `emit(colour, alpha, height, ao, roughness, metalness)`; the vertex tint colours the
 // white parts (frame, door leaf, cloth), the dark parts stay dark.
 //
-//   window  uv 0..1 of the texture = [0, 0.5] a casement (two leaves, glazing bars) and [0.5, 1] one large shop pane
-//           with a transom; the generator writes uv 0..1 (casement) or 1..2 (shop pane) over a set 2 m wide.
+//   window  a sheet of eight panels side by side (uv u = panel + 0..1): 0 casement pair, 1 shop pane with a transom, 2 sash 2 over 2,
+//           3 sash 6 over 6, 4 sash 1 over 1, 5 french doors, 6 a single pane (a roundel). gen/facade.js GLAZE_PANEL names them.
 //   door    a panelled leaf, the top pair of panels glazed.
 //   tarp    vertical stripes of cloth, alternating white and a half tone, for tinting.
 import { Tn as GENERATORS, c3 as SETS, l1 as MATERIALS, Nt as def } from './materials.js';
 
 GENERATORS.window = `
+float bar1(float v, float c, float w){ return smoothstep(w * 2.0, w, abs(v - c)); }
 void surf(vec2 uv){
   float fine = fbm(uv, vec2(120.0), 3, 101.0), mid = fbm(uv, vec2(6.0), 3, 102.0);
-  bool shop = uv.x > 0.5;
-  vec2 q = shop ? vec2((uv.x - 0.5) * 2.0, uv.y) : vec2(uv.x * 2.0, uv.y);
-  float bx = shop ? 0.035 : 0.07, by = shop ? 0.035 : 0.045;
+  float panel = floor(uv.x * 8.0);
+  vec2 q = vec2(fract(uv.x * 8.0), uv.y);
+  bool shop = panel > 0.5 && panel < 1.5;
+  float bx = shop ? 0.035 : (panel > 1.5 && panel < 4.5 ? 0.075 : 0.07), by = shop ? 0.035 : 0.045;
   float frameD = min(min(q.x, 1.0 - q.x) / bx, min(q.y, 1.0 - q.y) / by);
   float isFrame = 1.0 - smoothstep(0.9, 1.0, frameD);
   float bar = 0.0;
-  if (shop) bar = smoothstep(0.014, 0.007, abs(q.y - 0.8));                    // transom
-  else {
-    bar = smoothstep(0.016, 0.008, abs(q.x - 0.5));                           // meeting stile
-    float fy = abs(fract(q.y * 4.0) - 0.5) * 2.0;                             // 1 at a muntin
-    bar = max(bar, smoothstep(0.94, 0.97, fy) * step(0.05, q.y) * step(q.y, 0.95));
+  if (panel < 0.5) {                                                           // casement pair, 4 rows
+    bar = max(bar1(q.x, 0.5, 0.008), bar1(abs(fract(q.y * 4.0) - 0.5) * 0.25 + 0.0, 0.125, 0.004) * step(0.05, q.y) * step(q.y, 0.95));
+  } else if (shop) { bar = bar1(q.y, 0.8, 0.007);
+  } else if (panel < 2.5) {                                                    // sash 2 over 2
+    bar = max(bar1(q.y, 0.5, 0.014), bar1(q.x, 0.5, 0.008));
+  } else if (panel < 3.5) {                                                    // sash 6 over 6
+    bar = max(bar1(q.y, 0.5, 0.014), max(bar1(q.x, 0.333, 0.007), bar1(q.x, 0.667, 0.007)));
+    bar = max(bar, max(bar1(q.y, 0.25, 0.006), bar1(q.y, 0.75, 0.006)));
+  } else if (panel < 4.5) { bar = bar1(q.y, 0.5, 0.014);                       // sash 1 over 1
+  } else if (panel < 5.5) {                                                    // french doors: two leaves, a kick panel
+    bar = max(bar1(q.x, 0.5, 0.01), bar1(q.y, 0.28, 0.012));
+    bar = max(bar, bar1(abs(fract(q.y * 5.0) - 0.5) * 0.4, 0.1, 0.004) * step(0.3, q.y) * step(q.y, 0.95));
+    bar = max(bar, step(q.y, 0.28));
   }
   float solid = max(isFrame, bar);
   float sky = smoothstep(0.0, 1.0, q.y);
   float refl = fbm(q * vec2(1.0, 2.0), vec2(3.0, 5.0), 3, 103.0);
   vec3 glass = mix(L(0.030, 0.040, 0.055), L(0.16, 0.21, 0.27), sky * 0.7 + refl * 0.5);
+  if (shop) glass = mix(L(0.16, 0.11, 0.06), L(0.20, 0.26, 0.32), smoothstep(0.1, 0.8, q.y) * 0.8 + refl * 0.3);   // a lit shop behind the pane
   float curtain = smoothstep(0.62, 0.7, fbm(q, vec2(2.0, 1.0), 3, 104.0)) * (shop ? 0.0 : 0.6) * step(q.y, 0.55);
   glass = mix(glass, L(0.30, 0.26, 0.20), curtain * 0.5);
-  if (shop) glass = mix(L(0.16, 0.11, 0.06), L(0.20, 0.26, 0.32), smoothstep(0.1, 0.8, q.y) * 0.8 + refl * 0.3);   // a lit shop behind the pane
   vec3 paint = L(0.88, 0.87, 0.84) * (0.9 + 0.2 * fine);
   vec3 col = mix(glass, paint, solid);
   float inner = smoothstep(0.0, 0.12, frameD) * (1.0 - isFrame);
@@ -60,7 +70,7 @@ void surf(vec2 uv){
   emit(col, 1.0, 0.5 + fine * 0.1 + fold * 0.1, 1.0, 0.85, 0.0);
 }`;
 Object.assign(SETS, {
-  window: { fn: 'window', size: 1, tile: [2, 1], bump: 3 },
+  window: { fn: 'window', size: 1, tile: [8, 1], bump: 3 },
   door: { fn: 'door', size: 0.5, tile: [1, 1], bump: 3 },
   tarp: { fn: 'tarp', size: 0.5, tile: [2, 1], bump: 1 },
 });

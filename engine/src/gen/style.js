@@ -65,7 +65,21 @@ export const DEFAULT_STYLE = {
   roofs: { metal_seam: ['#8d9396', '#6f777b', '#a9aeb0'], copper: ['#6f9a84'], slate: ['#4a4d52'], shingle: ['#55504a', '#3f3d3a', '#6a5f52'], tile: ['#9a4f38'],
     membrane: ['#3a3b3c'], concrete: ['#8e8c86'], thatch: ['#a39064'], sheet_metal: ['#9aa0a3'], generic: ['#6a6c6e'] },
   trim: ['#e8e4da', '#d9d2c0'], frames: ['#f0ede4', '#f0ede4', '#2a2c2e'], doors: ['#5a3a2a', '#27462f', '#243a5a', '#1f2326'], awnings: ['#7a2f27', '#27462f', '#e8e4da'],
-  window: { bay: [2.8, 3.4], width: 1.0, height: 1.5, sill: 0.9, reveal: 0.12, shutters: 0, panes: [2, 2] },
+  // window.types: what a modelled window can be: w, h (m; h includes an arched head), sill (m above the floor, default window.sill),
+  // reveal (m, default window.reveal), head 'flat' | 'segmental' | 'round', glaze (the panel of the glass: casement, sash22, sash66,
+  // sash11, french, single), kind 'round' (a roundel of diameter d set on the wall; no cut) ; `blind` is a bricked-up window.
+  // window.mix: per storey class (ground, upper, top = the attic storey of a house of 3 storeys or more) the weight of each type; one
+  // type is drawn per building and storey from the building's id, and `blind` is mixed into single bays by its share of the weights.
+  window: { bay: [2.8, 3.4], width: 1.0, height: 1.5, sill: 0.9, reveal: 0.12, shutters: 0, panes: [2, 2],
+    types: {
+      casement: { w: 1.0, h: 1.5, glaze: 'casement' }, sash22: { w: 0.95, h: 1.6, glaze: 'sash22' }, sash66: { w: 1.0, h: 1.75, glaze: 'sash66' },
+      sash11: { w: 0.9, h: 1.5, glaze: 'sash11' }, arched: { w: 0.95, h: 2.0, glaze: 'sash66', head: 'segmental' }, arch_round: { w: 0.9, h: 2.2, glaze: 'sash22', head: 'round' },
+      french: { w: 1.1, h: 2.3, sill: 0.12, glaze: 'french' }, attic: { w: 0.9, h: 1.15, glaze: 'sash22' }, roundel: { kind: 'round', d: 0.7 }, blind: { w: 1.0, h: 1.5, reveal: 0.05, glaze: 'sash66' },
+    },
+    mix: {
+      ground: { sash22: 3, casement: 2, arched: 1, blind: 0.2 }, upper: { sash66: 3, sash22: 2, casement: 2, french: 0.3, arch_round: 0.4, blind: 0.25 },
+      top: { attic: 3, sash11: 1, sash22: 1, roundel: 0.5 },
+    } },
   groundFloor: { doorWidth: 1.0, doorHeight: 2.1, shopPier: 0.4, shopSill: 0.5, fascia: 0.5, awning: 0.2 },
   cornice: { depth: 0.2, height: 0.25 }, plinth: { height: 0.4, depth: 0.04 },
   dormers: { mansard: 1.0, gabled: 0.25, width: 1.1, height: 1.4 },

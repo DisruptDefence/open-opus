@@ -46,7 +46,7 @@ test('the same building gives the same triangles', () => {
 });
 
 // ---- the walls themselves ---------------------------------------------------------------------------------------------
-const fixedBays = { ...style, window: { ...style.window, bay: [2.5, 2.5], shutters: 0 } };
+const only = { casement: 1 }, fixedBays = { ...style, window: { ...style.window, bay: [2.5, 2.5], shutters: 0, mix: { ground: only, upper: only, top: only } } };
 const area = (s, keep = () => true) => { let a = 0; for (let i = 0; i < s.pos.length; i += 9) { if (!keep(s.pos.slice(i, i + 9))) continue; const [ux, uy, uz, vx, vy, vz] = [s.pos[i + 3] - s.pos[i], s.pos[i + 4] - s.pos[i + 1], s.pos[i + 5] - s.pos[i + 2], s.pos[i + 6] - s.pos[i], s.pos[i + 7] - s.pos[i + 1], s.pos[i + 8] - s.pos[i + 2]]; a += Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2; } return a; };
 const inPlane = (p) => [2, 5, 8].every((k) => Math.abs(p[k]) < 1e-6); // the wall z = 0 of RING (edge 0)
 const wallOnly = (extra = {}) => building(RING, { blind: new Set([1, 2, 3]), ...extra });
@@ -96,4 +96,18 @@ test('dormers and chimneys are drawn once, with piece 0', () => {
   const p0 = on(0), p1 = on(1);
   assert.ok(quads(p0, 'window|vn') >= 2, 'a dormer window'); assert.equal(quads(p1, 'window|vn'), 0, 'a second piece draws none');
   assert.ok(p0.map.get('brick|tv') || p0.map.get('stone|tv'), 'chimney stacks'); assert.ok(p0.triangles() > p1.triangles());
+});
+
+test('window types come from the style: arched heads, bricked-up windows, round windows, and a different mix per building and storey', () => {
+  const mixed = (m) => ({ ...fixedBays, window: { ...fixedBays.window, mix: { ground: m, upper: m, top: m } } });
+  const arched = near(wallOnly(), mixed({ arched: 1 })), flatW = near(wallOnly());
+  assert.ok(arched.map.get('window|vn').pos.length > flatW.map.get('window|vn').pos.length * 3, 'an arched head adds a fan of glass');
+  for (const v of vertices(arched)) assert.ok(v.every(Number.isFinite), 'no NaN');
+  assert.equal(quads(near(wallOnly(), mixed({ blind: 1 })), 'window|vn'), 0, 'a bricked-up window has no glass');
+  assert.ok(near(wallOnly(), mixed({ roundel: 1 })).map.get('window|vn').pos.length > 0, 'a roundel is glass set on the wall');
+  const panels = new Set(), heads = new Set();
+  for (let id = 1; id <= 80; id++) { const g = near(wallOnly({ id, hEave: 12, levels: 4 }), { ...style, window: { ...style.window, bay: [2.5, 2.5] } }).map.get('window|vn'); for (let i = 0; i < g.uv.length; i += 2) panels.add(Math.floor(g.uv[i])); heads.add(g.pos.length); }
+  assert.ok(panels.size >= 4, `glazing patterns seen: ${[...panels]}`); assert.ok(heads.size > 5, 'buildings differ');
+  const custom = { ...fixedBays, window: { ...fixedBays.window, types: { ...fixedBays.window.types, tall: { w: 0.8, h: 2.4, glaze: 'french' } }, mix: { ground: { tall: 1 }, upper: { tall: 1 }, top: { tall: 1 } } } };
+  assert.ok(Math.max(...vertices(near(wallOnly(), custom)).map((v) => v[1])) > 0, 'a type added by data is drawn');
 });

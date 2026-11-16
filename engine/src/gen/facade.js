@@ -119,23 +119,95 @@ function facing(s, a, b, c, tint, hint) {
   if (d >= 0) tri(s, a, b, c, tint); else tri(s, a, c, b, tint);
 }
 
+// ---- window types: data in style.window.types / style.window.mix (docs/SCENE-FORMAT.md, window types) ---------------------
+/** Panel of the window material (materials/openings.js) for each `glaze` name; the glass uv is panel + 0..1 in u. */
+export const GLAZE_PANEL = { casement: 0, shop: 1, sash22: 2, sash66: 3, sash11: 4, french: 5, single: 6 };
+function pickWeighted(table, r) {
+  let total = 0; for (const k in table) if (table[k] > 0) total += table[k];
+  if (!(total > 0)) return null;
+  let x = r * total; for (const k in table) if (table[k] > 0) { x -= table[k]; if (x <= 0) return k; }
+  return null;
+}
+/** One type per storey of a building (seeded), `blind` mixed in per bay by its share of the weights. */
+function storeyType(wd, cls, id, s) {
+  const mix = (wd.mix && (wd.mix[cls] || wd.mix.upper)) || {}, r = rng(((id | 0) * 2654435761 + s * 40503 + 17) >>> 0), plain = {}; let blind = 0, all = 0;
+  for (const k in mix) { if (!(mix[k] > 0)) continue; all += mix[k]; if (k === 'blind') blind = mix[k]; else plain[k] = mix[k]; }
+  return { name: pickWeighted(plain, r()) || 'casement', blindShare: all > 0 ? blind / all : 0, r };
+}
+/** Points [u, y] along an arched head from the left spring to the right spring, apex between. `rise` over the chord w. */
+function arcPoints(u0, u1, ysp, rise, segs) {
+  const w = u1 - u0, R = (w * w / 4 + rise * rise) / (2 * rise), al = Math.asin(Math.min(1, w / 2 / R)), uc = (u0 + u1) / 2, cy = ysp + rise - R, pts = [];
+  for (let i = 0; i <= segs; i++) { const a = Math.PI / 2 + al - 2 * al * (i / segs); pts.push([uc + R * Math.cos(a), cy + R * Math.sin(a)]); }
+  pts[0] = [u0, ysp]; pts[segs] = [u1, ysp]; return { pts, R, uc, cy };
+}
+
+function facingUV(s, a, b, c, tint, hint, ua, ub, uc) {
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  const d = (uy * vz - uz * vy) * hint[0] + (uz * vx - ux * vz) * hint[1] + (ux * vy - uy * vx) * hint[2];
+  if (d >= 0) tri(s, a, b, c, tint, ua, ub, uc); else tri(s, a, c, b, tint, ua, uc, ub);
+}
+
 /** The walls of one edge cut around openings. `ops`: [{ u0, u1, ys, yh }] sorted by u, all inside [y0, y1]. */
 function wallAround(w, f, len, y0, y1, ops, tint) {
   let u = 0;
   for (const o of ops) {
     if (o.u0 > u + 1e-4) rect(w, f, u, o.u0, y0, y1, 0, tint);
     if (o.ys > y0 + 1e-4) rect(w, f, o.u0, o.u1, y0, o.ys, 0, tint);
-    if (o.yh < y1 - 1e-4) rect(w, f, o.u0, o.u1, o.yh, y1, 0, tint);
+    const top = o.yTop ?? o.yh;
+    if (top < y1 - 1e-4) rect(w, f, o.u0, o.u1, top, y1, 0, tint);
+    if (o.arc) spandrels(w, f, o, tint);
     u = o.u1;
   }
   if (len > u + 1e-4) rect(w, f, u, len, y0, y1, 0, tint);
 }
-/** The four faces of a reveal (the opening's inside), looking into the opening. */
+/** The wall between an arched head and the straight line over its apex: two fans of triangles. */
+function spandrels(w, f, o, tint) {
+  const p = o.arc.pts, m = p.length >> 1, hint = [f.nx, 0, f.nz];
+  for (let i = 0; i < m; i++) facing(w, f.at(o.u0, o.yTop, 0), f.at(p[i][0], p[i][1], 0), f.at(p[i + 1][0], p[i + 1][1], 0), tint, hint);
+  for (let i = m; i < p.length - 1; i++) facing(w, f.at(o.u1, o.yTop, 0), f.at(p[i][0], p[i][1], 0), f.at(p[i + 1][0], p[i + 1][1], 0), tint, hint);
+}
+/** The glass of an arched opening: the rectangle up to the springing and the segment above it, uv = the panel over the whole height. */
+function archGlass(G, f, o, d, panel) {
+  const w = o.u1 - o.u0, h = o.yTop - o.ys, uv = (u, y) => [panel + (u - o.u0) / w, (y - o.ys) / h], P = (u, y) => f.at(u, y, d), hint = [f.nx, 0, f.nz];
+  const ring = [[o.u0, o.ys], [o.u1, o.ys], ...o.arc.pts.slice().reverse()], cu = (o.u0 + o.u1) / 2, cy = (o.ys + o.yh) / 2, C = P(cu, cy);
+  for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; facingUV(G, P(a[0], a[1]), P(b[0], b[1]), C, null, hint, uv(a[0], a[1]), uv(b[0], b[1]), uv(cu, cy)); }
+}
+/** The inside of an arched head and the painted ring round it. */
+function archReveal(W, T, f, o, r, tint, trim) {
+  const p = o.arc.pts, hint = [f.nx, 0, f.nz];
+  for (let i = 0; i < p.length - 1; i++) { // soffit: faces down into the opening
+    const a = p[i], b = p[i + 1], cu = o.arc.uc, cy = (o.ys + o.yh) / 2, towards = [cu - (a[0] + b[0]) / 2, cy - (a[1] + b[1]) / 2];
+    const A = f.at(a[0], a[1], 0), B = f.at(b[0], b[1], 0), A2 = f.at(a[0], a[1], -r), B2 = f.at(b[0], b[1], -r);
+    const dir = [f.ex * towards[0], towards[1], f.ez * towards[0]]; facing(W, A, B, B2, tint, dir); facing(W, A, B2, A2, tint, dir);
+    // archivolt: a band 0.11 wide round the arc, standing 0.03 out
+    const oa = [a[0] - o.arc.uc, a[1] - o.arc.cy], ob = [b[0] - o.arc.uc, b[1] - o.arc.cy], la = Math.hypot(...oa), lb = Math.hypot(...ob), k = 0.11;
+    const A3 = f.at(a[0] + oa[0] / la * k, a[1] + oa[1] / la * k, 0.03), B3 = f.at(b[0] + ob[0] / lb * k, b[1] + ob[1] / lb * k, 0.03), A4 = f.at(a[0], a[1], 0.03), B4 = f.at(b[0], b[1], 0.03);
+    facing(T, A4, B4, B3, trim, hint); facing(T, A4, B3, A3, trim, hint);
+  }
+}
+
+/** The walls of one edge cut around openings. (the opening's inside), looking into the opening. */
 function reveal(w, f, o, r, tint) {
   quad(w, f.at(o.u0, o.ys, -r), f.at(o.u0, o.ys, 0), f.at(o.u0, o.yh, 0), f.at(o.u0, o.yh, -r), tint);   // left cheek, faces right
   quad(w, f.at(o.u1, o.ys, 0), f.at(o.u1, o.ys, -r), f.at(o.u1, o.yh, -r), f.at(o.u1, o.yh, 0), tint);   // right cheek, faces left
   quad(w, f.at(o.u0, o.yh, 0), f.at(o.u1, o.yh, 0), f.at(o.u1, o.yh, -r), f.at(o.u0, o.yh, -r), tint);   // soffit
   if (o.sillTop) quad(w, f.at(o.u0, o.ys, -r), f.at(o.u1, o.ys, -r), f.at(o.u1, o.ys, 0), f.at(o.u0, o.ys, 0), tint); // the sill's top
+}
+
+/** The wall plugging an arched opening of a bricked-up window. */
+function archGlassWall(W, f, o, d, tint) {
+  const hint = [f.nx, 0, f.nz], P = (u, y) => f.at(u, y, d), cu = (o.u0 + o.u1) / 2, cy = (o.ys + o.yh) / 2, C = P(cu, cy), ring = [[o.u0, o.ys], [o.u1, o.ys], ...o.arc.pts.slice().reverse()];
+  for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; facing(W, P(a[0], a[1]), P(b[0], b[1]), C, tint, hint); }
+}
+/** A round window set on the wall: glass disc in a painted ring. */
+function roundel(soups, f, rd, y0, lk, tint) {
+  const G = soups.get(SOUP.window), T = soups.get(SOUP.trim), n = 12, hint = [f.nx, 0, f.nz], P = (a, k, d) => f.at(rd.c + Math.cos(a) * k, rd.y + Math.sin(a) * k, d), C = f.at(rd.c, rd.y, 0.04);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2, uvOf = (ang) => [6 + 0.5 + Math.cos(ang) * 0.45, 0.5 + Math.sin(ang) * 0.45];
+    facingUV(G, P(a, rd.rad, 0.04), P(b, rd.rad, 0.04), C, null, hint, uvOf(a), uvOf(b), [6.5, 0.5]);
+    const A = P(a, rd.rad, 0.05), B = P(b, rd.rad, 0.05), A2 = P(a, rd.rad + 0.09, 0.05), B2 = P(b, rd.rad + 0.09, 0.05); facing(T, A, B, B2, lk.trim, hint); facing(T, A, B2, A2, lk.trim, hint);
+  }
+  void tint; void y0;
 }
 
 /** A painted frame round an opening at depth d: four strips `w` wide, on the opening's edge, facing out. */
@@ -180,7 +252,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
   if (front && b.groundFloor === 2 && by.n > 0) doors.add(Math.floor((by.n - 1) / 2));
 
   for (let s = 0; s < st.n; s++) {
-    const y0 = L.base + s * sh, y1 = s === st.n - 1 ? L.eave : y0 + sh, ground = s === 0, ops = [];
+    const y0 = L.base + s * sh, y1 = s === st.n - 1 ? L.eave : y0 + sh, ground = s === 0, ops = [], roundels = [], types = {};
     for (let k = 0; k < by.n; k++) {
       const c = centre(k), isDoor = ground && doors.has(k);
       if (ground && front && b.groundFloor === 1 && !isDoor) { // a shop window
@@ -190,17 +262,30 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         const dw = b.groundFloor === 2 ? 2.6 : door.w, dh = b.groundFloor === 2 ? Math.min(2.4, sh - 0.3) : door.h;
         ops.push({ kind: 'door', u0: c - dw / 2, u1: c + dw / 2, ys: y0, yh: y0 + dh, r: lk.recess, big: b.groundFloor === 2 });
       } else {
-        const g = 1, ys = y0 + sill, yh = ys + wh * g; ops.push({ kind: 'win', u0: c - ww / 2, u1: c + ww / 2, ys, yh, r: reveal0, sillTop: true });
+        const cls = ground ? 'ground' : st.n >= 3 && s === st.n - 1 ? 'top' : 'upper', ty = types[cls] || (types[cls] = storeyType(wd, cls, b.id, s));
+        const name = ty.blindShare > 0 && ty.r() < ty.blindShare ? 'blind' : ty.name, t = wd.types[name] || wd.types.casement || {};
+        const w = Math.min((t.w || lk.ww) * (0.94 + 0.12 * lk.wsc), by.width - 0.55), sl = t.sill ?? sill, h = Math.min(t.h || wh, sh - sl - 0.3), ys = y0 + sl;
+        if (t.kind === 'round') { roundels.push({ c, y: y0 + sh * 0.5, rad: Math.min(t.d || 0.7, sh * 0.35, by.width * 0.3) / 2 }); continue; }
+        const o = { kind: 'win', u0: c - w / 2, u1: c + w / 2, ys, yh: ys + h, r: t.reveal ?? reveal0, sillTop: true, panel: GLAZE_PANEL[t.glaze] ?? 0, blind: name === 'blind' };
+        if (t.head === 'segmental' || t.head === 'round') {
+          const rise = t.head === 'round' ? Math.min(w / 2, h * 0.45) : Math.min(w * 0.22, h * 0.25);
+          if (h - rise > 0.5) { o.yTop = ys + h; o.yh = ys + h - rise; o.arc = arcPoints(o.u0, o.u1, o.yh, rise, t.head === 'round' ? 10 : 6); o.round = t.head === 'round'; }
+        }
+        ops.push(o);
       }
     }
     wallAround(W, f, len, y0, y1, ops, tint);
     for (const o of ops) {
       if (o.kind === 'win') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [0, 0, 1, 1]); if (lk.frameC[1] < 0.6) border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
+        if (o.arc) archReveal(W, T, f, o, o.r, inner, lk.trim);
+        if (o.blind) { const fill = shade(tint, 0.8); if (o.arc) archGlassWall(W, f, o, -o.r, fill); else rect(W, f, o.u0, o.u1, o.ys, o.yh, -o.r, fill); }
+        else if (o.arc) archGlass(G, f, o, -o.r, o.panel);
+        else rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [o.panel, 0, o.panel + 1, 1]);
+        if (!o.blind && !o.arc && lk.frameC[1] < 0.6) border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
         slab(T, f, o.u0 - 0.08, o.u1 + 0.08, o.ys - 0.07, o.ys, 0, 0.08, lk.trim, 'ftb');
-        slab(T, f, o.u0 - 0.1, o.u1 + 0.1, o.yh, o.yh + 0.22, 0, lk.headDepth, lk.trim, 'fb');
-        if (lk.shutters) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yh, 0.03, lk.shutC); }
+        if (!o.arc) slab(T, f, o.u0 - 0.1, o.u1 + 0.1, o.yh, o.yh + 0.22, 0, lk.headDepth, lk.trim, 'fb');
+        if (lk.shutters && !o.blind) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
         rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.05, mixTint(lk.frameC, DARK, 0.5));
@@ -216,6 +301,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         slab(T, f, o.u0 - 0.14, o.u0 - 0.02, o.ys, o.yh, 0, 0.05, lk.trim, 'fr'); slab(T, f, o.u1 + 0.02, o.u1 + 0.14, o.ys, o.yh, 0, 0.05, lk.trim, 'fl');
       }
     }
+    for (const rd of roundels) roundel(soups, f, rd, y0, lk, tint);
     if (ground && front && b.groundFloor === 1) { // the fascia over the shopfronts, and sometimes an awning
       slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.1, lk.awnC, 'fbtlr');
       if (lk.r() < gfl.awning) {
