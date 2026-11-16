@@ -64,6 +64,25 @@
     "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.6, "depth": 0.05 },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
-    "kerb": 0.14, "season": "summer"
+    "kerb": 0.14, "season": "summer",
+    "detail": {
+      "default": { "strength": 0.85, "normal": 1, "rough": 1, "ao": 0.8, "hue": 0.1, "base": 0.3, "far": 60 },
+      "materials": {
+        "stone": { "set": ["bricks076a", "medieval_blocks_05"], "scale": 1 },
+        "rubble": { "set": ["bricks102", "old_stone_wall"], "scale": 1 },
+        "brick": { "set": ["bricks003", "brick_wall_006"], "scale": 1 },
+        "stucco": { "set": ["plaster003", "worn_plaster_wall"], "scale": 1, "strength": 0.7 },
+        "cobble": { "set": ["pavingstones041", "cobblestone_floor_04"], "scale": 1, "hue": 1, "base": 0.13 },
+        "asphalt": { "set": ["asphalt012", "worn_asphalt"], "scale": 1, "hue": 1, "base": 0.1 },
+        "paving": { "set": ["pavingstones126a", "pavement_03"], "scale": 1, "hue": 1, "base": 0.12 },
+        "concrete": { "set": ["concrete016"], "scale": 1, "hue": 1, "base": 0.25 },
+        "roof_zinc": { "set": ["metal019"], "scale": 1, "strength": 0.5, "normal": 0.4 },
+        "roof_copper": { "set": ["metal035"], "scale": 1, "strength": 0.5, "normal": 0.4 },
+        "grass": { "set": ["grass003"], "scale": 1, "hue": 1, "base": 0.11 },
+        "rock": { "set": ["rock041"], "scale": 1, "hue": 1, "base": 0.25 },
+        "dirt": { "set": ["ground015"], "scale": 1, "hue": 1, "base": 0.2 },
+        "gravel": { "set": ["gravel013"], "scale": 1, "hue": 1, "base": 0.13 }
+      }
+    }
   }
 }
