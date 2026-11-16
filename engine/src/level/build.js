@@ -1,8 +1,19 @@
-// Turns a decoded chunk into three.js geometry: the client generates meshes from semantic data (SCENE-FORMAT.md,
-// principle 1). Everything of one material in a chunk is one mesh, so a chunk costs a handful of draw calls.
-import { BufferAttribute, BufferGeometry, Color, Group, Mesh, ShapeUtils, Vector2 } from '../../vendor/three.module.js';
+// Turns a decoded chunk into three.js meshes: the client generates meshes from semantic data (SCENE-FORMAT.md,
+// principle 1). The triangles come from the generators (gen/mesher.js, pure code); this file only gives them
+// materials and puts them on the graphics card.
+//
+//   terrain   the ground of a chunk, one mesh per surface class
+//   static    a chunk's `base` and `far` groups, each ONE mesh per material for the whole chunk, so a chunk costs a
+//             handful of draw calls however many cells it has. The `far` meshes keep each cell's triangles together
+//             and can leave a cell out (its `near` group is showing instead) by rewriting their index.
+//   near      one group per cell, built when the camera comes close and thrown away when it leaves
+import { BufferAttribute, BufferGeometry, Group, Mesh } from '../../vendor/three.module.js';
 import { CHUNK } from '../scene/grid.js';
-import { SURFACE_MATERIAL, FACADE_MATERIAL, WALL_MATERIAL, ROOF_MATERIAL, PALETTE } from '../materials/outdoor.js';
+import { legacyTint } from '../scene/source.js';
+import { SURFACE_MATERIAL } from '../materials/outdoor.js';
+import { cellSoups } from '../gen/mesher.js';
+import { createSoups, prism, cap } from '../gen/soup.js';
+import { SOUP } from '../gen/style.js';
 
 const ROCK_SLOPE = 1.05; // ground steeper than this is drawn as rock whatever the raster says
 
@@ -81,106 +92,69 @@ export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
   return group;
 }
 
-const centroid = (r) => { let x = 0, z = 0; for (let i = 0; i < r.length; i += 2) { x += r[i]; z += r[i + 1]; } return [x / (r.length / 2), z / (r.length / 2)]; };
-const signedArea = (r) => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
-function cap(s, ring, holes, y, tint, up = true) {
-  const pts = [], hs = holes.map((h) => { const o = []; for (let i = 0; i < h.length; i += 2) o.push(new Vector2(h[i], h[i + 1])); return o; });
-  for (let i = 0; i < ring.length; i += 2) pts.push(new Vector2(ring[i], ring[i + 1]));
-  const all = pts.concat(...hs), n = [0, up ? 1 : -1, 0];
-  for (const t of ShapeUtils.triangulateShape(pts, hs)) {
-    const [a, b, d] = t.map((k) => all[k]), A = [a.x, y, a.y], B = [b.x, y, b.y], D = [d.x, y, d.y];
-    // wind so the face looks up (or down): in (x, z) a counter-clockwise triangle faces -y
-    const ccw = (b.x - a.x) * (d.y - a.y) - (b.y - a.y) * (d.x - a.x) > 0;
-    if (ccw === up) s.tri(A, D, B, n, [a.x, a.y], [d.x, d.y], [b.x, b.y], tint); else s.tri(A, B, D, n, [a.x, a.y], [b.x, b.y], [d.x, d.y], tint);
-  }
+/** The material a soup key names: "stone|tv" is `stone`, triplanar, with vertex colours (gen/soup.js). */
+export function materialOf(G, key) {
+  const [name, flags = ''] = key.split('|');
+  return G.mats.get(name, { triplanar: flags.includes('t'), vertexColors: flags.includes('v'), doubleSide: flags.includes('d') });
 }
-/** Vertical faces round a ring between two heights, facing outwards whatever the winding. UVs in metres. */
-function wallsOf(s, ring, y0, y1, tint, bays = false, vBase = y0) {
-  const out = signedArea(ring) > 0 ? 1 : -1;
-  for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
-    const ax = ring[j], az = ring[j + 1], bx = ring[i], bz = ring[i + 1], len = Math.hypot(bx - ax, bz - az); if (len < 0.02) continue;
-    const nx = ((bz - az) / len) * out, nz = (-(bx - ax) / len) * out, n = [nx, 0, nz];
-    // whole window bays along each wall, so no window is cut by a corner
-    const u1 = bays ? Math.max(1, Math.round(len / 3)) * 3 : len, v0 = y0 - vBase, v1 = y1 - vBase;
-    const A = [ax, y0, az], B = [bx, y0, bz], C = [bx, y1, bz], D = [ax, y1, az];
-    if (out > 0) { s.tri(A, C, B, n, [0, v0], [u1, v1], [u1, v0], tint); s.tri(A, D, C, n, [0, v0], [0, v1], [u1, v1], tint); }
-    else { s.tri(A, B, C, n, [0, v0], [u1, v0], [u1, v1], tint); s.tri(A, C, D, n, [0, v0], [u1, v1], [0, v1], tint); }
-  }
+const castsShadow = (key) => !(key.split('|')[1] || '').includes('n');
+function soupGeometry(s) {
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(s.pos), 3));
+  g.setAttribute('normal', new BufferAttribute(new Float32Array(s.nrm), 3));
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(s.uv), 2));
+  if (s.col) g.setAttribute('color', new BufferAttribute(new Float32Array(s.col), 3));
+  g.computeBoundingSphere(); g.computeBoundingBox();
+  return g;
 }
-/** A roof as a frustum: the eave ring drawn in towards the centre and raised. Works for any outline; exact for none. */
-function roofOf(s, b, tint) {
-  const eave = b.yBase + b.hEave, top = eave + b.hRoof, r = b.ring;
-  if (!b.hRoof || !b.roofShape) { cap(s, r, b.holes || [], eave, tint); return; }
-  const [cx, cz] = centroid(r); let rad = Infinity;
-  for (let i = 0; i < r.length; i += 2) rad = Math.min(rad, Math.hypot(r[i] - cx, r[i + 1] - cz));
-  const k = b.roofShape === 4 || b.roofShape === 7 ? 0.02 : Math.max(0.15, 1 - (b.hRoof * (b.roofShape === 3 ? 0.55 : 1.1)) / Math.max(1, rad));
-  const inner = r.map((v, i) => (i % 2 ? cz + (v - cz) * k : cx + (v - cx) * k)), out = signedArea(r) > 0 ? 1 : -1;
-  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
-    const A = [r[j], eave, r[j + 1]], B = [r[i], eave, r[i + 1]], C = [inner[i], top, inner[i + 1]], D = [inner[j], top, inner[j + 1]];
-    const ex = B[0] - A[0], ez = B[2] - A[2], l = Math.hypot(ex, ez) || 1, run = Math.hypot(D[0] - A[0], D[2] - A[2]) || 0.01;
-    const nl = Math.hypot(run, b.hRoof), n = [((ez / l) * out * b.hRoof) / nl, run / nl, ((-ex / l) * out * b.hRoof) / nl], u = [0, 0];
-    if (out > 0) { s.tri(A, C, B, n, u, u, u, tint); s.tri(A, D, C, n, u, u, u, tint); } else { s.tri(A, B, C, n, u, u, u, tint); s.tri(A, C, D, n, u, u, u, tint); }
-  }
-  if (k > 0.05) cap(s, inner, [], top, tint);
-}
-
-const tintOf = (palette) => new Color(PALETTE[palette % PALETTE.length]).convertSRGBToLinear();
-
-/** Buildings, walls and trees of a chunk. `groundAt(x, z)` gives the terrain height. */
-export function buildStructures(G, c, groundAt) {
-  const soups = new Map(), get = (name) => { let s = soups.get(name); if (!s) soups.set(name, (s = soup())); return s; };
-  for (const b of c.buildings) {
-    const tint = tintOf(b.palette || 0);
-    let lo = b.yBase; for (let i = 0; i < b.ring.length; i += 2) lo = Math.min(lo, groundAt(b.ring[i], b.ring[i + 1]));
-    const eave = b.yBase + b.hEave, facade = FACADE_MATERIAL[b.facade] || 'facade_stucco';
-    if (lo < b.yBase - 0.05) { wallsOf(get('wall:stone'), b.ring, lo - 0.5, b.yBase, null); for (const h of b.holes || []) wallsOf(get('wall:stone'), h, lo - 0.5, b.yBase, null); } // a plinth where the ground falls away
-    wallsOf(get('facade:' + facade), b.ring, b.yBase, eave, tint, true, b.yBase);
-    for (const h of b.holes || []) wallsOf(get('facade:' + facade), h, b.yBase, eave, tint, true, b.yBase);
-    const roofTint = b.roofColor ? safeColor(b.roofColor) : null;
-    roofOf(get('roof:' + (roofTint ? 'roof_zinc' : ROOF_MATERIAL[b.roofMat] || 'roof_zinc') + (roofTint ? ':t' : '')), b, roofTint);
-  }
-  for (const w of c.walls) {
-    const s = get('wall:' + (WALL_MATERIAL[w.material] || 'stone'));
-    wallsOf(s, w.ring, w.yBase, w.yTop, null); cap(s, w.ring, [], w.yTop, null);
-  }
-  const group = new Group(); group.name = `structures ${c.ce},${c.cn}`;
-  let tris = 0;
-  for (const [key, s] of soups) {
-    if (!s.pos.length) continue;
-    const [kind, name, tinted] = key.split(':');
-    const mat = kind === 'facade' ? G.mats.get(name, { vertexColors: true }) : kind === 'roof' ? G.mats.get(name, { triplanar: true, vertexColors: !!tinted }) : G.mats.get(name, { triplanar: true });
-    group.add(mesh(s.geometry(), mat)); tris += s.pos.length / 9;
-  }
-  if (c.trees.length) { const t = buildTrees(G, c.trees, groundAt); group.add(t); tris += t.userData.tris; }
+/** A soup set as a group of meshes, one per material. `userData.tris` is its triangle count. */
+export function soupsToGroup(G, soups, name) {
+  const group = new Group(); group.name = name; let tris = 0;
+  for (const [key, s] of soups.map) { if (!s.pos.length) continue; group.add(mesh(soupGeometry(s), materialOf(G, key), castsShadow(key))); tris += s.pos.length / 9; }
   group.userData.tris = tris;
   return group;
 }
-function safeColor(v) { try { const c = new Color(v); return c.convertSRGBToLinear().multiplyScalar(1.6); } catch { return null; } }
 
-function buildTrees(G, trees, groundAt) {
-  const trunk = soup(), crown = soup(), SEG = 6, g = new Group();
-  for (const t of trees) {
-    const y = groundAt(t.x, t.z), th = t.height * 0.45, r = 0.16 + t.height * 0.012;
-    for (let i = 0; i < SEG; i++) {
-      const a0 = (i / SEG) * Math.PI * 2, a1 = ((i + 1) / SEG) * Math.PI * 2, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
-      const A = [t.x + c0 * r, y - 0.3, t.z + s0 * r], B = [t.x + c1 * r, y - 0.3, t.z + s1 * r], C = [t.x + c1 * r * 0.7, y + th, t.z + s1 * r * 0.7], D = [t.x + c0 * r * 0.7, y + th, t.z + s0 * r * 0.7];
-      trunk.tri(A, C, B, [c0, 0, s0], [0, 0], [1, 1], [1, 0]); trunk.tri(A, D, C, [c0, 0, s0], [0, 0], [0, 1], [1, 1]);
-    }
-    // crown: two stacked rings and a tip (broadleaf round, conifer tall)
-    const conifer = t.kind === 2, R = t.crownRadius * (conifer ? 0.7 : 1), y0 = y + th * (conifer ? 0.5 : 0.85), H = t.height - (y0 - y), N = 7;
-    const ring = (k) => { const yy = y0 + H * k, rr = conifer ? R * (1 - k) : R * Math.sin(Math.PI * (0.12 + 0.88 * k)); const o = []; for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2 + k * 2 + t.x; o.push([t.x + Math.cos(a) * rr * (0.85 + 0.3 * Math.sin(i * 2.3 + t.z)), yy, t.z + Math.sin(a) * rr * (0.85 + 0.3 * Math.cos(i * 1.7 + t.x))]); } return o; };
-    const levels = conifer ? [0, 0.35, 0.7] : [0, 0.3, 0.62, 0.86], rings = levels.map(ring), tip = [t.x, y0 + H, t.z], base = [t.x, y0, t.z];
-    const nOf = (p) => { const dx = p[0] - t.x, dy = p[1] - (y0 + H * 0.4), dz = p[2] - t.z, l = Math.hypot(dx, dy, dz) || 1; return [dx / l, dy / l, dz / l]; };
-    for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < N; i++) {
-      const a = rings[k][i], b = rings[k][(i + 1) % N], cc = rings[k + 1][(i + 1) % N], d = rings[k + 1][i];
-      crown.tri(a, cc, b, nOf(a), [0, 0], [0, 0], [0, 0]); crown.tri(a, d, cc, nOf(d), [0, 0], [0, 0], [0, 0]);
-    }
-    for (let i = 0; i < N; i++) { const a = rings[rings.length - 1][i], b = rings[rings.length - 1][(i + 1) % N]; crown.tri(a, tip, b, nOf(tip), [0, 0], [0, 0], [0, 0]); const e = rings[0][i], f = rings[0][(i + 1) % N]; crown.tri(e, f, base, [0, -1, 0], [0, 0], [0, 0], [0, 0]); }
+/**
+ * The `base` and `far` groups of a whole chunk. Returns { group, tris(), setNear(cellIndex, on) }: setNear(k, true)
+ * leaves cell k out of the `far` meshes (its `near` group is showing), setNear(k, false) puts it back. tris() counts
+ * what is drawn now.
+ */
+export function buildChunkStatic(G, chunk, env) {
+  const group = new Group(); group.name = `structures ${chunk.ce},${chunk.cn}`;
+  const base = createSoups(); for (const cell of chunk.cells) base.add(cellSoups(cell, 'base', env));
+  const b = soupsToGroup(G, base, 'base'); group.add(b);
+  // far: per material, the cells' triangles one after another, and where each cell's run starts and ends
+  const far = createSoups(), runs = new Map(); // key -> [[first vertex, vertex count] per cell]
+  for (const cell of chunk.cells) {
+    const part = cellSoups(cell, 'far', env);
+    for (const [key, s] of part.map) { if (!s.pos.length) continue; let r = runs.get(key); if (!r) runs.set(key, (r = chunk.cells.map(() => [0, 0]))); r[cell.index] = [far.get(key).pos.length / 3, s.pos.length / 3]; }
+    far.add(part);
   }
-  g.add(mesh(trunk.geometry(), G.mats.get('wood', { triplanar: true })), mesh(crown.geometry(), G.mats.get('leaves', { triplanar: true })));
-  g.userData.tris = (trunk.pos.length + crown.pos.length) / 9;
-  return g;
+  const f = new Group(); f.name = 'far'; group.add(f);
+  const meshes = [];
+  for (const [key, s] of far.map) {
+    if (!s.pos.length) continue;
+    const g = soupGeometry(s), n = s.pos.length / 3, index = new BufferAttribute(n > 65535 ? new Uint32Array(n) : new Uint16Array(n), 1);
+    for (let i = 0; i < n; i++) index.array[i] = i;
+    g.setIndex(index);
+    const m = mesh(g, materialOf(G, key), castsShadow(key)); f.add(m); meshes.push({ m, index, runs: runs.get(key), n });
+  }
+  const hidden = new Set(); let farTris = 0; for (const x of meshes) farTris += x.n / 3;
+  function setNear(k, on) {
+    if (hidden.has(k) === !!on) return;
+    if (on) hidden.add(k); else hidden.delete(k);
+    farTris = 0;
+    for (const x of meshes) {
+      let w = 0;
+      for (let c = 0; c < x.runs.length; c++) { if (hidden.has(c)) continue; const [first, count] = x.runs[c]; for (let i = 0; i < count; i++) x.index.array[w++] = first + i; }
+      x.index.needsUpdate = true; x.m.geometry.setDrawRange(0, w); x.m.visible = w > 0; farTris += w / 3;
+    }
+  }
+  return { group, setNear, tris: () => b.userData.tris + farTris };
 }
+/** The `near` group of one cell. */
+export const buildCellNear = (G, chunk, cell, env) => soupsToGroup(G, cellSoups(cell, 'near', env), `near ${chunk.ce},${chunk.cn}/${cell.index}`);
 
 /** The far ring for one chunk cell: coarse ground and plain hulls, drawn until the chunk itself is in. */
 export function buildFarTile(G, far, ce, cn, x0, z0, hulls) {
@@ -189,9 +163,9 @@ export function buildFarTile(G, far, ce, cn, x0, z0, hulls) {
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) c.heights[j * m + i] = g.height(ox + i * step, oz + j * step) - 0.4; // a little low, so detail always wins
   const group = buildTerrain(G, c, { skirt: 10 });
   if (hulls.length) {
-    const s = soup();
-    for (const h of hulls) { const t = tintOf(h.palette || 0); wallsOf(s, h.ring, h.yBase - 3, h.top, t); cap(s, h.ring, [], h.top, t); }
-    group.add(mesh(s.geometry(), G.mats.get('stucco', { triplanar: true, vertexColors: true }), false));
+    const set = createSoups(), s = set.get(SOUP.hull);
+    for (const h of hulls) { const t = h.tint || legacyTint(h.palette || 0); prism(s, h.ring, h.yBase - 3, h.top, t, false); cap(s, h.ring, [], h.top, t); }
+    const m = soupsToGroup(G, set, 'hulls'); for (const o of m.children) o.castShadow = false; group.add(m);
   }
   group.name = `far ${ce},${cn}`;
   return group;

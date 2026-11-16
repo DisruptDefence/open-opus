@@ -68,7 +68,8 @@ interface WorldApi {
   // what the last frame cost: for budgets, captures and a host's own quality choice
   stats(): { quality: string; frameMs: number;  // the quality tier; smoothed time between frames, milliseconds
              calls: number; triangles: number;  // draw calls and triangles of the last frame, shadow pass included
-             chunksLive: number; sceneTriangles: number; buildMs: number };   // scene chunks at full detail, their triangles, time spent meshing them
+             chunksLive: number; sceneTriangles: number; buildMs: number;     // scene chunks at full detail, the scene's triangles drawn now, time spent meshing chunks
+             cellsNear: number; nearBuildMs: number };                        // cells of 62.5 m drawn in near detail, time the last one took to build (added 2026-11-16)
 
   // scenario commands
   apply(cmd: ScenarioCommand): void;            // throws a ScenarioCommandError when it cannot be applied

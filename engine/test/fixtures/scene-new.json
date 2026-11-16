@@ -1,0 +1,51 @@
+{
+  "format": "opus-scene/1", "formatMinor": 1, "packaging": "single", "id": "fixture-new", "name": "Fixture, section 3 keys",
+  "georef": { "crs": "EPSG:32619", "projection": "utm", "zone": 19, "band": "T", "hemisphere": "N", "easting": 340100, "northing": 5190050, "h0": 0, "vertical": { "datum": "none (synthetic)", "geoid_undulation": -27.6 }, "anchor": { "lat": 46.84477456, "lon": -71.09720309 }, "convergence_deg": -1.5302, "checks": [ { "x": 0, "z": 0, "lat": 46.84477456, "lon": -71.09720309, "mgrs": "19TCM4010090050" }, { "x": 250, "z": -250, "lat": 46.84708282, "lon": -71.09401381, "mgrs": "19TCM4035090300" }, { "x": -400, "z": 300, "lat": 46.84198046, "lon": -71.10234048, "mgrs": "19TCM3970089750" }, { "x": 470, "z": 470, "lat": 46.84066059, "lon": -71.09087885, "mgrs": "19TCM4057089580" }, { "x": -470, "z": -470, "lat": 46.84888816, "lon": -71.10352831, "mgrs": "19TCM3963090520" } ] },
+  "play": { "minX": -110, "maxX": 190, "minZ": -140, "maxZ": 110 },
+  "extent": { "minX": -120, "maxX": 200, "minZ": -150, "maxZ": 120 },
+  "sources": [ { "title": "Hand-written fixture", "licence": "none", "attribution": "fixture" } ],
+  "terrain": { "nx": 65, "nz": 55, "cell": 5, "minX": -120, "minZ": -150, "unit": 0.01, "plane": { "y0": 20, "sx": 0.02, "sz": 0 } },
+  "season": "autumn",
+  "ambience": { "tod": 16.5, "day": 200, "haze": 0.3, "cloud": 0.35, "wet": 0 },
+  "style": {
+    "palettes": { "stone_ashlar": ["#9c978c", "#a8a294", "#8f8a80", "#b1a78f"], "brick": ["#8a4b3a", "#9a5a40"] },
+    "roofs": { "metal_seam": ["#9aa0a3", "#7d8589"], "copper": ["#6f9a84", "#5f8a78"] },
+    "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.12, "panes": [2, 4] },
+    "kerb": 0.14, "season": "summer"
+  },
+  "buildings": [
+    { "id": 2890417532, "r": [12.1, -40.3, 21.9, -39.8, 22.3, -48.9, 12.4, -49.5], "g": 22.6, "h": 14.2, "hs": "measured",
+      "rh": 4.1, "rs": 3, "rd": 255, "rmt": 1, "rp": 0, "fa": 1, "pal": 2, "use": 2, "lv": 3,
+      "blind": [1, 3], "front": [0], "gf": 1, "k": "retail" },
+    { "id": 77001, "r": [40, -40, 52, -40, 52, -52, 40, -52], "g": 23.2, "h": 9.6, "hs": "levels", "rh": 3, "rs": 2, "rd": 90, "rmt": 2, "rp": 1,
+      "rc": "#67B083", "roof": "hipped", "fa": 3, "pal": 1, "use": 3, "lv": 2, "blind": [], "front": [2], "gf": 0, "n": "Hall" },
+    { "id": 77002, "r": [60, -40, 80, -40, 80, -60, 60, -60], "holes": [[66, -46, 74, -46, 74, -54, 66, -54]], "g": 23.6, "h": 5, "hs": "measured",
+      "rh": 0, "rs": 0, "rd": 255, "rmt": 6, "rp": 0, "fa": 4, "pal": 0, "use": 1, "lv": 1, "blind": [], "front": [], "gf": 0 },
+    { "id": 77003, "r": [-20, 0, 0, 0, 0, 12, -20, 12], "g": 22, "h": 16, "hs": "rule", "rh": 0, "rs": 0, "rd": 255, "rmt": 1, "rp": 0, "fa": 1, "pal": 0,
+      "use": 2, "lv": 4, "blind": [], "front": [], "gf": 0, "k": "hotel", "n": "Outline", "parts": 1 },
+    { "id": 77004, "r": [-20, 0, -10, 0, -10, 12, -20, 12], "g": 22, "h": 12, "hs": "measured", "rh": 0, "rs": 0, "rd": 255, "rmt": 1, "rp": 0, "fa": 1, "pal": 0,
+      "use": 2, "lv": 3, "blind": [1], "front": [], "gf": 0, "part": 1 },
+    { "id": 77005, "r": [-10, 0, 0, 0, 0, 12, -10, 12], "g": 22, "h": 24, "hs": "measured", "rh": 6, "rs": 4, "rd": 255, "rmt": 2, "rp": 0, "fa": 1, "pal": 0,
+      "use": 2, "lv": 2, "mh": 12, "blind": [3], "front": [], "gf": 0, "part": 1 },
+    { "id": 77006, "r": [-66, 24, -54, 24, -54, 36, -66, 36], "g": 21.1, "h": 9, "hs": "measured", "rh": 0, "rs": 0, "rd": 255, "rmt": 1, "rp": 0, "fa": 1, "pal": 1,
+      "use": 0, "lv": 2, "blind": [], "front": [], "gf": 0, "pass": [[-60, 23.5, -60, 36.5, 4, 5]], "k": "gate", "n": "Gate" }
+  ],
+  "roads": [
+    { "p": [-110, -20, 190, -20], "k": "residential", "w": 6, "s": "asphalt", "sf": 1, "sw": "both", "lit": 1, "mk": 1, "n": "Long Street" },
+    { "p": [30, -20, 30, 100], "k": "footway", "w": 2, "sf": 4, "sw": "no" },
+    { "p": [120, -20, 120, -60], "k": "steps", "w": 2.5, "sf": 9, "sw": "no", "sc": 12, "hr": 1 },
+    { "p": [-60, 10, -60, 50], "k": "pedestrian", "w": 4, "sf": 3, "sw": "no" }
+  ],
+  "crossings": [ [30, -20, 90, 6], [-99, -20, 90, 6] ],
+  "areas": [ { "r": [60, 0, 100, 0, 100, 30, 60, 30], "k": "square", "s": "sett" }, { "r": [150, 60, 190, 60, 190, 100, 150, 100], "k": "bare", "s": "rock" } ],
+  "green": [ { "r": [-100, 60, -40, 60, -40, 110, -100, 110] } ],
+  "walls": [
+    { "p": [-80, 30, -66, 30], "k": "city_wall", "t": 2.4, "m": 1, "hp": 1.4, "cr": 1, "n": "Rampart" },
+    { "p": [-54, 30, 20, 30, 20, 80], "k": "city_wall", "t": 2.4, "m": 1, "h": 5, "cr": 1, "n": "Rampart" },
+    { "p": [140, 20, 180, 20], "k": "fence", "t": 0.08, "m": 8, "h": 1.1, "rail": "rail_iron" }
+  ],
+  "trees": [ [-60, 80, 14.5, 4.6, 1, 1], [-70, 90, 9, 2.9, 2, 3], [160, -100, 11, 3.5, 1, 0] ],
+  "props": { "kinds": ["lamp_lantern", "bench_slat", "cannon", "kind_from_the_future"],
+             "items": [[0, 101.2, -43.0, 90, 0, 0], [2, 180.4, -60.1, 135, 0, 1], [1, 70, 10, 180, 1, 0], [3, 75, 12, 0, 0, 0]] },
+  "landmarks": [ { "n": "Hall", "k": "building", "x": 46, "z": -46 } ]
+}
