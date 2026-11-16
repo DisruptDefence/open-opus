@@ -12,7 +12,7 @@ This document is the format. Three things write or read it today and none matche
 
 | | Matches | Differs |
 |---|---|---|
-| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | Section 2.2 field names (`easting`, `northing`, `convergence_deg`, `play`, `extent`), the layers | No `packaging`, `h0` or `checks`; `vertical` is a sentence and the geoid offset sits in `anchor.hae` |
+| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | Section 2.2 field names (`easting`, `northing`, `convergence_deg`, `play`, `extent`), the layers | No `packaging`, `h0` or `checks`; `vertical` is a sentence and the geoid offset sits in `anchor.hae`. Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale` |
 | `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The container (3.2), raster layers, `checks`, hashed names, `anchors.json` | The georeference is spelt differently (`utm: {…}`, `anchor: { e0, n0, h0 }`, `anchorGeo`, `convergenceDeg`, `vertical.geoidUndulation`, `bounds`, `walkable`). Chunks are numbered from the scene's anchor, not on the absolute UTM grid of 3.1. Vector layers are JSON in the chunk header, not binary records |
 | The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads both files above | Given a block written exactly as 2.2, it ignores `h0` and `vertical.geoid_undulation`, so heights above the ellipsoid come out wrong by the undulation with no error |
 
