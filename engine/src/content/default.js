@@ -28,6 +28,11 @@
 //            moving (how much the target's speed spoils the aim)
 //   melee    range (starts the rush), windup, speed, time, reach, damage, cooldown, recover
 //   death    explode { radius, damage }: an air threat blows up where it falls
+//   zones    damage multiplier of a round by the part of the figure it hits (a person: head, torso, arm, leg; a
+//            machine: weak, body); a part not named counts 1, and `weak` 2.2 when there is no `zones`
+//   reactions what a hit does to it (a person): aimSpoil (seconds: a burst being announced or fired stops and none
+//            starts), limpSeconds and limpSpeed (after a leg hit, that share of its speed), stagger { damage, seconds }
+//            (a round of that damage or more stops it where it stands). The flinch is the figure's
 //
 // How many threats may shoot at once, and how fast aim improves, is `threatTuning` below: the numbers are the
 // stand-in game's, so a fight has its rhythm.
@@ -41,6 +46,8 @@ const THREATS = {
       look: { cloth: ['#4d5338', '#575a45', '#45503a'], gear: ['#34362e', '#3c3b31'], skin: ['#c49a7c', '#a07a5e', '#6e4c38', '#d8b096'], boot: ['#2a2622'], headgear: ['helmet'], pack: 0.2 } },
     senses: { sight: 55, fov: 140, hearing: 45, eye: 1.62, closeRange: 3.5, notice: 0.55 },
     weapon: { kind: 'hitscan', damage: 5, burst: 4, interval: 0.11, cooldown: [1.8, 3], aimTime: 0.5, range: 80, spreadFar: 0.12, spreadNear: 0.045, moving: 0.3 },
+    zones: { head: 4, torso: 1, arm: 0.55, leg: 0.7 },
+    reactions: { aimSpoil: 0.4, limpSeconds: 6, limpSpeed: 0.55, stagger: { damage: 30, seconds: 0.35 } },
     tactics: { rangeMin: 8, rangeMax: 18 },
     alertRadius: 60,
     behaviour: {
@@ -61,6 +68,8 @@ const THREATS = {
       look: { cloth: ['#6b6650', '#4d5338', '#5d5f52', '#625a46'], gear: ['#3c3b31', '#4a4636', '#34362e'], skin: ['#c49a7c', '#a07a5e', '#6e4c38', '#d8b096'], boot: ['#2a2622', '#3b3127'], headgear: ['cap', 'helmet', 'cap', 'none'], pack: 0.6 } },
     senses: { sight: 50, fov: 130, hearing: 40, eye: 1.62, closeRange: 3.5, notice: 0.7 },
     weapon: { kind: 'hitscan', damage: 5, burst: 4, interval: 0.11, cooldown: [1.8, 3], aimTime: 0.5, range: 80, spreadFar: 0.12, spreadNear: 0.045, moving: 0.3 },
+    zones: { head: 4, torso: 1, arm: 0.55, leg: 0.7 },
+    reactions: { aimSpoil: 0.4, limpSeconds: 6, limpSpeed: 0.55, stagger: { damage: 30, seconds: 0.35 } },
     tactics: { rangeMin: 8, rangeMax: 18 },
     alertRadius: 60,
     behaviour: {

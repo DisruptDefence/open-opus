@@ -350,7 +350,7 @@ export function createPerson(G, kit, rng) {
     if (!s.started) start(v);
     s.t += dt; s.pos.copy(v.pos); s.yaw = v.yaw; s.speed = Math.hypot(v.vx, v.vz);
     s.limp = Math.max(0, s.limp - dt * 0.12);
-    if (v.limp !== undefined) s.limp = v.limp;
+    if (v.limp !== undefined) { s.limp = v.limp; if (v.limpSide !== undefined) s.limpSide = v.limpSide; }
     gait(dt, v); pose(dt, v);
     if (!s.alive) fall(dt);
     apply();

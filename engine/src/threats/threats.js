@@ -69,6 +69,29 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   G.events.on('explosion', (e) => noise(e && e.pos, 150));
   const fx = (name, ...args) => { try { if (G.fx && G.fx[name]) G.fx[name](...args); } catch { /* effects are optional */ } };
 
+  // ---- what a hit does to a person (archetype `reactions`) ---------------------------------------------------------
+  // The aim is spoiled for `aimSpoil` seconds (a burst being announced or fired stops, no new one starts); a leg hit
+  // makes it limp at `limpSpeed` of its speed for `limpSeconds`; a round of `stagger.damage` or more stops it where it
+  // stands for `stagger.seconds`. The flinch itself is the figure's. Damage by zone is the archetype's `zones`
+  // (combat.js asks `zoneMultiplier`).
+  function react(t, amount, part, side) {
+    const re = t.def.reactions; if (!re) return;
+    t.spoil = Math.max(t.spoil, re.aimSpoil || 0);
+    if (t.spoil > 0 && t.atk !== 'idle') { releaseToken(t); t.atk = 'idle'; t.shots = 0; t.cooldown = Math.max(t.cooldown, t.spoil); }
+    if (part === 'leg' && re.limpSeconds) { t.limpFor = re.limpSeconds; t.limpSide = side ?? 0; }
+    if (re.stagger && amount >= re.stagger.damage) t.stagger = Math.max(t.stagger, re.stagger.seconds);
+  }
+  /** Which leg (0 left, 1 right) a hit point is nearer. */
+  function legSide(t, point) {
+    if (!point || !t.figure.zones) return 0;
+    let best = 0, bd = Infinity; for (const z of t.figure.zones()) if (z.part === 'leg') { const d = Math.hypot(point.x - (z.a.x + z.b.x) / 2, point.z - (z.a.z + z.b.z) / 2); if (d < bd) { bd = d; best = z.side; } }
+    return best;
+  }
+  /** How much of its speed a threat has: all of it, or less while it limps, none while it staggers. */
+  const mobility = (t) => (t.stagger > 0 ? 0 : t.limpFor > 0 ? t.def.reactions.limpSpeed ?? 0.6 : 1);
+  /** Damage multiplier of a round in `part` (combat.js): the archetype's zones, else the weak point's 2.2. */
+  const zoneMultiplier = (def, part) => (def.zones && Number.isFinite(def.zones[part]) ? def.zones[part] : part === 'weak' ? 2.2 : 1);
+
   // ---- who may shoot ---------------------------------------------------------------------------------------------
   // A fight is readable because few threats shoot at a time and each burst is announced.
   const tokens = { held: 0, at: -9 };
@@ -96,15 +119,16 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       senseIn: rng() * 0.2, atk: 'idle', atkT: 0, shots: 0, bursts: 0, lead: 0.5, hasToken: false, cooldown: 0.6 + rng(), flare: 0, lens: [...LENS_CALM],
       es: null, esT: 0, moveT: 0, lungeIn: 0.3, firePos: new Vector3(), firePlayer: new Vector3(),
       reportIn: 0, orbit: rng() * 6.28, orbitDir: rng() < 0.5 ? 1 : -1, orbitR: between(def.orbitRadius ?? 25, rng), orbitAlt: between(def.orbitAltitude ?? def.body.altitude ?? 15, rng), flipIn: 3 + rng() * 4, phase: rng() * 6.28,
-      stride: 0, deadFor: 0, spin: 0, smokeIn: 0, landed: false,
+      stride: 0, deadFor: 0, spin: 0, smokeIn: 0, landed: false, spoil: 0, limpFor: 0, limpSide: 0, stagger: 0,
       damage(amount, point, dir, bodyPart) {
         if (!t.alive) return false;
         t.health -= amount; t.hurt = true;
         if (!t.lastKnown && G.player) t.lastKnown = G.player.pos.clone();
         if (dir && t.type === 'air') t.vel.addScaledVector(dir, Math.min(3, amount * 0.09));
+        const side = bodyPart === 'leg' ? legSide(t, point) : undefined;
         G.events.emit('enemy:hit', { enemy: t, amount, point, part: bodyPart });
-        t.figure.hit(dir, amount, bodyPart);
-        if (t.health > 0) return false;
+        t.figure.hit(dir, amount, bodyPart, side);
+        if (t.health > 0) { react(t, amount, bodyPart, side); return false; }
         t.alive = false; t.deadFor = 0; calm(t); t.lens = [0.3, 0.05, 0.02]; t.flare = 0; t.figure.lens.color.setRGB(0.3, 0.05, 0.02); t.figure.die(dir);
         if (t.type === 'air') { t.spin = (rng() < 0.5 ? -1 : 1) * (5 + rng() * 3); t.vel.y += 1.5; if (dir) t.vel.addScaledVector(dir, 2.5); } else t.vel.set(0, 0, 0);
         if (t.figure.machine) { fx('sparks', point || t.pos, UP, 14); fx('debris', point || t.pos, { count: 3 }); fx('smoke', t.pos, { size: 0.5, life: 1 }); }
@@ -151,12 +175,12 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   function turnTo(t, x, z, dt) {
     const want = Math.atan2(-(x - t.pos.x), -(z - t.pos.z)); let d = want - t.yaw;
     while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
-    const max = t.def.body.turn * dt; t.yaw += Math.max(-max, Math.min(max, d));
+    const max = t.def.body.turn * dt * (t.stagger > 0 ? 0.3 : 1); t.yaw += Math.max(-max, Math.min(max, d));
     return Math.abs(d);
   }
   /** Walk towards a goal along the nav grid. Sets t.arrived. */
   function walkTo(t, goal, speed, dt) {
-    const nav = G.nav;
+    const nav = G.nav; speed *= mobility(t);
     t.repath -= dt;
     if (!t.path || !t.pathFor || t.pathFor.distanceToSquared(goal) > 4 || t.repath <= 0) {
       t.pathFor = (t.pathFor || new Vector3()).copy(goal); t.repath = 2 + rng();
@@ -241,6 +265,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   function fire(t, dt, { facing = true } = {}) {
     const w = t.def.weapon, p = G.player; if (!w) return false;
     t.cooldown -= dt;
+    if (t.spoil > 0) return false; // its aim was spoiled by a hit: no burst now
     if (t.atk === 'idle') {
       if (t.los && facing && t.cooldown <= 0 && p.alive && muzzleOf(t, tmpA).distanceTo(p.pos) <= w.range && requestToken(t)) {
         t.atk = 'tele'; t.atkT = w.aimTime;
@@ -368,7 +393,8 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     const v = t.view || (t.view = { pos: t.pos, target: null }), engaged = t.alive && fighting(t), p = G.player;
     v.yaw = t.yaw; v.vx = t.vel.x; v.vy = t.type === 'air' ? t.vel.y : 0; v.vz = t.vel.z; v.alive = t.alive; v.health = t.health / t.def.body.health;
     v.engaged = engaged; v.aim = t.atk; v.melee = t.es === 'wind' || t.es === 'lunge' || t.es === 'recover' ? t.es : null;
-    v.alert = t.alive && t.brain.state !== t.def.behaviour.start; v.crouch = 0;
+    v.alert = t.alive && t.brain.state !== t.def.behaviour.start; v.crouch = t.alive && t.brain.action === 'gotoCover' && t.arrived ? 1 : 0;
+    v.limp = t.limpFor > 0 ? Math.min(1, t.limpFor / 2) : 0; v.limpSide = t.limpSide;
     v.target = engaged && t.los && p ? p.pos : v.alert ? t.lastKnown : null;
     return v;
   }
@@ -436,6 +462,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     for (let i = list.length - 1; i >= 0; i--) {
       const t = list[i];
       if (!t.alive) { die(t, dt); continue; }
+      t.spoil -= dt; t.limpFor -= dt; t.stagger -= dt;
       sense(t, dt);
       const rule = t.brain.step({ seesTarget: t.sees, heardNoise: t.heard, damaged: t.hurt, arrived: t.arrived, noCover: t.noCover, health: t.health / t.def.body.health, lostFor: t.lostFor }, dt);
       if (rule) {
@@ -471,15 +498,17 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
         const d2 = oc.lengthSq() - tc * tc, r = b.radius; if (d2 > r * r) continue;
         const d = tc - Math.sqrt(r * r - d2); if (!best || d < best.dist) best = { enemy: t, dist: d, part: 'body' };
       } else {
+        if (t.figure.zones) { // a figure with hit volumes: a first test against a wide upright segment, then its parts
+          tmpA.copy(origin).addScaledVector(dir, max); tmpB.set(t.pos.x, t.pos.y, t.pos.z); tmpC.set(t.pos.x, t.pos.y + b.height + 0.2, t.pos.z);
+          if (segmentDistanceSq(origin, tmpA, tmpB, tmpC) > 1.2 * 1.2) continue;
+          for (const z of t.figure.zones()) { const dz = rayCapsule(origin, dir, z.a, z.b, z.r, max); if (dz !== null && (!best || dz < best.dist)) best = { enemy: t, dist: dz, part: z.part }; }
+          continue;
+        }
         // an upright cylinder
         const ox = origin.x - t.pos.x, oz = origin.z - t.pos.z, a = dir.x * dir.x + dir.z * dir.z; if (a < 1e-9) continue;
         const bq = 2 * (ox * dir.x + oz * dir.z), c = ox * ox + oz * oz - b.radius * b.radius, disc = bq * bq - 4 * a * c; if (disc < 0) continue;
         const d = (-bq - Math.sqrt(disc)) / (2 * a); if (d < 0 || d > max) continue;
         const y = origin.y + dir.y * d - t.pos.y; if (y < 0 || y > b.height) continue;
-        if (t.figure.zones) { // the cylinder is only the first test: what is hit is a part of the figure, or nothing
-          for (const z of t.figure.zones()) { const dz = rayCapsule(origin, dir, z.a, z.b, z.r, max); if (dz !== null && (!best || dz < best.dist)) best = { enemy: t, dist: dz, part: z.part }; }
-          continue;
-        }
         if (!best || d < best.dist) best = { enemy: t, dist: d, part: y > b.height - (b.weakTop ?? 0.32) ? 'weak' : 'body' };
       }
     }
@@ -493,6 +522,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     get intensity() { return intensity; },
     bolts: () => bolts.filter((b) => b.on).map((b) => ({ x: b.pos.x, y: b.pos.y, z: b.pos.z })),
     knows: (kind) => !!defOf(kind),
+    zoneMultiplier: (t, part) => zoneMultiplier(t.def, part),
     despawn(id) { const t = list.find((x) => x.id === id); if (t) remove(t); return !!t; },
     pose, place,
     clear() { for (const t of [...list]) remove(t); for (const b of bolts) { b.on = false; b.mesh.visible = false; } tokens.held = 0; },
