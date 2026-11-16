@@ -57,6 +57,16 @@ class Terrace(unittest.TestCase):
         self.assertAlmostEqual(abs(lines[0][-1][1] - lines[0][0][1]), 40, delta=4.5)
         self.assertEqual(terrace.rail_lines(self.ctx(lambda x, z: 50.0), ring, [], 2.0, 0.25), [])
 
+    def test_the_outline_is_cut_back_to_the_crest_of_a_bank_and_only_where_it_drops(self):
+        # level to x = 6 then a bank down to x = 12: the mapped east edge (x = 12) lies at the foot
+        ground = lambda x, z: 50.0 if x <= 6 else max(40.0, 50.0 - (x - 6) * 2.0)
+        ring = [(0, 0), (12, 0), (12, 30), (0, 30)]
+        new = terrace.crest_ring(self.ctx(ground), ring, [], 2.0)
+        east = [p for p in new if p[0] > 3]
+        self.assertTrue(east and all(abs(p[0] - 6) < 0.8 for p in east if 0 < p[1] < 30))
+        self.assertTrue(any(p[0] < 1 for p in new))         # the west side is where it was
+        self.assertEqual(terrace.crest_ring(self.ctx(lambda x, z: 50.0), ring, [], 2.0), ring)
+
     def test_lamps_every_spacing_along_a_line_starting_half_a_spacing_in(self):
         pts = terrace.along([(0, 0), (0, -100)], 25.0, 12.5)
         self.assertEqual(len(pts), 4)

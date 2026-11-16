@@ -31,7 +31,7 @@ export const PROP_KIT = {};
 import { box, tri, triN, quad, fan, shade } from './soup.js';
 import { SOUP, ROOF_SOUP } from './style.js';
 
-const IRON = [0.03, 0.033, 0.036], GREEN_PAINT = [0.02, 0.1, 0.05], STONE = [0.42, 0.4, 0.36], BRONZE = [0.05, 0.16, 0.12], WHITE = [0.8, 0.78, 0.72];
+const IRON = [0.03, 0.033, 0.036], GREEN_PAINT = [0.02, 0.1, 0.05], STONE = [0.42, 0.4, 0.36], BRONZE = [0.2, 0.36, 0.28], WHITE = [0.8, 0.78, 0.72];
 // a prop's own frame: right, up, forward (the facing), at the plan point (x, z) turned by yaw
 const frameOf = (x, z, yaw) => ({ x, z, rx: Math.cos(yaw), rz: -Math.sin(yaw), fx: -Math.sin(yaw), fz: -Math.cos(yaw) });
 const at = (p, u, d) => [p.x + p.rx * u + p.fx * d, p.z + p.rz * u + p.fz * d];
@@ -124,18 +124,16 @@ PROP_KIT.plinth = {
     bx(I, p, 0, 0, 0.4, 0.3, y + 2.0, y + 3.2, BRONZE); bx(I, p, 0, 0, 0.2, 0.2, y + 3.2, y + 3.5, BRONZE);
   },
 };
-// A tall monument: stepped base, a pedestal with corner piers and a cornice, a bronze figure on a drum. Where a place has a named one it gives a
-// bigger variant (variant > 0 scales it by 1 + variant / 10).
+// A tall monument: stepped base, a pedestal with corner piers and a cornice, a bronze figure on a drum (a simple silhouette, no likeness).
 PROP_KIT.monument_tall = {
   collider: { r: 3.6, h: 9, nav: true },
-  build(soups, x, y, z, yaw, variant) {
-    const p = frameOf(x, z, yaw), T = soups.get(SOUP.trim), I = soups.get(SOUP.iron), k = 1 + (variant | 0) / 10;
+  build(soups, x, y, z, yaw) {
+    const p = frameOf(x, z, yaw), T = soups.get(SOUP.trim), I = soups.get(SOUP.iron);
     bx(T, p, 0, 0, 3.5, 3.5, y, y + 0.35, STONE); bx(T, p, 0, 0, 3.0, 3.0, y + 0.35, y + 0.7, STONE); bx(T, p, 0, 0, 2.5, 2.5, y + 0.7, y + 1.05, STONE);
     bx(T, p, 0, 0, 1.7, 1.7, y + 1.05, y + 1.5, WHITE);
     for (const u of [-1.2, 1.2]) for (const d of [-1.2, 1.2]) bx(T, p, u, d, 0.45, 0.45, y + 1.5, y + 5.2, STONE);
     bx(T, p, 0, 0, 1.15, 1.15, y + 1.5, y + 5.2, WHITE);
     bx(T, p, 0, 0, 1.9, 1.9, y + 5.2, y + 5.65, STONE); bx(T, p, 0, 0, 1.5, 1.5, y + 5.65, y + 5.95, WHITE);
-    for (const u of [-1.2, 1.2]) for (const d of [-1.2, 1.2]) bx(I, p, u, d, 0.22, 0.22, y + 5.95, y + 6.5 * k - 0.0, BRONZE);
     lathe(I, p, 0, 0, [[0.9, y + 5.95], [0.7, y + 6.3], [0.5, y + 7.0]], 8, BRONZE);
     bx(I, p, 0, 0, 0.32, 0.22, y + 7.0, y + 8.1, BRONZE); bx(I, p, 0, 0, 0.4, 0.2, y + 8.1, y + 8.9, BRONZE);
     lathe(I, p, 0, 0, [[0.17, y + 8.9], [0.15, y + 9.1], [0.0, y + 9.25]], 8, BRONZE);

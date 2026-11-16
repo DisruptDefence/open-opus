@@ -66,6 +66,7 @@
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
     "looks": {
       "chateau": {
+        "wall": ["#dcb98a", "#d2a97a", "#e0c093"],
         "course": { "from": 1, "every": 1, "h": 0.32, "out": 0.12, "tint": "#d2c8ae" },
         "corbel": { "h": 0.85, "out": 0.42, "steps": 3, "tint": "#d2c8ae" },
         "oriel": { "every": 16, "w": 2.6, "depth": 0.95, "from": 2, "floors": 2, "rise": 2.6, "minEdge": 14 },
@@ -76,6 +77,7 @@
         "chimneys": { "perBuilding": [2, 4], "width": 1.5, "depth": 1.0, "above": 3.2 }
       },
       "turret": {
+        "wall": ["#dcb98a", "#d2a97a"],
         "course": { "from": 1, "every": 2, "h": 0.28, "out": 0.1, "tint": "#d2c8ae" },
         "corbel": { "h": 0.8, "out": 0.4, "steps": 3, "tint": "#d2c8ae" },
         "slits": { "w": 0.6, "h": 1.5, "sill": 0.9, "every": 2 },

@@ -16,6 +16,7 @@
 //   crest   { h, w }                                     a cresting along every ridge, `finial` { h, w } a spike at its ends / on a cone
 //   canopy  { depth, rise }                              a porte-cochere canopy over each end of a passage through the building
 //   flag    { above, h, w, colors }                      a flagpole on the ridge of a building whose top is `above` m over its ground
+//   wall    [colours]                                    the wall colour of the building (one per building by its id), instead of the façade palette
 //   window  { bay: [lo, hi] }, dormers, chimneys         laid over the style's own for this building's façade
 // Soups: SOUP.trim (stone dressing), SOUP.window (glass), ROOF_SOUP copper (caps), SOUP.iron (cresting). Budget: <= 9 000
 // triangles for a building of 40 edges and 8 storeys; near only for courses, oriels, windows.

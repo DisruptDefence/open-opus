@@ -77,6 +77,8 @@ function completeBuilding(b, style) {
     const pick = b.styled ? paletteColor(style.palettes[FACADE_NAMES[b.facade]] || style.palettes.generic, b.palette || 0) : legacyTint(b.palette || 0);
     b.tint = b.styled ? jitterTint(pick, b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13)) : pick;
   }
+  const lookWall = b.look && style.looks && style.looks[b.look] && style.looks[b.look].wall; // a landmark look may colour its walls itself (a colour list)
+  if (lookWall) b.tint = jitterTint(paletteColor(lookWall, b.id ?? 0), b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13));
   if (b.roofColor === undefined || typeof b.roofColor === 'string') b.roofColor = parseColor(b.roofColor) || (b.roofPalette != null ? paletteColor(style.roofs[ROOF_MAT_NAMES[b.roofMat]] || style.roofs.generic, b.roofPalette, null) : null);
   return b;
 }
