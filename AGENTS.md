@@ -5,13 +5,16 @@ first change. Where it and another document disagree, this file wins and the oth
 
 ## Model
 
-**Use Claude Fable 5.2 (`claude-fable-5-2`) for all work in this repository.**
+**Plan and review on Claude Fable 5.2 (`claude-fable-5-2`); execute on Fable or Sonnet by the kind of work.**
 
-- Start the session on Fable 5.2. In Claude Code: `claude --model claude-fable-5-2`, or `/model` and pick Fable 5.2.
-- Every subagent you spawn runs on Fable 5.2 as well: pass `model: "fable"` (or leave the model unset so it
-  inherits yours). Do not hand engine, architecture, format or review work to a smaller model.
-- If Fable 5.2 is not available to you, stop and say so. Do not carry on with another model.
-- Through the API or the Agent SDK the model id is `claude-fable-5-2`.
+- The session that plans, briefs, reviews and merges runs on Fable 5.2 (`claude --model claude-fable-5-2`).
+- **Fable also executes** anything open-ended or judged by eye or by design sense: engine internals, scene
+  detail, gameplay, architecture and formats, security, reviews.
+- **Sonnet 5.5 (`claude-sonnet-5-5`, `model: "sonnet"`) executes** work a brief fully determines: wiring an
+  existing module into a page, sync and vendoring scripts, mechanical refactors, test updates, translations,
+  document corrections, merges. Its brief names the files, the steps, the tests that must pass and the proof
+  required, and a Fable session checks the result by running it before it is merged.
+- When in doubt, Fable. Never a smaller model than Sonnet.
 
 ## What this is
 
@@ -64,8 +67,13 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
    it lacks, extend the API (additively, with a contract test) instead of reaching past it.
 2. **Imports go down, never up** (table in `docs/ARCHITECTURE.md`). Pure modules (`geo`, `terrain`, `physics`,
    `nav`, `scene`) import neither three.js nor the DOM and are tested under Node.
-3. **Data, not code.** A place is a scene package, a weapon or threat is a content pack, a mission is a
-   scenario. Nothing about one place, one nation or one mission is written into engine code.
+3. **Data, not code: the engine is built once and reused.** A place is a scene package, a weapon or threat is a
+   content pack, a mission is a scenario. Nothing about one place, one nation or one mission is written into
+   engine or builder code. A new place anywhere is a small place-config file given to the same builder; what
+   varies by region (roof shapes, materials, storey heights, street furniture, tree species, road surfaces) is
+   a style pack with a country-wide default and regional overrides; props come from one reusable kit. Use
+   country-wide open sources first and city-specific data only as optional enrichers behind the same interface.
+   The test of any scene or gameplay change: a second, different place builds and plays with no code change.
 4. **Real coordinates.** Game metres are UTM metres from the scene's anchor. Never use a flat
    metres-per-degree approximation. Conversions are tested against the scene's check points.
 5. **Open data only, with its licence.** Every source used by a scene is listed in its `attribution.json` with
