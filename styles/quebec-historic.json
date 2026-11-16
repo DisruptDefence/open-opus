@@ -21,7 +21,7 @@
                   "on": ["primary", "secondary", "tertiary", "residential", "unclassified"] },
     "surface": { "pedestrian": "cobble", "living_street": "cobble", "footway": "paving", "steps": "rock",
                  "residential": "asphalt", "service": "asphalt", "path": "gravel" },
-    "lamps": { "kind": "lamp_lantern", "spacing": 28, "offset": 0.6, "stagger": true,
+    "lamps": { "kind": "lamp_lantern", "spacing": 24, "offset": 0.6, "stagger": true,
                "on": ["residential", "living_street", "pedestrian", "tertiary", "secondary", "primary"] },
     "bollards": { "kind": "bollard_iron", "at": "pedestrian_ends", "gap": 1.6 }
   },
