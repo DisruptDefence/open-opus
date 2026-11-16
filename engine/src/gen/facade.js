@@ -138,6 +138,12 @@ function reveal(w, f, o, r, tint) {
   if (o.sillTop) quad(w, f.at(o.u0, o.ys, -r), f.at(o.u1, o.ys, -r), f.at(o.u1, o.ys, 0), f.at(o.u0, o.ys, 0), tint); // the sill's top
 }
 
+/** A painted frame round an opening at depth d: four strips `w` wide, on the opening's edge, facing out. */
+function border(T, f, o, d, w, tint) {
+  rect(T, f, o.u0, o.u0 + w, o.ys, o.yh, d, tint); rect(T, f, o.u1 - w, o.u1, o.ys, o.yh, d, tint);
+  rect(T, f, o.u0 + w, o.u1 - w, o.yh - w, o.yh, d, tint); rect(T, f, o.u0 + w, o.u1 - w, o.ys, o.ys + w, d, tint);
+}
+
 function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
   const parapet = (roofInfo && roofInfo.parapet) || 0, pr = profile(e, groundAt), L = wallLimits(b, groundAt, pr, parapet); if (!L.ok) return;
   const W = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[0]), T = soups.get(SOUP.trim), G = soups.get(SOUP.window), wd = style.window, gfl = style.groundFloor, f = e.f, len = e.len;
@@ -185,13 +191,13 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
     for (const o of ops) {
       if (o.kind === 'win') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, lk.frameC, [0, 0, 1, 1]);
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [0, 0, 1, 1]); border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
         slab(T, f, o.u0 - 0.08, o.u1 + 0.08, o.ys - 0.07, o.ys, 0, 0.08, lk.trim, 'ftlrb');
         slab(T, f, o.u0 - 0.1, o.u1 + 0.1, o.yh, o.yh + 0.22, 0, lk.headDepth, lk.trim, 'fb');
         if (lk.shutters) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, mixTint(lk.frameC, DARK, 0.5), [1, 0, 2, 1]);
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.05, mixTint(lk.frameC, DARK, 0.5));
         slab(T, f, o.u0 - 0.06, o.u1 + 0.06, o.ys - 0.06, o.ys, 0, 0.1, lk.trim, 'ftb');
       } else { // a door, recessed
         const D = soups.get(SOUP.door);
@@ -235,7 +241,7 @@ function dormers(soups, b, style, info, lk) {
     for (let k = by.n > 2 ? lk.r.int(step) : 0; k < by.n; k += step) {
       const c = by.start + (k + 0.5) * by.width, u0 = c - hw, u1 = c + hw, ub = 0.1;
       // front: window set in a painted surround, and the gable above it
-      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, lk.frameC, [0, 0, 1, 1]);
+      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, null, [0, 0, 1, 1]);
       rect(T, f, u0, u0 + ub, yb, yt, d0, lk.trim); rect(T, f, u1 - ub, u1, yb, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yt - 0.1, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yb, yb + 0.1, d0, lk.trim);
       tri(T, f.at(u0, yt, d0), f.at(u1, yt, d0), f.at(c, yt + rise, d0), lk.trim);
       // cheeks and roof

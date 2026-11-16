@@ -26,7 +26,7 @@ void surf(vec2 uv){
   float solid = max(isFrame, bar);
   float sky = smoothstep(0.0, 1.0, q.y);
   float refl = fbm(q * vec2(1.0, 2.0), vec2(3.0, 5.0), 3, 103.0);
-  vec3 glass = mix(L(0.020, 0.028, 0.040), L(0.10, 0.14, 0.18), sky * 0.7 + refl * 0.5);
+  vec3 glass = mix(L(0.030, 0.040, 0.055), L(0.16, 0.21, 0.27), sky * 0.7 + refl * 0.5);
   float curtain = smoothstep(0.62, 0.7, fbm(q, vec2(2.0, 1.0), 3, 104.0)) * (shop ? 0.0 : 0.6) * step(q.y, 0.55);
   glass = mix(glass, L(0.30, 0.26, 0.20), curtain * 0.5);
   vec3 paint = L(0.88, 0.87, 0.84) * (0.9 + 0.2 * fine);

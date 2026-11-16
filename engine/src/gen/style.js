@@ -41,7 +41,7 @@ export const GROUND_SOUP = ['paving|tn', 'asphalt|tn', 'concrete|tn', 'cobble|tn
  */
 export const SOUP = {
   plinth: 'stone|t',        // the plain stone below a façade where the ground falls away
-  trim: 'stone|tvn',        // sills, lintels, cornices, string courses, steps: tinted with a trim colour
+  trim: 'stucco|tvn',       // sills, lintels, cornices, string courses, fascias, frames: painted render, tinted with a trim colour
   window: 'window|vn',      // glass and frame, uv 0..1 a casement, 1..2 a shop pane; tinted with the frame colour
   door: 'door|vn',          // uv 0..1 one door; tinted with the door colour
   shutter: 'wood|tvn',
