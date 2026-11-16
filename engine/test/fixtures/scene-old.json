@@ -1,0 +1,30 @@
+{
+  "format": "opus-scene/1", "packaging": "single", "id": "fixture-old", "name": "Fixture, old keys",
+  "georef": { "crs": "EPSG:32619", "projection": "utm", "zone": 19, "band": "T", "hemisphere": "N", "easting": 340100, "northing": 5190050, "h0": 0, "vertical": { "datum": "none (synthetic)", "geoid_undulation": -27.6 }, "anchor": { "lat": 46.84477456, "lon": -71.09720309 }, "convergence_deg": -1.5302, "checks": [ { "x": 0, "z": 0, "lat": 46.84477456, "lon": -71.09720309, "mgrs": "19TCM4010090050" }, { "x": 250, "z": -250, "lat": 46.84708282, "lon": -71.09401381, "mgrs": "19TCM4035090300" }, { "x": -400, "z": 300, "lat": 46.84198046, "lon": -71.10234048, "mgrs": "19TCM3970089750" }, { "x": 470, "z": 470, "lat": 46.84066059, "lon": -71.09087885, "mgrs": "19TCM4057089580" }, { "x": -470, "z": -470, "lat": 46.84888816, "lon": -71.10352831, "mgrs": "19TCM3963090520" } ] },
+  "play": { "minX": -110, "maxX": 190, "minZ": -140, "maxZ": 110 },
+  "extent": { "minX": -120, "maxX": 200, "minZ": -150, "maxZ": 120 },
+  "sources": [ { "title": "Hand-written fixture", "licence": "none", "attribution": "fixture" } ],
+  "terrain": { "nx": 65, "nz": 55, "cell": 5, "minX": -120, "minZ": -150, "unit": 0.01, "plane": { "y0": 20, "sx": 0.02, "sz": 0 } },
+  "buildings": [
+    { "r": [12.1, -40.3, 21.9, -39.8, 22.3, -48.9, 12.4, -49.5], "g": 22.6, "h": 14.2, "hs": "rule", "k": "retail" },
+    { "r": [40, -40, 52, -40, 52, -52, 40, -52], "g": 23.2, "h": 9.6, "hs": "levels", "lv": 3, "roof": "hipped", "rc": "#67B083", "mat": "brick", "n": "Hall" },
+    { "r": [60, -40, 80, -40, 80, -60, 60, -60], "holes": [[66, -46, 74, -46, 74, -54, 66, -54]], "g": 23.6, "h": 5, "hs": "rule", "roof": "flat" },
+    { "r": [-20, 0, 0, 0, 0, 12, -20, 12], "g": 22, "h": 16, "hs": "rule", "k": "hotel", "n": "Outline", "parts": 1 },
+    { "r": [-20, 0, -10, 0, -10, 12, -20, 12], "g": 22, "h": 12, "hs": "rule", "part": 1 },
+    { "r": [-10, 0, 0, 0, 0, 12, -10, 12], "g": 22, "h": 20, "hs": "rule", "part": 1 },
+    { "r": [100, 20, 104, 20, 104, 24, 100, 24], "g": 24.4, "h": 3, "hs": "rule", "k": "roof" }
+  ],
+  "roads": [
+    { "p": [-110, -20, 190, -20], "k": "residential", "w": 6, "s": "asphalt", "n": "Long Street" },
+    { "p": [30, -20, 30, 100], "k": "footway", "w": 2 },
+    { "p": [120, -20, 120, -60], "k": "steps", "w": 2.5 }
+  ],
+  "areas": [ { "r": [60, 0, 100, 0, 100, 30, 60, 30], "k": "square", "s": "sett" } ],
+  "green": [ { "r": [-100, 60, -40, 60, -40, 110, -100, 110] } ],
+  "walls": [
+    { "p": [-80, 30, 20, 30, 20, 80], "k": "city_wall", "h": 6, "n": "Rampart" },
+    { "p": [140, 20, 180, 20], "k": "fence", "h": 1.1 }
+  ],
+  "trees": [ [-60, 80], [-70, 90], [160, -100] ],
+  "landmarks": [ { "n": "Hall", "k": "building", "x": 46, "z": -46 } ]
+}

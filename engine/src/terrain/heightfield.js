@@ -8,16 +8,25 @@ import { chunkGrid } from '../scene/grid.js';
 /**
  * One grid of heights: `nx` by `nz` samples, `cell` metres apart, the first sample at (minX, minZ). `surface` is an
  * optional raster of surface classes from the same corner, `surfaceN` cells square of `surfaceCell` metres.
+ * `lift` is an optional raster of centimetres to add to the ground (raised sidewalks), `liftN` cells square of
+ * `liftCell` metres from the same corner: `height()` reports the ground with it, `baseHeight()` without it (what the
+ * terrain mesh is drawn from). With no lift the two are the same.
  */
-export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, surfaceCell = cell, surfaceN = 0 }) {
+export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, surfaceCell = cell, surfaceN = 0, lift = null, liftCell = 1, liftN = 0 }) {
   const maxX = minX + (nx - 1) * cell, maxZ = minZ + (nz - 1) * cell;
-  function height(x, z) {
+  function baseHeight(x, z) {
     let fx = (x - minX) / cell, fz = (z - minZ) / cell;
     fx = fx < 0 ? 0 : fx > nx - 1 ? nx - 1 : fx;
     fz = fz < 0 ? 0 : fz > nz - 1 ? nz - 1 : fz;
     const i = Math.min(nx - 2, fx | 0), j = Math.min(nz - 2, fz | 0), u = fx - i, v = fz - j, k = j * nx + i;
     return (data[k] * (1 - u) + data[k + 1] * u) * (1 - v) + (data[k + nx] * (1 - u) + data[k + nx + 1] * u) * v;
   }
+  const ln = lift ? liftN || Math.round(((nx - 1) * cell) / liftCell) : 0;
+  function liftAt(x, z) {
+    const i = Math.floor((x - minX) / liftCell), j = Math.floor((z - minZ) / liftCell);
+    return i < 0 || j < 0 || i >= ln || j >= ln ? 0 : lift[j * ln + i] / 100;
+  }
+  const height = lift ? (x, z) => baseHeight(x, z) + liftAt(x, z) : baseHeight;
   const sn = surface ? surfaceN || Math.round(((nx - 1) * cell) / surfaceCell) : 0;
   function surfaceAt(x, z) {
     if (!surface) return 0;
@@ -26,7 +35,7 @@ export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, sur
     return surface[j * sn + i];
   }
   const contains = (x, z) => x >= minX && x <= maxX && z >= minZ && z <= maxZ;
-  return { nx, nz, cell, minX, minZ, maxX, maxZ, data, surface, surfaceCell, height, surfaceAt, contains };
+  return { nx, nz, cell, minX, minZ, maxX, maxZ, data, surface, surfaceCell, lift, height, baseHeight, surfaceAt, contains };
 }
 
 export const SURFACES = ['unknown', 'asphalt', 'concrete', 'cobble', 'paving', 'gravel', 'dirt', 'grass', 'sand', 'rock',

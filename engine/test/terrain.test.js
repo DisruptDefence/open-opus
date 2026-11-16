@@ -39,3 +39,12 @@ test('a ray finds the ground and misses when it clears it', () => {
   const down = t.raycast(4, 10, 4, 0, -1, 0, 50);
   assert.ok(Math.abs(down.dist - 10) < 0.01);
 });
+
+test('a lift raster raises the ground it covers; the base height ignores it', () => {
+  const flat = new Float32Array(11 * 11).fill(5), lift = new Uint8Array(20 * 20); lift[3 * 20 + 7] = 14; // the 1 m cell x 7..8, z 3..4
+  const g = createGrid({ nx: 11, nz: 11, cell: 2, minX: 0, minZ: 0, data: flat, lift, liftCell: 1, liftN: 20 });
+  assert.ok(Math.abs(g.height(7.5, 3.5) - 5.14) < 1e-6); assert.equal(g.height(8.5, 3.5), 5); assert.equal(g.height(7.5, 4.5), 5); assert.equal(g.baseHeight(7.5, 3.5), 5);
+  assert.equal(g.height(-3, -3), 5, 'outside the raster nothing is added');
+  const plain = createGrid({ nx: 11, nz: 11, cell: 2, minX: 0, minZ: 0, data: flat }); assert.equal(plain.height(7.5, 3.5), plain.baseHeight(7.5, 3.5));
+  const t = createTerrain({ grid }); t.addTile(0, -1, g); assert.ok(Math.abs(t.height(7.5, 3.5) - 5.14) < 1e-6, 'the terrain reports the lifted ground');
+});

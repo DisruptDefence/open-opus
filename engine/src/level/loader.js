@@ -4,12 +4,15 @@
 //   order     manifest -> far ring (whole scene, coarse) -> the start chunk and its ring -> play -> further rings
 //   window    full detail and collision within `radius` chunks of the player; released beyond `radius + 1`
 //   budget    one chunk is decoded and one is meshed per frame at most, so streaming never stalls a frame for long
+//   detail    a live chunk draws its `base` and `far` groups; the cells near the camera get their `near` group, one
+//             cell a frame at most (level/detail.js; docs/plans/SCENE-DETAIL.md section 4)
 //
 // Objectives, the extraction point and threat spawns are NOT here: by the format they are the host's (anchors.json)
 // and arrive as scenario commands through the world API.
 import { Group, Mesh, PlaneGeometry, Vector3 } from '../../vendor/three.module.js';
 import { installChunk, uninstallChunk } from '../scene/install.js';
-import { buildTerrain, buildStructures, buildFarTile, disposeGroup } from './build.js';
+import { buildTerrain, buildChunkStatic, buildCellNear, buildFarTile, disposeGroup } from './build.js';
+import { createDetail, DETAIL_RADIUS } from './detail.js';
 
 export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   const m = source.manifest, root = new Group(); root.name = 'level'; G.scene.add(root);
@@ -19,7 +22,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   const grid = m.grid, key = grid.key;
   const state = new Map(); // key -> { cx, cz, phase: 'fetching' | 'decoded' | 'live', data, groups, far }
   const farTiles = new Map();
-  const stats = { chunksLive: 0, chunksTotal: m.chunks.length, tris: 0, buildMs: 0, lastBuildMs: 0, fetched: 0, released: 0 };
+  const stats = { chunksLive: 0, chunksTotal: m.chunks.length, buildMs: 0, lastBuildMs: 0, fetched: 0, released: 0, nearBuildMs: 0, nearBuilt: 0 };
 
   // far ring: one coarse tile per chunk cell, hulls bucketed by the cell of their first vertex
   const hullsBy = new Map();
@@ -32,7 +35,19 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     w.position.set((b.minX + b.maxX) / 2, m.water.level, (b.minZ + b.maxZ) / 2); w.receiveShadow = true; w.name = 'water'; root.add(w);
   }
 
-  const groundAt = (x, z) => { const h = G.terrain.height(x, z); return Number.isNaN(h) ? 0 : h; };
+  // detail: the `near` group of the cells round the camera. The switch `detail=<metres>` overrides the tier's distance.
+  const asked = G.params && G.params.detail != null && G.params.detail !== '' ? +G.params.detail : NaN;
+  const detail = createDetail({
+    radius: Number.isFinite(asked) ? asked : DETAIL_RADIUS[G.quality && G.quality.name] ?? DETAIL_RADIUS.medium,
+    build(k, cell) {
+      const s = state.get(k), t0 = performance.now(), g = buildCellNear(G, s.data, cell, s.env);
+      g.visible = false; root.add(g); stats.nearBuildMs = performance.now() - t0; stats.nearBuilt++;
+      return g;
+    },
+    show(k, cell, g, on) { g.visible = on; state.get(k).fixed.setNear(cell.index, on); },
+    dispose(k, cell, g) { disposeGroup(g); },
+  });
+  const hasNear = (cell) => cell.buildings.length + cell.trees.length + cell.roads.length + cell.props.length + cell.crossings.length + cell.walls.filter((w) => w.rail).length > 0;
 
   async function fetchChunk(ce, cn) {
     const k = key(ce, cn), s = { ce, cn, phase: 'fetching', data: null, groups: [] }; state.set(k, s);
@@ -40,21 +55,31 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     catch (e) { state.delete(k); console.error(`[scene] chunk ${k} failed: ${(e && e.message) || e}`); }
   }
   function goLive(s) {
-    const t0 = performance.now();
-    installChunk(G.physics, G.terrain, s.data); // collision and height first: the simulation never waits for a mesh
-    const terrain = buildTerrain(G, s.data), structures = buildStructures(G, s.data, groundAt);
-    root.add(terrain, structures); s.groups = [terrain, structures]; s.tris = terrain.userData.tris + structures.userData.tris;
-    const f = farTiles.get(key(s.ce, s.cn)); if (f) f.visible = false;
-    s.phase = 'live'; s.data = null; // the tile and the solids hold what is still needed
-    stats.chunksLive++; stats.tris += s.tris; stats.lastBuildMs = performance.now() - t0; stats.buildMs += stats.lastBuildMs;
+    const t0 = performance.now(), k = key(s.ce, s.cn);
+    s.env = installChunk(G.physics, G.terrain, s.data, m.style); // collision and height first: the simulation never waits for a mesh
+    s.env.season = m.season || s.env.season;
+    s.terrain = buildTerrain(G, s.data); s.fixed = buildChunkStatic(G, s.data, s.env);
+    root.add(s.terrain, s.fixed.group); s.groups = [s.terrain, s.fixed.group];
+    detail.add(k, s.data.cells.map((cell) => (hasNear(cell) ? cell : { ...cell, empty: true })));
+    const f = farTiles.get(k); if (f) f.visible = false;
+    s.phase = 'live'; // the records stay: the cells' near groups are built from them as the camera comes
+    stats.chunksLive++; stats.lastBuildMs = performance.now() - t0; stats.buildMs += stats.lastBuildMs;
     G.events.emit('scene:chunk', { ce: s.ce, cn: s.cn, live: true, ms: stats.lastBuildMs });
   }
   function release(s) {
+    detail.remove(key(s.ce, s.cn));
     for (const g of s.groups) disposeGroup(g);
     uninstallChunk(G.physics, G.terrain, s.ce, s.cn);
     const f = farTiles.get(key(s.ce, s.cn)); if (f) f.visible = true;
-    state.delete(key(s.ce, s.cn)); stats.chunksLive--; stats.tris -= s.tris; stats.released++;
+    state.delete(key(s.ce, s.cn)); stats.chunksLive--; stats.released++;
     G.events.emit('scene:chunk', { ce: s.ce, cn: s.cn, live: false });
+  }
+  /** Triangles of the scene that are drawn now: live chunks' ground, base and far groups, and the near groups showing. */
+  function trisNow() {
+    let n = 0;
+    for (const s of state.values()) if (s.phase === 'live') n += s.terrain.userData.tris + s.fixed.tris();
+    root.traverse((o) => { if (o.visible && o.userData.tris && o.name.startsWith('near ')) n += o.userData.tris; });
+    return n;
   }
 
   /** Bring the window round (x, z) up to date. Returns true when every chunk in it is live. */
@@ -76,7 +101,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   }
   /** Load the whole window round a point before play begins. */
   async function preload(x, z) {
-    for (let guard = 0; guard < 2000; guard++) { if (stream(x, z, 4)) return; await new Promise((r) => setTimeout(r, 0)); }
+    for (let guard = 0; guard < 2000; guard++) { if (stream(x, z, 4)) { detail.update(x, z, Infinity); return; } await new Promise((r) => setTimeout(r, 0)); } // the near cells too: a first frame or a picture shows the place as it is
     throw new Error('scene: the start window did not load');
   }
 
@@ -86,8 +111,9 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     playerStart: start,
     objectives: [], extraction: null, enemySpawns: [], zones: m.zones || [], interiorBoxes: [], cinematicPath: [], coverPoints: [],
     groundSurfaceAt: (x, z) => { const s = G.terrain.surfaceAt(x, z); return s === 'unknown' ? 'concrete' : s; },
-    update() { const at = G.photo || (G.player && G.player.pos); if (at) stream(at.x, at.z); }, // in photo mode the scene follows the camera
-    stream, preload, stats: () => ({ ...stats }),
+    update() { const at = G.photo || (G.player && G.player.pos); if (at) { stream(at.x, at.z); detail.update(at.x, at.z, 1); } }, // in photo mode the scene follows the camera
+    stream, preload, stats: () => ({ ...stats, tris: trisNow(), cellsNear: detail.stats().shown, cellsBuilt: detail.stats().built, detail: detail.radius }),
+    setDetail(r) { detail.setRadius(r); },
     setRadius(r) { radius = r; },
     get radius() { return radius; },
   };

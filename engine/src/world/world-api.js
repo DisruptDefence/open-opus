@@ -157,7 +157,7 @@ export function createWorldApi(engine, emit) {
     overhead,
     photo,
     /** What the last frame cost, as plain numbers: for budgets and captures. */
-    stats() { const t = engine.stats(), sc = t.scene || {}; return { quality: t.quality, frameMs: t.frameMs, calls: t.calls ?? 0, triangles: t.tris ?? 0, chunksLive: sc.chunksLive ?? 0, sceneTriangles: sc.tris ?? 0, buildMs: round(sc.buildMs ?? 0, 10) }; },
+    stats() { const t = engine.stats(), sc = t.scene || {}; return { quality: t.quality, frameMs: t.frameMs, calls: t.calls ?? 0, triangles: t.tris ?? 0, chunksLive: sc.chunksLive ?? 0, sceneTriangles: sc.tris ?? 0, buildMs: round(sc.buildMs ?? 0, 10), cellsNear: sc.cellsNear ?? 0, nearBuildMs: round(sc.nearBuildMs ?? 0, 10) }; },
     photographing: () => !!G.photo,
     /** Scenario commands (director/director.js). Throws a ScenarioCommandError, and only that, when one cannot be applied. */
     apply(cmd) {

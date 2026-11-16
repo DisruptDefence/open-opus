@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGrid, createTerrain } from '../src/terrain/heightfield.js';
 import { createPhysics, STEP } from '../src/physics/physics.js';
-import { loadTestScene, walk } from './helpers.js';
+import { loadTestScene, walk, fixture, installAll } from './helpers.js';
+import { jsonSource } from '../src/scene/source.js';
+import { PROP_KIT } from '../src/gen/props.js';
 
 function flat(f = () => 0) {
   const n = 101, d = new Float32Array(n * n); for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) d[j * n + i] = f(-50 + i, -50 + j);
@@ -88,4 +90,32 @@ test('on the test scene: up the ramp, held at the cliff edge, stopped by a build
   // 6. the stair on the square is climbed
   const st = walk(physics, { x: 58, y: terrain.height(58, -24), z: -24 }, 1, 0, 3, 4);
   assert.ok(st.pos.y - terrain.height(58, -24) > 1.7, `up the stair by ${(st.pos.y - terrain.height(58, -24)).toFixed(2)} m`);
+});
+
+test('collision is what is drawn: a walker passes under a part that floats, and props stop what their collider says', async () => {
+  // the kit is empty until its item lands: two colliders stand in for it here
+  const had = { ...PROP_KIT }; PROP_KIT.lamp_lantern = { build() {}, collider: { r: 0.15, h: 3.6, nav: false } }; PROP_KIT.bench_slat = { build() {}, collider: { hw: 0.9, hd: 0.3, h: 0.85, nav: true } };
+  try {
+    const { physics, terrain } = await installAll(jsonSource(fixture('scene-new')));
+    // the part with `mh: 12` over x -10..0: nothing at head height. Its neighbour without one, x -20..-10: a wall
+    const under = walk(physics, { x: -5, y: terrain.height(-5, -6), z: -6 }, 0, 1, 3.8, 6);
+    assert.ok(under.pos.z > 14, `walked under the floating part to z ${under.pos.z.toFixed(1)}`);
+    const stopped = walk(physics, { x: -15, y: terrain.height(-15, -6), z: -6 }, 0, 1, 3.8, 6);
+    assert.ok(stopped.pos.z < 0, `stopped by the part on the ground at z ${stopped.pos.z.toFixed(2)}`);
+    assert.ok(physics.raycast({ x: -5, y: terrain.height(-5, 6) + 40, z: 6 }, { x: 0, y: -1, z: 0 }, 100).box, 'the floating part is still there for a shot from above');
+    assert.equal(physics.raycast({ x: -5, y: terrain.height(-5, -6) + 1.5, z: -6 }, { x: 0, y: 0, z: 1 }, 15), null, 'and a shot passes under it');
+    // a lamp post: stops the walker and a shot, closes no nav cell
+    const y = terrain.height(101.2, -43), pos = { x: 98, y, z: -43 }, vel = { x: 0, y: 0, z: 0 }; let closest = Infinity;
+    for (let i = 0; i < 180; i++) { vel.x = 3; vel.z = 0; vel.y -= 21 / 60; physics.moveCapsule(pos, vel, 1 / 60, 0.32, 1.8, true); closest = Math.min(closest, Math.max(Math.abs(pos.x - 101.2), Math.abs(pos.z + 43))); }
+    assert.ok(closest >= 0.15 + 0.32 - 0.02, `the walker never came nearer the post than its collider allows (${closest.toFixed(3)})`);
+    assert.ok(physics.raycast({ x: 98, y: y + 1.5, z: -43 }, { x: 1, y: 0, z: 0 }, 10).dist < 3.2);
+    assert.equal(physics.blocked(101.2, -43, 0.3, y), false, 'no nav cell is closed by a post');
+    // a bench turned to face south: 1.8 m across x, 0.6 m deep, and it closes its nav cell
+    const by = terrain.height(70, 10);
+    assert.equal(physics.blocked(70, 10, 0.3, by), true);
+    assert.ok(physics.raycast({ x: 70.8, y: by + 0.4, z: 8 }, { x: 0, y: 0, z: 1 }, 10).dist < 1.8, 'the bench is 0.9 m either side of its middle');
+    assert.equal(physics.raycast({ x: 71.1, y: by + 0.4, z: 8 }, { x: 0, y: 0, z: 1 }, 5), null);
+    // an unknown kind in the scene is skipped, not an error: nothing stands at its place
+    assert.equal(physics.blocked(75, 12, 0.3, terrain.height(75, 12)), false);
+  } finally { for (const k of Object.keys(PROP_KIT)) delete PROP_KIT[k]; Object.assign(PROP_KIT, had); }
 });

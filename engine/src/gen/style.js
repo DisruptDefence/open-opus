@@ -35,20 +35,23 @@ export const ROOF_TINT_SOUP = ['roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', '
 export const STRUCTURE_SOUP = ['stone|t', 'stone|t', 'rubble|t', 'brick|t', 'stucco|t', 'wood|t', 'concrete|t', 'concrete|t', 'galv|t', 'stucco|t', 'concrete|t'];
 /** Ground laid over the terrain (ribbons, sidewalks), by surface class (4.1): triplanar, casts no shadow. */
 export const GROUND_SOUP = ['paving|tn', 'asphalt|tn', 'concrete|tn', 'cobble|tn', 'paving|tn', 'gravel|tn', 'dirt|tn', 'grass|tn', 'sand|tn', 'rock|tn', 'concrete|tn', 'dirt|tn', 'wood|tn', 'metal|tn', 'sand|tn', 'grass|tn'];
-/** Single slots. */
+/**
+ * Single slots. Small things set into or onto a wall cast no shadow of their own (`n`): the shadow map cannot show
+ * them, and every soup that casts is drawn once more for each shadow pass.
+ */
 export const SOUP = {
   plinth: 'stone|t',        // the plain stone below a façade where the ground falls away
-  trim: 'stone|tv',         // sills, lintels, cornices, string courses, steps: tinted with a trim colour
-  window: 'window|v',       // glass and frame, uv 0..1 a casement, 1..2 a shop pane; tinted with the frame colour
-  door: 'door|v',           // uv 0..1 one door; tinted with the door colour
-  shutter: 'wood|tv',
+  trim: 'stone|tvn',        // sills, lintels, cornices, string courses, steps: tinted with a trim colour
+  window: 'window|vn',      // glass and frame, uv 0..1 a casement, 1..2 a shop pane; tinted with the frame colour
+  door: 'door|vn',          // uv 0..1 one door; tinted with the door colour
+  shutter: 'wood|tvn',
   awning: 'tarp|vd',
   kerb: 'stone|tn',
   paint: 'paint_white|tn',  // road markings
   tread: 'stone|t',         // stair treads and stringers
   iron: 'metal|tv',         // lamp posts, rails, bollards: dark iron, tinted
   timber: 'wood|tv',
-  lampGlass: 'glass_lamp|',
+  lampGlass: 'glass_lamp|n',
   trunk: 'wood|t',
   leaves: 'leaves|t',       // `leaves|tv` when a tree is tinted (autumn)
   hull: 'stucco|tv',        // the far ring's plain building hulls
