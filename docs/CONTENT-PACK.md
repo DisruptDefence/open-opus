@@ -43,3 +43,33 @@ Neither argument is modified.
   deep-merged, so a changed sentry is written out in full.
 - `threatTuning`, `player`, `hud.words`: merged by key.
 - `hud.elements`, `loadout`: replaced when `extra` has them.
+
+<!-- weapon: item D -->
+## Weapons
+
+The player's weapon is `weapons[loadout[0]]`; `weapons/weapon.js` reads `name`, `magSize`, `reserve`, `rpm`,
+`damage` and `range` from it (the view model stays the engine's carbine; `view` is carried, not read). The
+snapshot's `self.weapon.id` is the pack key and `name` is the pack's name. A weapon without `reserve` has 0 and
+without `range` 300 m. `weakMultiplier` is **not read yet**: `combat.js` takes 2.2 as a literal. Only the first
+weapon of the loadout is used; several weapons and switching are not built. The engraving plate on the view
+model is blank.
+<!-- /weapon -->
+
+<!-- sound: item E -->
+## Sounds of a threat
+
+`audio/audio.js` reads `sounds.threats` for every threat event. The entry is looked up by the threat's archetype id,
+then by its class (`ground` | `air`); a missing entry, or a missing name in it, plays nothing.
+
+| Name | Used for |
+|---|---|
+| `fire` | `enemy:fire` |
+| `step` | `enemy:step`, and the footfall of `enemy:melee` |
+| `die` | `enemy:killed` |
+| `loop` | the engine loop that follows the nearest threats (a looping sound of the engine's sound table) |
+| `voice` | the variant (0 or 1) of the shared `alert` and `telegraph` sounds |
+
+The names are those of the engine's own synthesised sound table (`ground_fire`, `air_rotor`, …). A pack cannot add
+a new sound yet, only choose among the engine's. The port's sounds of the stand-in (horn, gulls, halyards, relay
+hum, container bang) and its mission-end jingle are not in the engine. Ambience by scene is not built.
+<!-- /sound -->
