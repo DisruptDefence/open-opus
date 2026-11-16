@@ -12,10 +12,10 @@ export const fileFetch = async (p) => { try { const b = readFileSync(p); return 
 /** The test scene, every chunk loaded into a terrain and a physics world. */
 export async function loadTestScene() {
   const source = await packageSource(join(ROOT, 'scenes', 'test') + '/', fileFetch);
-  const far = await source.far(), terrain = createTerrain({ far: far.grid });
+  const far = await source.far(), terrain = createTerrain({ grid: source.manifest.grid, far: far.grid });
   const w = source.manifest.walkable;
   const physics = createPhysics({ terrain, bounds: { min: { x: w.minX, y: -10, z: w.minZ }, max: { x: w.maxX, y: 500, z: w.maxZ } } });
-  for (const c of source.manifest.chunks) installChunk(physics, terrain, await source.chunk(c.cx, c.cz));
+  for (const c of source.manifest.chunks) installChunk(physics, terrain, await source.chunk(c.ce, c.cn));
   return { source, terrain, physics, anchors: JSON.parse(readFileSync(join(ROOT, 'scenes', 'test', 'anchors.json'), 'utf8')) };
 }
 
@@ -30,3 +30,6 @@ export function walk(physics, pos, dirX, dirZ, speed, seconds, { radius = 0.32, 
   }
   return { pos, grounded, minClear, blocked };
 }
+
+/** The published Old Quebec scene (the single-file packaging), as parsed JSON. */
+export const oldQuebec = () => JSON.parse(readFileSync(join(ROOT, '..', 'scenes', 'old-quebec.json'), 'utf8'));

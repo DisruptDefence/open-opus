@@ -66,20 +66,23 @@ export function mgrsFromUtm(easting, northing, zone, band, digits = 5) {
 }
 
 /**
- * Read a scene's `georef` block. Two spellings are accepted:
- *   docs/SCENE-FORMAT.md 2.2:   { utm: { zone, hemisphere }, anchor: { e0, n0, h0 }, vertical: { geoidUndulation }, convergenceDeg }
- *   the first Old Quebec file:  { zone, hemisphere, easting, northing, anchor: { hae }, convergence_deg }
+ * Read a scene's `georef` block exactly as docs/SCENE-FORMAT.md 2.2 writes it:
+ *   { zone, hemisphere, easting, northing, h0, vertical: { datum, geoid_undulation }, convergence_deg, ... }
+ * `easting`, `northing`: the anchor (E0, N0). `h0`: H0, 0 when absent. `vertical.geoid_undulation`: ellipsoid height
+ * minus orthometric height, required: a block without it would give heights above the ellipsoid that are wrong by
+ * tens of metres with nothing to show for it. `convergence_deg` is computed from the anchor when absent.
+ * Other spellings are not read; a block that uses one is refused with the name of what is missing.
  */
 export function createGeoref(g = {}) {
-  const utm = g.utm || g;
-  const zone = +utm.zone, south = String(utm.hemisphere || 'N').toUpperCase() === 'S';
-  const a = g.anchor || {};
-  const e0 = a.e0 ?? g.easting, n0 = a.n0 ?? g.northing, h0 = a.h0 ?? 0;
-  if (!(zone >= 1 && zone <= 60) || !Number.isFinite(e0) || !Number.isFinite(n0)) throw new Error('georef: zone and anchor (e0, n0) are required');
-  // ellipsoid height = game y + h0 + undulation
-  const undulation = (g.vertical && typeof g.vertical === 'object' ? g.vertical.geoidUndulation : undefined) ?? a.hae ?? 0;
+  const zone = +g.zone, south = String(g.hemisphere || 'N').toUpperCase() === 'S';
+  const e0 = g.easting, n0 = g.northing, h0 = g.h0 ?? 0;
+  if (!(zone >= 1 && zone <= 60) || !Number.isFinite(e0) || !Number.isFinite(n0)) throw new Error('georef: `zone`, `easting` and `northing` are required (SCENE-FORMAT.md 2.2)');
+  if (!Number.isFinite(h0)) throw new Error('georef: `h0` must be a number of metres');
+  const undulation = g.vertical && typeof g.vertical === 'object' ? g.vertical.geoid_undulation : undefined;
+  if (!Number.isFinite(undulation)) throw new Error('georef: `vertical.geoid_undulation` (metres) is required (SCENE-FORMAT.md 2.2)');
   const anchorGeo = utmInverse(e0, n0, zone, south);
-  const conv = g.convergenceDeg ?? g.convergence_deg ?? convergenceDeg(anchorGeo.lat, anchorGeo.lon, zone);
+  const conv = g.convergence_deg ?? convergenceDeg(anchorGeo.lat, anchorGeo.lon, zone);
+  // height above the ellipsoid = game y + h0 + undulation
 
   const toUTM = (x, z) => ({ zone, easting: e0 + x, northing: n0 - z });
   function toGeo(x, z, y = 0) {

@@ -62,7 +62,7 @@ export async function createEngine({ source, params = {}, modules = {}, onProgre
   G.mats.uniforms.wet.value = +(params.wet ?? 0); G.render.post.wet = G.mats.uniforms.wet.value;
 
   const w = m.walkable || m.bounds;
-  G.terrain = createTerrain({ chunk: m.chunkSize });
+  G.terrain = createTerrain({ grid: m.grid });
   G.physics = createPhysics({ terrain: G.terrain, vec, bounds: { min: vec(w.minX, -20, w.minZ), max: vec(w.maxX, 2000, w.maxZ) } });
   G.nav = createNav({ physics: G.physics, terrain: G.terrain, vec }); G.physics.nav = G.nav;
   G.input = F.input(G);

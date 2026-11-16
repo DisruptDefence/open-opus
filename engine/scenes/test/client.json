@@ -1,89 +1,85 @@
 {
  "format": "opus-scene/1",
  "formatMinor": 0,
+ "packaging": "chunked",
  "scene_id": "test",
- "version": "2026-11-15.8a32731",
+ "version": "2026-11-15.c7cdd4f",
  "name": "Engine test scene",
  "georef": {
   "crs": "EPSG:32619",
-  "utm": {
-   "zone": 19,
-   "hemisphere": "N",
-   "band": "T"
-  },
-  "anchor": {
-   "e0": 340000,
-   "n0": 5190000,
-   "h0": 0
-  },
+  "projection": "utm",
+  "zone": 19,
+  "band": "T",
+  "hemisphere": "N",
+  "easting": 340100,
+  "northing": 5190050,
+  "h0": 0,
   "vertical": {
    "datum": "none (synthetic)",
-   "geoidUndulation": -27.6
+   "geoid_undulation": -27.6
   },
-  "scaleFactor": 0.9997,
-  "bounds": {
-   "minX": -500,
-   "maxX": 500,
-   "minZ": -500,
-   "maxZ": 500
+  "anchor": {
+   "lat": 46.84477456,
+   "lon": -71.09720309
   },
-  "walkable": {
-   "minX": -470,
-   "maxX": 470,
-   "minZ": -470,
-   "maxZ": 470
-  },
-  "anchorGeo": {
-   "lat": 46.8443009,
-   "lon": -71.0984962
-  },
-  "convergenceDeg": -1.5312,
+  "convergence_deg": -1.5302,
   "checks": [
    {
     "x": 0,
     "z": 0,
-    "lat": 46.84430088,
-    "lon": -71.09849625,
-    "mgrs": "19TCM4000090000"
+    "lat": 46.84477456,
+    "lon": -71.09720309,
+    "mgrs": "19TCM4010090050"
    },
    {
     "x": 250,
     "z": -250,
-    "lat": 46.84660917,
-    "lon": -71.09530705,
-    "mgrs": "19TCM4025090250"
+    "lat": 46.84708282,
+    "lon": -71.09401381,
+    "mgrs": "19TCM4035090300"
    },
    {
     "x": -400,
     "z": 300,
-    "lat": 46.84150672,
-    "lon": -71.10363352,
-    "mgrs": "19TCM3960089700"
+    "lat": 46.84198046,
+    "lon": -71.10234048,
+    "mgrs": "19TCM3970089750"
    },
    {
     "x": 470,
     "z": 470,
-    "lat": 46.84018698,
-    "lon": -71.09217196,
-    "mgrs": "19TCM4047089530"
+    "lat": 46.84066059,
+    "lon": -71.09087885,
+    "mgrs": "19TCM4057089580"
    },
    {
     "x": -470,
     "z": -470,
-    "lat": 46.8484144,
-    "lon": -71.1048215,
-    "mgrs": "19TCM3953090470"
+    "lat": 46.84888816,
+    "lon": -71.10352831,
+    "mgrs": "19TCM3963090520"
    }
   ]
  },
- "chunkSize": 250,
+ "play": {
+  "minX": -470,
+  "maxX": 470,
+  "minZ": -470,
+  "maxZ": 470
+ },
+ "extent": {
+  "minX": -600,
+  "maxX": 650,
+  "minZ": -700,
+  "maxZ": 550
+ },
  "chunks": [
   {
-   "cx": -2,
-   "cz": -2,
-   "name": "chunks/-2_-2.9a197f1e28098130.bin",
-   "hash": "9a197f1e28098130ef442775c4a98fd33bde09fd718465a793e38b1461d03839",
-   "size": 95368,
+   "ce": 1358,
+   "cn": 20758,
+   "name": "chunks/1358_20758.d9c92da06923f582.bin",
+   "hash": "d9c92da06923f582a8b7daeaab23241075bd3fc75f466edfc4983a5a77139f40",
+   "size": 94812,
    "spill": {
     "minX": 0,
     "maxX": 250,
@@ -97,231 +93,15 @@
    "buildings": 0
   },
   {
-   "cx": -1,
-   "cz": -2,
-   "name": "chunks/-1_-2.9a45b3f21a154307.bin",
-   "hash": "9a45b3f21a154307d9ad7ae7205e1edbfdb75888924a5fcd05d1651514918541",
-   "size": 95348,
+   "ce": 1359,
+   "cn": 20758,
+   "name": "chunks/1359_20758.7b050bf8ec8900a1.bin",
+   "hash": "7b050bf8ec8900a1199e86c9db2f6beb8a2d6dac516d0c681db716288b214bb9",
+   "size": 95376,
    "spill": {
     "minX": 0,
     "maxX": 250,
     "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    2.09,
-    67.62
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": 0,
-   "cz": -2,
-   "name": "chunks/0_-2.b6bd3229a8cffbe2.bin",
-   "hash": "b6bd3229a8cffbe291261749a6c704818749be9a050de1198e2db4bf84d7bbac",
-   "size": 95680,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.69,
-    93.23
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": 1,
-   "cz": -2,
-   "name": "chunks/1_-2.81722118a99269b5.bin",
-   "hash": "81722118a99269b5a657954c2c2957dba15513b21643ed00f85d686bc895c7ac",
-   "size": 95572,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.77,
-    93.31
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": -2,
-   "cz": -1,
-   "name": "chunks/-2_-1.6a662082c33432d7.bin",
-   "hash": "6a662082c33432d7b726febe750e851ce61e1e7b0adbb4c7f85a39c7c5c76f2c",
-   "size": 95316,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    0,
-    65.53
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": -1,
-   "cz": -1,
-   "name": "chunks/-1_-1.175f11c5f3586b1e.bin",
-   "hash": "175f11c5f3586b1e9fa38504d1842a07dbb03b40e6be4bbbe623f40d852d824f",
-   "size": 100408,
-   "spill": {
-    "minX": 0,
-    "maxX": 252.73,
-    "minZ": -10,
-    "maxZ": 254.78
-   },
-   "y": [
-    1.7,
-    67.23
-   ],
-   "buildings": 13
-  },
-  {
-   "cx": 0,
-   "cz": -1,
-   "name": "chunks/0_-1.9d39b44aad82a119.bin",
-   "hash": "9d39b44aad82a119ffe3cc39bb6cb3618a39c0539efaf09f526456edebc8e98b",
-   "size": 104996,
-   "spill": {
-    "minX": 0,
-    "maxX": 253.19,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.53,
-    93.06
-   ],
-   "buildings": 35
-  },
-  {
-   "cx": 1,
-   "cz": -1,
-   "name": "chunks/1_-1.36f1c7abcdd6ad4b.bin",
-   "hash": "36f1c7abcdd6ad4bae71ed780b95df16c217be9698df41781d84c2811253c060",
-   "size": 95996,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.66,
-    93.2
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": -2,
-   "cz": 0,
-   "name": "chunks/-2_0.bb561e6d70e06b44.bin",
-   "hash": "bb561e6d70e06b44e6413556054d0c4f69cf1f5662a6c3a835816e6ffdf87778",
-   "size": 95836,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    0,
-    65.53
-   ],
-   "buildings": 3
-  },
-  {
-   "cx": -1,
-   "cz": 0,
-   "name": "chunks/-1_0.622679987972e70a.bin",
-   "hash": "622679987972e70afeea29b5a46f2881dbb3df8a95f70f5051f0211faa868ac7",
-   "size": 102856,
-   "spill": {
-    "minX": -4.150000000000006,
-    "maxX": 252.62,
-    "minZ": -15,
-    "maxZ": 250
-   },
-   "y": [
-    1.8,
-    67.33
-   ],
-   "buildings": 25
-  },
-  {
-   "cx": 0,
-   "cz": 0,
-   "name": "chunks/0_0.fd7e369c71f43c28.bin",
-   "hash": "fd7e369c71f43c2803ebad4260da874d225b19c64af353aaae63f6c342508a7e",
-   "size": 112600,
-   "spill": {
-    "minX": -5.2,
-    "maxX": 254.04,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.43,
-    92.97
-   ],
-   "buildings": 73
-  },
-  {
-   "cx": 1,
-   "cz": 0,
-   "name": "chunks/1_0.c2a9ce5c0ec8fdc4.bin",
-   "hash": "c2a9ce5c0ec8fdc44a1b3247fa43fdb933cf10009f91d47a42ffaecf37149e6a",
-   "size": 95628,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    27.41,
-    92.94
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": -2,
-   "cz": 1,
-   "name": "chunks/-2_1.f199642ebfbc951f.bin",
-   "hash": "f199642ebfbc951f441beffd110236e476a53af6e85add037781f9d48bf50391",
-   "size": 95180,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": 0,
-    "maxZ": 250
-   },
-   "y": [
-    0,
-    65.53
-   ],
-   "buildings": 0
-  },
-  {
-   "cx": -1,
-   "cz": 1,
-   "name": "chunks/-1_1.8cb710ae8c85cac3.bin",
-   "hash": "8cb710ae8c85cac3a9af9629036eb966b4d76980f6177d3e27c822de05c82f3a",
-   "size": 96024,
-   "spill": {
-    "minX": 0,
-    "maxX": 250,
-    "minZ": -10,
     "maxZ": 250
    },
    "y": [
@@ -331,11 +111,11 @@
    "buildings": 0
   },
   {
-   "cx": 0,
-   "cz": 1,
-   "name": "chunks/0_1.39db334e47d7e4d4.bin",
-   "hash": "39db334e47d7e4d460db740640eba09dd7f81cf3be7ff0613309012a859ea07a",
-   "size": 95368,
+   "ce": 1360,
+   "cn": 20758,
+   "name": "chunks/1360_20758.405eba7750474f01.bin",
+   "hash": "405eba7750474f016d55ba340ab37b8f6a4b9d6ceeffe1da0ff190dac33fb8ce",
+   "size": 95564,
    "spill": {
     "minX": 0,
     "maxX": 250,
@@ -349,11 +129,11 @@
    "buildings": 0
   },
   {
-   "cx": 1,
-   "cz": 1,
-   "name": "chunks/1_1.7ac6914a4a252b91.bin",
-   "hash": "7ac6914a4a252b9193b0c195763ac0a6c9cdbed436c495fcf998ff0859588b54",
-   "size": 95308,
+   "ce": 1361,
+   "cn": 20758,
+   "name": "chunks/1361_20758.a0fd218e54cdaa19.bin",
+   "hash": "a0fd218e54cdaa19da463482759155470dbe1decf085f6c92a40ca41c9e1b69d",
+   "size": 95136,
    "spill": {
     "minX": 0,
     "maxX": 250,
@@ -365,12 +145,390 @@
     92.92
    ],
    "buildings": 0
+  },
+  {
+   "ce": 1362,
+   "cn": 20758,
+   "name": "chunks/1362_20758.93c5d3a1c5412ceb.bin",
+   "hash": "93c5d3a1c5412cebf6aabc937fdf591d1480876cd4aaba5fab39641dce560520",
+   "size": 94700,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.44,
+    92.97
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1358,
+   "cn": 20759,
+   "name": "chunks/1358_20759.1d47a5419603aec3.bin",
+   "hash": "1d47a5419603aec3415d283d56c5c3d28725e280c2bf1f41b878f2cf04d5d8c1",
+   "size": 94688,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    0,
+    65.53
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1359,
+   "cn": 20759,
+   "name": "chunks/1359_20759.bd154dbed61b29d6.bin",
+   "hash": "bd154dbed61b29d618b8026528e4ec5a3610287dab5572b2f0410634c2b7c04d",
+   "size": 96972,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    1.41,
+    66.94
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1360,
+   "cn": 20759,
+   "name": "chunks/1360_20759.26f54e5359d93ace.bin",
+   "hash": "26f54e5359d93ace4b89c2d54acc700e783abd39b66132b454006887a11bd9a0",
+   "size": 106116,
+   "spill": {
+    "minX": -5.1,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    25.94,
+    91.47
+   ],
+   "buildings": 45
+  },
+  {
+   "ce": 1361,
+   "cn": 20759,
+   "name": "chunks/1361_20759.2581af46b607c17d.bin",
+   "hash": "2581af46b607c17dad0d7af1ff35e7b6d1a1b763c132ecca9e12e5267507b31f",
+   "size": 100356,
+   "spill": {
+    "minX": -0.41,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.5,
+    93.04
+   ],
+   "buildings": 21
+  },
+  {
+   "ce": 1362,
+   "cn": 20759,
+   "name": "chunks/1362_20759.7df8f43e3658d64f.bin",
+   "hash": "7df8f43e3658d64f76c80593068e3c199008e5800d879b0ade6e728e05fe40dd",
+   "size": 95128,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.41,
+    92.94
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1358,
+   "cn": 20760,
+   "name": "chunks/1358_20760.81f1a13d38de50ca.bin",
+   "hash": "81f1a13d38de50caf03b5a367741f2a23a167b8fcfa22f496531b58b0237e2d6",
+   "size": 95120,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    0,
+    65.53
+   ],
+   "buildings": 1
+  },
+  {
+   "ce": 1359,
+   "cn": 20760,
+   "name": "chunks/1359_20760.50024b0bbb70752c.bin",
+   "hash": "50024b0bbb70752c39aa4354b0128a904cbf448e481abf4c8d57e88976dec511",
+   "size": 98436,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 260
+   },
+   "y": [
+    1.67,
+    67.21
+   ],
+   "buildings": 5
+  },
+  {
+   "ce": 1360,
+   "cn": 20760,
+   "name": "chunks/1360_20760.4ca2781fa4779509.bin",
+   "hash": "4ca2781fa4779509115e433db6a986281e6a679e1627430e95b9396e9d34489d",
+   "size": 108860,
+   "spill": {
+    "minX": -4.9,
+    "maxX": 260,
+    "minZ": 0,
+    "maxZ": 253.15
+   },
+   "y": [
+    27.6,
+    93.13
+   ],
+   "buildings": 50
+  },
+  {
+   "ce": 1361,
+   "cn": 20760,
+   "name": "chunks/1361_20760.4a928085295b3111.bin",
+   "hash": "4a928085295b311194900bffc7c1d7d88852e979d83eeedcc913a00b06739820",
+   "size": 101920,
+   "spill": {
+    "minX": -1.07,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.62,
+    93.16
+   ],
+   "buildings": 27
+  },
+  {
+   "ce": 1362,
+   "cn": 20760,
+   "name": "chunks/1362_20760.4456b3dd3a2b3697.bin",
+   "hash": "4456b3dd3a2b369729ad193afcd18f45c5f26c9118029e55561dcb6f37615b44",
+   "size": 95072,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.4,
+    92.93
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1358,
+   "cn": 20761,
+   "name": "chunks/1358_20761.221aa690464a9d40.bin",
+   "hash": "221aa690464a9d40a48b9b94ed2f002194c74dd74e597a23d8a258da94c3e30d",
+   "size": 95064,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    0,
+    65.53
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1359,
+   "cn": 20761,
+   "name": "chunks/1359_20761.43e2742e63e14ca8.bin",
+   "hash": "43e2742e63e14ca8f2f9ea4449fe6ac314ea9f0cb0a6ae226fb0cdf43707df45",
+   "size": 95824,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    1.73,
+    67.27
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1360,
+   "cn": 20761,
+   "name": "chunks/1360_20761.ad00afe26618e62b.bin",
+   "hash": "ad00afe26618e62bf0734f2fc9924b90965679fc59ae3d45e03f12fed29f0522",
+   "size": 95632,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.53,
+    93.06
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1361,
+   "cn": 20761,
+   "name": "chunks/1361_20761.225e63a026f0d28e.bin",
+   "hash": "225e63a026f0d28e329d4ad845dca5bb8ba8b93c82987fcf40aeecb114120c9e",
+   "size": 95992,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.91,
+    93.45
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1362,
+   "cn": 20761,
+   "name": "chunks/1362_20761.a229db78a7f71f8d.bin",
+   "hash": "a229db78a7f71f8d625629845636085255bacb8dbb7d75425f83185b4b0f8ee0",
+   "size": 95012,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.26,
+    92.8
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1358,
+   "cn": 20762,
+   "name": "chunks/1358_20762.926b656f72cd4dbe.bin",
+   "hash": "926b656f72cd4dbe2f360eac1c348d240d6481347781415390aeb0fe311e71a8",
+   "size": 94688,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    0,
+    65.53
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1359,
+   "cn": 20762,
+   "name": "chunks/1359_20762.3f9a23d52922cc73.bin",
+   "hash": "3f9a23d52922cc7319d367fa53df0e7be28e31f875f3c490c5752477e81cdc1a",
+   "size": 94704,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    1.63,
+    67.17
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1360,
+   "cn": 20762,
+   "name": "chunks/1360_20762.b7a58e3108c662c3.bin",
+   "hash": "b7a58e3108c662c357836cdd6d0a4ac3206e880e6c3f62eadfab98250bcee4f1",
+   "size": 94704,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.39,
+    92.92
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1361,
+   "cn": 20762,
+   "name": "chunks/1361_20762.8e11b152dbd9e604.bin",
+   "hash": "8e11b152dbd9e6044c7aee1ce41fa5cec38292d4d9f90d99c662b40f6c9da95d",
+   "size": 94704,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.27,
+    92.8
+   ],
+   "buildings": 0
+  },
+  {
+   "ce": 1362,
+   "cn": 20762,
+   "name": "chunks/1362_20762.91b666b6122a706c.bin",
+   "hash": "91b666b6122a706cd8df7253f88ad30f3ac0b44bfee2727ecfba9105d4fb4fda",
+   "size": 94640,
+   "spill": {
+    "minX": 0,
+    "maxX": 250,
+    "minZ": 0,
+    "maxZ": 250
+   },
+   "y": [
+    27.39,
+    92.93
+   ],
+   "buildings": 0
   }
  ],
  "far": {
-  "name": "far.8a32731ee21f7f24.bin",
-  "hash": "8a32731ee21f7f24e57511c5691a9a820f9a5d2acfd0289e392a24deae428b5e",
-  "size": 38412
+  "name": "far.c7cdd4fc8942e124.bin",
+  "hash": "c7cdd4fc8942e124f36dc6eac274396e5f2f0e0f7b77ce2c9a6e05be185835ba",
+  "size": 49760
  },
  "water": {
   "level": 1.2

@@ -84,7 +84,7 @@ test('scene() describes the place, pause and resume stop and restart play, chunk
   world.apply({ op: 'place', x: -400, z: -400, now: true });
   for (let i = 0; i < 20; i++) { run(0.1); await new Promise((r) => setTimeout(r, 2)); } // chunk files are read between frames
   assert.ok(Math.abs(world.snapshot().self.x - -400) < 3);
-  assert.ok(chunks.every((c) => Number.isInteger(c.cx) && Number.isInteger(c.cz) && typeof c.live === 'boolean'));
+  assert.ok(chunks.every((c) => Number.isInteger(c.ce) && Number.isInteger(c.cn) && typeof c.live === 'boolean'));
   assert.ok(chunks.some((c) => c.live) && chunks.some((c) => !c.live), JSON.stringify(chunks));
   off(); const n = chunks.length;
   world.apply({ op: 'place', x: 20, z: 18, now: true });
@@ -122,8 +122,8 @@ test('geo: the anchor, a round trip, MGRS and true heading agree with the scene 
   const m = world.geo.toMGRS(0, 0);
   assert.deepEqual(Object.keys(m).sort(), ['easting', 'northing', 'square', 'zone']);
   assert.equal(m.easting.length, 5); assert.equal(world.geo.toMGRS(0, 0, 3).easting, m.easting.slice(0, 3));
-  assert.ok(Math.abs(world.geo.headingTrue(90) - (90 + ref.convergenceDeg)) < 1e-9);
-  assert.ok(Math.abs(world.geo.headingTrue(0) - (360 + ref.convergenceDeg)) < 1e-9, 'wraps into 0..360');
+  assert.ok(Math.abs(world.geo.headingTrue(90) - (90 + ref.convergence_deg)) < 1e-9);
+  assert.ok(Math.abs(world.geo.headingTrue(0) - (360 + ref.convergence_deg)) < 1e-9, 'wraps into 0..360');
 });
 
 test('hold freezes or slows the game and release gives it back', async () => {

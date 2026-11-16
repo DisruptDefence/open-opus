@@ -3,9 +3,13 @@
 // The terrain is a set of square tiles, one per scene chunk, that arrive as chunks stream in. Each tile is a regular
 // grid of heights whose edge samples are shared with its neighbours. A coarse grid for the whole scene (the "far"
 // terrain) answers for places whose tile has not arrived yet, when the caller allows it.
+import { chunkGrid } from '../scene/grid.js';
 
-/** One grid of heights: `nx` by `nz` samples, `cell` metres apart, the first sample at (minX, minZ). */
-export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, surfaceCell = cell }) {
+/**
+ * One grid of heights: `nx` by `nz` samples, `cell` metres apart, the first sample at (minX, minZ). `surface` is an
+ * optional raster of surface classes from the same corner, `surfaceN` cells square of `surfaceCell` metres.
+ */
+export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, surfaceCell = cell, surfaceN = 0 }) {
   const maxX = minX + (nx - 1) * cell, maxZ = minZ + (nz - 1) * cell;
   function height(x, z) {
     let fx = (x - minX) / cell, fz = (z - minZ) / cell;
@@ -14,7 +18,7 @@ export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, sur
     const i = Math.min(nx - 2, fx | 0), j = Math.min(nz - 2, fz | 0), u = fx - i, v = fz - j, k = j * nx + i;
     return (data[k] * (1 - u) + data[k + 1] * u) * (1 - v) + (data[k + nx] * (1 - u) + data[k + nx + 1] * u) * v;
   }
-  const sn = surface ? Math.round(((nx - 1) * cell) / surfaceCell) : 0;
+  const sn = surface ? surfaceN || Math.round(((nx - 1) * cell) / surfaceCell) : 0;
   function surfaceAt(x, z) {
     if (!surface) return 0;
     const i = Math.min(sn - 1, Math.max(0, Math.floor((x - minX) / surfaceCell)));
@@ -28,11 +32,14 @@ export function createGrid({ nx, nz, cell, minX, minZ, data, surface = null, sur
 export const SURFACES = ['unknown', 'asphalt', 'concrete', 'cobble', 'paving', 'gravel', 'dirt', 'grass', 'sand', 'rock',
   'snow', 'mud', 'wood', 'metal', 'water', 'vegetation_dense'];
 
-/** The streamed terrain: tiles by chunk, a far grid behind them. `chunk` is the chunk size in metres. */
-export function createTerrain({ chunk = 250, far = null } = {}) {
+/**
+ * The streamed terrain: tiles by chunk, a far grid behind them. `grid` is the scene's chunk grid (scene/grid.js):
+ * it says which chunk (ce, cn) a game position lies in.
+ */
+export function createTerrain({ grid = chunkGrid(), far = null } = {}) {
   const tiles = new Map();
-  const key = (cx, cz) => cx + ',' + cz;
-  const tileAt = (x, z) => tiles.get(key(Math.floor(x / chunk), Math.floor(z / chunk)));
+  const key = grid.key;
+  const tileAt = (x, z) => tiles.get(key(grid.ce(x), grid.cn(z)));
   let farGrid = far;
 
   /** Ground height, or NaN where nothing is known. With `detailOnly`, NaN wherever the full-detail tile is missing. */
@@ -87,12 +94,12 @@ export function createTerrain({ chunk = 250, far = null } = {}) {
   if (farGrid) noteMax(farGrid);
 
   return {
-    chunk, tiles,
+    grid, tiles,
     setFar(g) { farGrid = g; noteMax(g); },
     get far() { return farGrid; },
-    addTile(cx, cz, grid) { tiles.set(key(cx, cz), grid); fine = Math.min(fine, grid.cell); noteMax(grid); },
-    removeTile(cx, cz) { tiles.delete(key(cx, cz)); },
-    hasTile: (cx, cz) => tiles.has(key(cx, cz)),
+    addTile(ce, cn, tile) { tiles.set(key(ce, cn), tile); fine = Math.min(fine, tile.cell); noteMax(tile); },
+    removeTile(ce, cn) { tiles.delete(key(ce, cn)); },
+    hasTile: (ce, cn) => tiles.has(key(ce, cn)),
     height, loaded, slope, normal, surfaceAt, raycast,
     get maxY() { return maxY; },
   };
