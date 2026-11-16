@@ -158,6 +158,12 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
     slab(T, f, -ext0 * 0.5, len + ext1 * 0.5, L.top - ch - 0.09, L.top - ch, 0, cd * 0.55, shade(lk.trim, 0.9), 'fb');
   }
   if (L.top > L.eave + 1e-4) rect(W, f, 0, len, L.eave, L.top, 0, tint);
+  // quoins: painted strips up the convex corners of a rendered or brick house
+  if (!blind && (b.facade === 4 || b.facade === 0 || (b.facade === 3 && lk.stringCourse)) && len > 2) {
+    const qb = L.base + style.plinth.height, q = 0.3;
+    if (e.convLeft) slab(T, f, 0, q, qb, L.top, 0, 0.03, lk.trim, 'fr');
+    if (e.convRight) slab(T, f, len - q, len, qb, L.top, 0, 0.03, lk.trim, 'fl');
+  }
   const noOpenings = blind || by.n === 0 || st.h < 2.3;
   if (noOpenings) { rect(W, f, 0, len, L.base, L.eave, 0, tint); return; }
 
@@ -184,15 +190,15 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         const dw = b.groundFloor === 2 ? 2.6 : door.w, dh = b.groundFloor === 2 ? Math.min(2.4, sh - 0.3) : door.h;
         ops.push({ kind: 'door', u0: c - dw / 2, u1: c + dw / 2, ys: y0, yh: y0 + dh, r: lk.recess, big: b.groundFloor === 2 });
       } else {
-        const g = ground ? 1 : 1, ys = y0 + sill, yh = ys + wh * g; ops.push({ kind: 'win', u0: c - ww / 2, u1: c + ww / 2, ys, yh, r: reveal0, sillTop: true });
+        const g = 1, ys = y0 + sill, yh = ys + wh * g; ops.push({ kind: 'win', u0: c - ww / 2, u1: c + ww / 2, ys, yh, r: reveal0, sillTop: true });
       }
     }
     wallAround(W, f, len, y0, y1, ops, tint);
     for (const o of ops) {
       if (o.kind === 'win') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [0, 0, 1, 1]); border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
-        slab(T, f, o.u0 - 0.08, o.u1 + 0.08, o.ys - 0.07, o.ys, 0, 0.08, lk.trim, 'ftlrb');
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [0, 0, 1, 1]); if (lk.frameC[1] < 0.6) border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
+        slab(T, f, o.u0 - 0.08, o.u1 + 0.08, o.ys - 0.07, o.ys, 0, 0.08, lk.trim, 'ftb');
         slab(T, f, o.u0 - 0.1, o.u1 + 0.1, o.yh, o.yh + 0.22, 0, lk.headDepth, lk.trim, 'fb');
         if (lk.shutters) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
