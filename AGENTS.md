@@ -5,13 +5,16 @@ first change. Where it and another document disagree, this file wins and the oth
 
 ## Model
 
-**Use Claude Fable 5.2 (`claude-fable-5-2`) for all work in this repository.**
+**Plan and review on Claude Fable 5.2 (`claude-fable-5-2`); execute on Fable or Sonnet by the kind of work.**
 
-- Start the session on Fable 5.2. In Claude Code: `claude --model claude-fable-5-2`, or `/model` and pick Fable 5.2.
-- Every subagent you spawn runs on Fable 5.2 as well: pass `model: "fable"` (or leave the model unset so it
-  inherits yours). Do not hand engine, architecture, format or review work to a smaller model.
-- If Fable 5.2 is not available to you, stop and say so. Do not carry on with another model.
-- Through the API or the Agent SDK the model id is `claude-fable-5-2`.
+- The session that plans, briefs, reviews and merges runs on Fable 5.2 (`claude --model claude-fable-5-2`).
+- **Fable also executes** anything open-ended or judged by eye or by design sense: engine internals, scene
+  detail, gameplay, architecture and formats, security, reviews.
+- **Sonnet 5.5 (`claude-sonnet-5-5`, `model: "sonnet"`) executes** work a brief fully determines: wiring an
+  existing module into a page, sync and vendoring scripts, mechanical refactors, test updates, translations,
+  document corrections, merges. Its brief names the files, the steps, the tests that must pass and the proof
+  required, and a Fable session checks the result by running it before it is merged.
+- When in doubt, Fable. Never a smaller model than Sonnet.
 
 ## What this is
 
