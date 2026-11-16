@@ -7,7 +7,7 @@
 // scene format uses for `blind` and `front`.
 //
 // Built by item 3 (the mesher needs them): signedArea, centroid, pointInRing, bbox, obb, clip, triangulate.
-// Left for item 4 (roofs): inset.
+// Item 4 (roofs): inset, selfIntersects, ringsCross.
 
 /** Twice-the-shoelace over two: positive when the ring runs counter-clockwise in (x, z). */
 export function signedArea(ring) {
@@ -71,8 +71,60 @@ export function clip(ring, a, b, c) {
   return out.length >= 6 ? out : [];
 }
 
-/** Mitred offset of a ring towards its inside by d metres, or null when it collapses. Item 4 (roofs) builds it. */
-export function inset(ring, d) { throw new Error('gen/poly.js inset(): not built yet (scene-detail plan, item 4)'); } // eslint-disable-line no-unused-vars
+/** Do segments (a, b) and (c, d) cross properly (not merely touch at an end)? */
+function segCross(ax, az, bx, bz, cx, cz, dx, dz) {
+  const o = (px, pz, qx, qz, rx, rz) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
+  const d1 = o(ax, az, bx, bz, cx, cz), d2 = o(ax, az, bx, bz, dx, dz), d3 = o(cx, cz, dx, dz, ax, az), d4 = o(cx, cz, dx, dz, bx, bz);
+  return ((d1 > 1e-9 && d2 < -1e-9) || (d1 < -1e-9 && d2 > 1e-9)) && ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9));
+}
+/** Does a ring cross itself (two non-adjacent edges cut each other)? */
+export function selfIntersects(ring) {
+  const n = ring.length / 2;
+  for (let i = 0; i < n; i++) for (let k = i + 2; k < n; k++) {
+    if (i === 0 && k === n - 1) continue; // adjacent through the wrap
+    if (segCross(ring[i * 2], ring[i * 2 + 1], ring[((i + 1) % n) * 2], ring[((i + 1) % n) * 2 + 1], ring[k * 2], ring[k * 2 + 1], ring[((k + 1) % n) * 2], ring[((k + 1) % n) * 2 + 1])) return true;
+  }
+  return false;
+}
+/** Do two rings' edges cross each other? */
+export function ringsCross(a, b) {
+  const n = a.length / 2, m = b.length / 2;
+  for (let i = 0; i < n; i++) for (let k = 0; k < m; k++) {
+    if (segCross(a[i * 2], a[i * 2 + 1], a[((i + 1) % n) * 2], a[((i + 1) % n) * 2 + 1], b[k * 2], b[k * 2 + 1], b[((k + 1) % m) * 2], b[((k + 1) % m) * 2 + 1])) return true;
+  }
+  return false;
+}
+
+/**
+ * Mitred offset of a ring towards its inside by d metres (a negative d grows it), or null when it collapses.
+ * Each vertex is the intersection of its two edges moved in by d; where the edges are within 1 degree of parallel the
+ * vertex is moved along the normal. Valid only when the area keeps its sign and is at least 5 % of the original, every
+ * new edge points the way its old edge did, and no two non-adjacent new edges cross. Same vertex count and order.
+ */
+export function inset(ring, d) {
+  const n = ring.length / 2; if (n < 3) return null;
+  const sa = signedArea(ring); if (Math.abs(sa) < 1e-9) return null;
+  const sgn = sa > 0 ? 1 : -1, nx = [], nz = [];
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, ex = ring[j * 2] - ring[i * 2], ez = ring[j * 2 + 1] - ring[i * 2 + 1], l = Math.hypot(ex, ez);
+    if (l < 1e-9) return null;
+    nx.push((-ez / l) * sgn); nz.push((ex / l) * sgn); // the inward normal of edge i
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const h = (i + n - 1) % n, px = ring[i * 2], pz = ring[i * 2 + 1], det = nx[h] * nz[i] - nz[h] * nx[i];
+    if (Math.abs(det) < 0.01745) { out.push(px + (nx[h] + nx[i]) * 0.5 * d, pz + (nz[h] + nz[i]) * 0.5 * d); continue; }
+    const c1 = px * nx[h] + pz * nz[h] + d, c2 = px * nx[i] + pz * nz[i] + d;
+    out.push((c1 * nz[i] - c2 * nz[h]) / det, (nx[h] * c2 - nx[i] * c1) / det);
+  }
+  const na = signedArea(out);
+  if (na * sa <= 0 || Math.abs(na) < 0.05 * Math.abs(sa)) return null;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    if ((out[j * 2] - out[i * 2]) * (ring[j * 2] - ring[i * 2]) + (out[j * 2 + 1] - out[i * 2 + 1]) * (ring[j * 2 + 1] - ring[i * 2 + 1]) <= 0) return null;
+  }
+  return selfIntersects(out) ? null : out;
+}
 
 /**
  * Triangles of a ring with holes, by ear clipping: [i, j, k, …], indices into the vertices of the ring followed by
