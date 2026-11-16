@@ -277,6 +277,9 @@ grid north; 255 = along the long axis of the outline), `bw` the board width in m
 `near`); the ground under the deck is the terrain's own, so collision is unchanged. The builder writes the balustrade along the edge as wall records
 (4.4) and benches, lamps and shelters (`pavilion`) as props (`docs/plans/SCENE-DETAIL.md` 3.5).
 
+Props `items` are `[kind index, x, z, yawDeg, variant, source]`; `source` is `0` a mapped feature, `1` a terrace rule's lamp, `2` a lamp placed by the
+style pack's street rule (`street.lamps`: along the roads of the listed classes, every `spacing` m, `offset` m behind the kerb line).
+
 ### 4.5 Vegetation
 
 Trees are points: `x`, `z`, `height`, `crownRadius` (`uint8`, 0.25 m steps each), `kind` (`1 broadleaf,
