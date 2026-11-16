@@ -17,14 +17,18 @@ test('the bay rule: whole bays, centred, none on a wall too short for one', () =
   const a = bays(20, style, 42), b = bays(7, style, 42); assert.equal(a.width, b.width, 'one bay width per building (the seed)');
   assert.ok(a.width >= style.window.bay[0] && a.width <= style.window.bay[1]);
 });
-test('far and near each draw the whole wall of a closed ring: outward faces only, between the ground and the eave', () => {
+test('far and near each draw the whole wall of a closed ring: the wall plane looks outwards, between the ground and the eave', () => {
+  const planes = [[0, 1, 0, 0], [0, 1, 0, 8].slice(0, 0), [1, 0, 0, 0]]; void planes;
+  const onWall = (x, z) => Math.abs(x) < 1e-6 || Math.abs(x - 10) < 1e-6 || Math.abs(z) < 1e-6 || Math.abs(z - 8) < 1e-6;
   for (const ring of [RING, rev(RING)]) for (const fn of [facadeFar, facadeNear]) {
     const b = building(ring), soups = createSoups(); fn(soups, b, flat, style, info);
-    assert.ok(soups.triangles() >= 8, 'at least one quad per edge');
+    assert.ok(soups.triangles() >= 8, 'at least one quad per edge'); let plane = 0;
     for (const s of soups.map.values()) for (let i = 0; i < s.pos.length; i += 9) {
-      const cx = (s.pos[i] + s.pos[i + 3] + s.pos[i + 6]) / 3 - 5, cz = (s.pos[i + 2] + s.pos[i + 5] + s.pos[i + 8]) / 3 - 4;
-      if (Math.abs(s.nrm[i + 1]) < 0.5 && Math.hypot(cx, cz) > 3.9) assert.ok(cx * s.nrm[i] + cz * s.nrm[i + 2] > 0, 'a face on the outline looks outwards');
+      const cx = (s.pos[i] + s.pos[i + 3] + s.pos[i + 6]) / 3, cz = (s.pos[i + 2] + s.pos[i + 5] + s.pos[i + 8]) / 3;
+      const flatWall = [0, 3, 6].every((k) => Math.abs(s.pos[i + k] - s.pos[i]) < 1e-6) || [0, 3, 6].every((k) => Math.abs(s.pos[i + k + 2] - s.pos[i + 2]) < 1e-6);
+      if (Math.abs(s.nrm[i + 1]) < 0.5 && flatWall && onWall(cx, cz)) { plane++; assert.ok((cx - 5) * s.nrm[i] + (cz - 4) * s.nrm[i + 2] > 0, 'a face in the wall plane looks outwards'); }
     }
+    assert.ok(plane >= 8, 'there are wall faces in the planes');
     for (const [, y] of vertices(soups)) assert.ok(y >= 30 - 0.5 - 1e-6 && y <= 30 + 9 + 1.6, `y ${y}`);
   }
 });

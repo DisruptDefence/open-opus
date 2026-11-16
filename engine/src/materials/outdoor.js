@@ -235,3 +235,5 @@ export const ROOF_MATERIAL = ['roof_membrane', 'roof_zinc', 'roof_copper', 'roof
   'concrete', 'roof_zinc', 'roof_zinc'];
 /** Façade palettes: a tint over the wall texture, picked by the pipeline per building (`palette`). */
 export const PALETTE = [0xffffff, 0xf2e3c6, 0xd9c7a8, 0xe9d2c0, 0xc9d0d4, 0xe6c9a0, 0xb8b0a4, 0xf4ead2];
+
+import './openings.js';
