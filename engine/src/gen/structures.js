@@ -1,6 +1,6 @@
 // Walls and barriers: fortifications, retaining walls, garden walls, fences and rails. Pure code.
-// OWNED BY ITEM 7 of docs/plans/SCENE-DETAIL.md; the bodies below are the placeholder of item 3 (the walls the engine
-// drew before: one upright slab per segment, its top `height` above the highest ground under it).
+// OWNED BY ITEM 7 of docs/plans/SCENE-DETAIL.md. A wall is cut into runs of at most 6 m so its top steps with the ground;
+// a wall that holds ground back stands `parapet` above the higher side; crenels and posts are placed by s0 + distance.
 //
 // CONTRACT (fixed by item 3; change it only together with gen/mesher.js, scene/install.js and the plan)
 //
@@ -28,10 +28,45 @@
 //   Groups    solid walls -> `base` (seen from far away); a wall with `rail` -> `near`. The mesher decides by `rail`.
 //   Budget    walls and gates <= 40 000 triangles a scene.
 //   Must not  read the DOM or three.js, or return a ring the drawing does not show.
-import { prism } from './soup.js';
-import { STRUCTURE_SOUP } from './style.js';
+import { prism, box, quad } from './soup.js';
+import { STRUCTURE_SOUP, SOUP } from './style.js';
 
-/** A polyline with a thickness, as one quad ring per segment, each lengthened by half the thickness so corners close. */
+const RUN = 6;            // m: the longest run one solid covers, so tops follow the ground
+const MERLON = { length: 1.1, height: 0.7, thick: 0.5, period: 2.2 };
+const IRON = [0.035, 0.037, 0.04];   // linear: dark wrought iron
+const POST = { every: 2, size: 0.06, rails: [0.45, 0.92] };   // rails at these fractions of the height
+
+/**
+ * The runs of a piece: each a quad ring along one segment (at most 6 m), with its axis, its place along the whole
+ * mapped line and its top. Lengthened by half the thickness at the ends of a segment so corners close.
+ */
+function runsOf(wall, groundAt) {
+  const out = [], t = wall.thickness, pts = wall.pts, held = wall.parapet != null;
+  let g = wall.s0 || 0;
+  for (let p = 0; p + 3 < pts.length; p += 2) {
+    const ax = pts[p], az = pts[p + 1], bx = pts[p + 2], bz = pts[p + 3], l = Math.hypot(bx - ax, bz - az);
+    if (l < 0.05) continue;
+    const ux = (bx - ax) / l, uz = (bz - az) / l, nx = -uz, nz = ux, n = Math.ceil(l / RUN), h = t / 2;
+    for (let k = 0; k < n; k++) {
+      const d0 = (l * k) / n, d1 = (l * (k + 1)) / n, e0 = k === 0 ? h : 0, e1 = k === n - 1 ? h : 0;
+      const x0 = ax + ux * (d0 - e0), z0 = az + uz * (d0 - e0), x1 = ax + ux * (d1 + e1), z1 = az + uz * (d1 + e1);
+      const ring = [x0 + nx * h, z0 + nz * h, x1 + nx * h, z1 + nz * h, x1 - nx * h, z1 - nz * h, x0 - nx * h, z0 - nz * h];
+      let lo = Infinity, hi = -Infinity;
+      const sample = (x, z) => { const y = groundAt(x, z); lo = Math.min(lo, y); hi = Math.max(hi, y); };
+      for (let i = 0; i < 8; i += 2) sample(ring[i], ring[i + 1]);
+      sample((ring[0] + ring[2]) / 2, (ring[1] + ring[3]) / 2); sample((ring[4] + ring[6]) / 2, (ring[5] + ring[7]) / 2);
+      const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, yTop = hi + (held ? wall.parapet : wall.height);
+      // the side the ground falls to: the crenels stand on that edge only (the other edge is the walk behind the parapet; one edge halves the triangles of a free-standing wall)
+      const ls = groundAt(mx + nx * (h + 1), mz + nz * (h + 1)), rs = groundAt(mx - nx * (h + 1), mz - nz * (h + 1));
+      const side = ls < rs ? 1 : -1;
+      out.push({ ring, yBase: lo - 1, yTop, ax: ax + ux * d0, az: az + uz * d0, ux, uz, nx, nz, len: d1 - d0, g0: g + d0, side, seg: p, segG0: g, segG1: g + l });
+    }
+    g += l;
+  }
+  return out;
+}
+
+/** A polyline with a thickness, as one quad ring per segment, each lengthened by half the thickness so corners close (kept for scene/source.js). */
 export function lineToRings(pts, thickness) {
   const out = [], t = thickness / 2;
   for (let p = 0; p + 3 < pts.length; p += 2) {
@@ -43,15 +78,70 @@ export function lineToRings(pts, thickness) {
   return out;
 }
 
-export function wallRings(wall, groundAt) {
-  const out = [];
-  for (const ring of lineToRings(wall.pts, wall.thickness)) {
-    let lo = Infinity, hi = -Infinity; for (let i = 0; i < ring.length; i += 2) { const h = groundAt(ring[i], ring[i + 1]); lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    out.push({ ring, yBase: lo - 1, yTop: hi + (wall.parapet != null ? wall.parapet : wall.height) });
+/** What the wall is as solids (collision, and what wall() draws): one { ring, yBase, yTop } per run. */
+export function wallRings(wall, groundAt) { return runsOf(wall, groundAt).map(({ ring, yBase, yTop }) => ({ ring, yBase, yTop })); }
+
+/**
+ * The merlons of a piece, in step with the whole mapped line (period 2.2 m counted from s0). A merlon belongs to the run
+ * its middle is over and stands on the lower of the tops it overlaps (it never floats); it is cut at the end of its
+ * segment and of the piece, so two pieces draw the halves of one merlon.
+ */
+function merlonsOf(runs, wall) {
+  const { length, height, thick, period } = MERLON, th = Math.min(thick, wall.thickness), off = wall.thickness / 2 - th / 2, out = [];
+  const bySeg = new Map(); for (const r of runs) { if (!bySeg.has(r.seg)) bySeg.set(r.seg, []); bySeg.get(r.seg).push(r); }
+  for (const rs of bySeg.values()) {
+    const { segG0, segG1 } = rs[0];
+    for (let k = Math.floor((segG0 - length) / period); ; k++) {
+      const a = period * k + (period - length) / 2, b = a + length;
+      if (a >= segG1 - 1e-6) break;
+      const lo = Math.max(a, segG0), hi = Math.min(b, segG1);
+      if (hi - lo < 0.02) continue;
+      const centre = (a + b) / 2, home = rs.find((r) => centre >= r.g0 && centre < r.g0 + r.len + 1e-9) || (centre < segG0 ? rs[0] : rs[rs.length - 1]);
+      const y0 = Math.min(...rs.filter((r) => r.g0 < hi && r.g0 + r.len > lo).map((r) => r.yTop), home.yTop), mid = (lo + hi) / 2 - home.g0;
+      for (const side of [home.side]) out.push({ cx: home.ax + home.ux * mid + home.nx * off * side, cz: home.az + home.uz * mid + home.nz * off * side, ux: home.ux, uz: home.uz, hu: (hi - lo) / 2, hd: th / 2, y0, y1: home.yTop + height });
+    }
   }
   return out;
 }
+/** Every merlon of a crenellated piece (empty when the wall has no crenels): the boxes wall() draws. */
+export function merlons(wall, groundAt) { return wall.crenels && !wall.rail ? merlonsOf(runsOf(wall, groundAt), wall) : []; }
+
+/** A square bar from A to B (3D points), `w` across: the sides only, wound outwards. */
+function bar(s, A, B, w, tint) {
+  const dx = B[0] - A[0], dy = B[1] - A[1], dz = B[2] - A[2], l = Math.hypot(dx, dz) || 1, nx = -dz / l * w / 2, nz = dx / l * w / 2;
+  const at = (P, sx, sy) => [P[0] + nx * sx, P[1] + sy * w / 2, P[2] + nz * sx];
+  const c = (P) => [at(P, -1, -1), at(P, 1, -1), at(P, 1, 1), at(P, -1, 1)];
+  const a = c(A), b = c(B);
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(s, a[i], b[i], b[j], a[j], tint); }
+  quad(s, a[3], a[2], a[1], a[0], tint); quad(s, b[0], b[1], b[2], b[3], tint);
+}
+
+/** Posts every 2 m by s0 + distance, and two rails between them that follow the ground. */
+function rail(s, wall, groundAt) {
+  const pts = wall.pts, H = wall.height, w = POST.size;
+  let g = wall.s0 || 0;
+  for (let p = 0; p + 3 < pts.length; p += 2) {
+    const ax = pts[p], az = pts[p + 1], bx = pts[p + 2], bz = pts[p + 3], l = Math.hypot(bx - ax, bz - az);
+    if (l < 0.05) continue;
+    const ux = (bx - ax) / l, uz = (bz - az) / l, at = (d) => [ax + ux * d, az + uz * d];
+    // post positions along this segment, and the segment's own ends so rails reach the corners
+    const first = Math.ceil((g - 1e-9) / POST.every) * POST.every, stops = [0];
+    for (let q = first; q < g + l - 1e-6; q += POST.every) if (q - g > 1e-6) stops.push(q - g);
+    stops.push(l);
+    const post = (d) => { const [x, z] = at(d); box(s, x, z, ux, uz, w / 2, w / 2, groundAt(x, z) - 0.05, groundAt(x, z) + H, IRON, true); };
+    for (const d of stops) if (d > 1e-6 && d < l - 1e-6 || d === 0 || d === l) post(d);
+    for (let i = 0; i + 1 < stops.length; i++) {
+      const [x0, z0] = at(stops[i]), [x1, z1] = at(stops[i + 1]), y0 = groundAt(x0, z0), y1 = groundAt(x1, z1);
+      for (const f of POST.rails) bar(s, [x0, y0 + H * f, z0], [x1, y1 + H * f, z1], w * 0.8, IRON);
+    }
+    g += l;
+  }
+}
+
 export function wall(soups, wall, groundAt, style) { // eslint-disable-line no-unused-vars
+  if (wall.rail) { rail(soups.get(SOUP.iron), wall, groundAt); return; }
   const s = soups.get(STRUCTURE_SOUP[wall.material] || STRUCTURE_SOUP[1]);
-  for (const r of wallRings(wall, groundAt)) prism(s, r.ring, r.yBase, r.yTop, null, true);
+  const runs = runsOf(wall, groundAt);
+  for (const r of runs) prism(s, r.ring, r.yBase, r.yTop, null, true);
+  if (wall.crenels) for (const m of merlonsOf(runs, wall)) box(s, m.cx, m.cz, m.ux, m.uz, m.hu, m.hd, m.y0, m.y1, null, true);
 }
