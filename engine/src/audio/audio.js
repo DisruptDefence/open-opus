@@ -1826,18 +1826,18 @@ export var ki = 44100,
     impact_glass: { gen: x8, n: 1, sr: ki, peak: 0.6, bus: 'world', max: 2, pri: 4, ref: 4, roll: 0.7 },
     whiz: { gen: b8, n: 3, sr: ki, peak: 0.5, bus: 'world', max: 3, pri: 5, ref: 2.5, roll: 0.6 },
     ricochet: { gen: y8, n: 3, sr: ki, peak: 0.4, bus: 'world', max: 2, pri: 3, ref: 5, roll: 0.6 },
-    gull_fire: { gen: E8, n: 2, sr: ki, peak: 0.85, bus: 'world', max: 5, pri: 7, ref: 7, roll: 0.55 },
-    hound_fire: { gen: S8, n: 2, sr: ki, peak: 0.95, bus: 'world', max: 5, pri: 7, ref: 8, roll: 0.5 },
-    hound_step: { gen: T8, n: 3, sr: Xn, peak: 0.7, bus: 'world', max: 4, pri: 3, ref: 5, roll: 0.8 },
-    gull_die: { gen: A8, n: 1, sr: Xn, peak: 0.85, bus: 'world', max: 3, pri: 7, ref: 7, roll: 0.5 },
-    hound_die: { gen: R8, n: 1, sr: Xn, peak: 0.9, bus: 'world', max: 3, pri: 7, ref: 7, roll: 0.5 },
+    air_fire: { gen: E8, n: 2, sr: ki, peak: 0.85, bus: 'world', max: 5, pri: 7, ref: 7, roll: 0.55 },
+    ground_fire: { gen: S8, n: 2, sr: ki, peak: 0.95, bus: 'world', max: 5, pri: 7, ref: 8, roll: 0.5 },
+    ground_step: { gen: T8, n: 3, sr: Xn, peak: 0.7, bus: 'world', max: 4, pri: 3, ref: 5, roll: 0.8 },
+    air_die: { gen: A8, n: 1, sr: Xn, peak: 0.85, bus: 'world', max: 3, pri: 7, ref: 7, roll: 0.5 },
+    ground_die: { gen: R8, n: 1, sr: Xn, peak: 0.9, bus: 'world', max: 3, pri: 7, ref: 7, roll: 0.5 },
     telegraph: { gen: P8, n: 2, sr: Xn, peak: 0.42, bus: 'world', max: 4, pri: 6, ref: 6, roll: 0.6 },
     alert: { gen: C8, n: 2, sr: Xn, peak: 0.5, bus: 'world', max: 3, pri: 6, ref: 8, roll: 0.5 },
     explosion: { gen: I8, n: 2, sr: ki, peak: 0.97, bus: 'world', max: 3, pri: 10, ref: 12, roll: 0.5 },
     relay_cut: { gen: z8, n: 1, sr: Xn, peak: 0.75, bus: 'world', max: 2, pri: 8, ref: 6, roll: 0.5 },
     thunder: { gen: D8, n: 2, sr: pl, peak: 0.8, bus: 'dry', max: 2, pri: 6 },
     foghorn: { gen: L8, n: 1, sr: pl, peak: 0.5, bus: 'world', max: 1, pri: 2 },
-    gull_cry: { gen: k8, n: 2, sr: pl, peak: 0.4, bus: 'world', max: 2, pri: 1 },
+    air_cry: { gen: k8, n: 2, sr: pl, peak: 0.4, bus: 'world', max: 2, pri: 1 },
     halyard: { gen: F8, n: 2, sr: Xn, peak: 0.3, bus: 'world', max: 2, pri: 1 },
     container_bang: { gen: U8, n: 1, sr: pl, peak: 0.6, bus: 'world', max: 1, pri: 2 },
     ui_click: { gen: N8, n: 1, sr: ki, peak: 0.3, bus: 'dry', max: 2, pri: 9 },
@@ -1846,8 +1846,8 @@ export var ki = 44100,
     objective_all: { gen: j8, n: 1, sr: Xn, peak: 0.65, bus: 'music', max: 1, pri: 9 },
     complete: { gen: J8, n: 1, sr: Xn, peak: 0.7, bus: 'music', max: 1, pri: 9 },
     death: { gen: K8, n: 1, sr: Xn, peak: 0.75, bus: 'music', max: 1, pri: 9 },
-    gull_rotor: { gen: _8, n: 1, sr: Xn, peak: 0.6, loop: 1, ref: 5, roll: 0.9 },
-    hound_servo: { gen: M8, n: 1, sr: Xn, peak: 0.42, loop: 1, ref: 4, roll: 1 },
+    air_rotor: { gen: _8, n: 1, sr: Xn, peak: 0.6, loop: 1, ref: 5, roll: 0.9 },
+    ground_servo: { gen: M8, n: 1, sr: Xn, peak: 0.42, loop: 1, ref: 4, roll: 1 },
     relay_hum: { gen: w8, n: 1, sr: Xn, peak: 0.4, loop: 1, ref: 2.5, roll: 1.4 },
     rain: { gen: O8, n: 1, sr: Xn, peak: 0.5, loop: 1 },
     rain_interior: { gen: H8, n: 1, sr: Xn, peak: 0.7, loop: 1 },
@@ -1944,8 +1944,8 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
     'death',
     'explosion',
     'rifle_tail_in',
-    'gull_die',
-    'hound_die',
+    'air_die',
+    'ground_die',
     'relay_cut',
     'container_bang',
     'ear_ring',
@@ -1972,20 +1972,20 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
     'impact_water',
     'impact_glass',
     'ricochet',
-    'gull_rotor',
-    'hound_servo',
+    'air_rotor',
+    'ground_servo',
     'alert',
     'telegraph',
-    'gull_fire',
-    'hound_fire',
-    'hound_step',
+    'air_fire',
+    'ground_fire',
+    'ground_step',
     'ui_click',
     'ui_hover',
     'sea',
     'rain_interior',
     'relay_hum',
-    'gull_die',
-    'hound_die',
+    'air_die',
+    'ground_die',
     'explosion',
     'ear_ring',
     'death',
@@ -1997,7 +1997,7 @@ export var pi = (i, e, t) => Math.min(t, Math.max(e, i)),
     'thunder',
     'objective_all',
     'complete',
-    'gull_cry',
+    'air_cry',
     'halyard',
     'foghorn',
     'container_bang',
@@ -2320,7 +2320,7 @@ export function u_(i, e, t) {
     he = he || {};
     let pe = Go[te];
     if (!pe || !pe.loop) return Ie;
-    let ge = (te === 'gull_rotor' || te === 'hound_servo') && !he._auto;
+    let ge = (te === 'air_rotor' || te === 'ground_servo') && !he._auto;
     ge && !he.hrtf && (he = Object.assign({ hrtf: !0 }, he));
     let ye = {
         name: te,
@@ -2440,7 +2440,7 @@ export function u_(i, e, t) {
     pt = 0.4,
     ut = 0.4,
     nn = 2,
-    bt = { fog: 14 + s() * 14, gull: 5 + s() * 8, hal: 4 + s() * 6, bang: 20 + s() * 25 };
+    bt = { fog: 1 / 0, gull: 1 / 0, hal: 1 / 0, bang: 1 / 0 }; // OPUS: the port's ambience (foghorn, gulls, halyards) is switched off; a scene will bring its own
   function Os(te, he) {
     let pe = 1 - 0.7 * P;
     if ((bt.fog -= te) <= 0) {
@@ -2458,7 +2458,7 @@ export function u_(i, e, t) {
       bt.gull = 9 + s() * 16;
       let ge = s() * 6.283,
         ye = 35 + s() * 50;
-      ze('gull_cry', {
+      ze('air_cry', {
         pos: [re.x + Math.cos(ge) * ye, 14 + s() * 18, re.z + Math.sin(ge) * ye],
         ref: ye,
         roll: 1,
@@ -2497,7 +2497,7 @@ export function u_(i, e, t) {
       te.alive === !1 ||
       pn.set(te, {
         h: null,
-        type: te.type === 'hound' ? 'hound' : 'gull',
+        type: te.type === 'ground' ? 'ground' : 'air',
         lx: te.pos ? te.pos.x : 0,
         ly: te.pos ? te.pos.y : 0,
         lz: te.pos ? te.pos.z : 0,
@@ -2540,7 +2540,7 @@ export function u_(i, e, t) {
         let ge = Un[pe],
           ye = pe < 6 && ge.d < 90;
         ye && !ge.h
-          ? (ge.h = Be(ge.type === 'gull' ? 'gull_rotor' : 'hound_servo', {
+          ? (ge.h = Be(ge.type === 'air' ? 'air_rotor' : 'ground_servo', {
               pos: [ge.lx, ge.ly, ge.lz],
               gain: 0,
               hrtf: !0,
@@ -2558,7 +2558,7 @@ export function u_(i, e, t) {
           pe.sp += (Math.min(ye, 30) - pe.sp) * Math.min(1, te * 5);
         }
         if (((pe.lx = ge.x), (pe.ly = ge.y), (pe.lz = ge.z), !!pe.h))
-          if ((pe.h.setPos(ge), pe.type === 'gull'))
+          if ((pe.h.setPos(ge), pe.type === 'air'))
             (pe.h.setGain(1), pe.h.setPitch(pe.tune * (0.94 + 0.3 * pi(pe.sp / 10, 0, 1))));
           else {
             let ye = pi(pe.sp / 3, 0, 1);
@@ -2706,22 +2706,22 @@ export function u_(i, e, t) {
       if (he - ve < 0.12) return;
       ve = he;
       let pe = te.enemy || {};
-      ze('alert', { pos: Hn(pe.pos) || Hn(te.pos), variant: pe.type === 'hound' ? 1 : 0, gain: 0.9 });
+      ze('alert', { pos: Hn(pe.pos) || Hn(te.pos), variant: pe.type === 'ground' ? 1 : 0, gain: 0.9 });
     }),
     ln('enemy:fire', (te) => {
       let he = te.type || (te.enemy && te.enemy.type),
         pe = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos));
-      (ze(he === 'hound' ? 'hound_fire' : 'gull_fire', { pos: pe, gain: 1, jitter: 0.04 }),
+      (ze(he === 'ground' ? 'ground_fire' : 'air_fire', { pos: pe, gain: 1, jitter: 0.04 }),
         (Y = Math.min(1, Math.max(Y, 0.6) + 0.05)));
     }),
     ln('enemy:step', (te) => {
       if (te.crash) {
-        (ze('hound_step', { pos: Hn(te.pos), gain: 1, pitch: 0.72 }),
+        (ze('ground_step', { pos: Hn(te.pos), gain: 1, pitch: 0.72 }),
           ze('impact_metal', { pos: Hn(te.pos), gain: 0.8, pitch: 0.55 }));
         return;
       }
-      te.type !== 'gull' &&
-        ze('hound_step', { pos: Hn(te.pos), gain: pi(0.6 + (+te.speed || 2) * 0.1, 0.6, 1), jitter: 0.06 });
+      te.type !== 'air' &&
+        ze('ground_step', { pos: Hn(te.pos), gain: pi(0.6 + (+te.speed || 2) * 0.1, 0.6, 1), jitter: 0.06 });
     }),
     ln('enemy:telegraph', (te) => {
       let he = te.enemy || {},
@@ -2729,7 +2729,7 @@ export function u_(i, e, t) {
         ge = pi(+te.time || 0.55, 0.15, 1.5);
       (ze('telegraph', {
         pos: Hn(te.pos) || Hn(he.pos),
-        variant: pe === 'hound' ? 1 : 0,
+        variant: pe === 'ground' ? 1 : 0,
         pitch: 0.55 / ge,
         gain: te.melee ? 0.7 : 1,
         jitter: 0,
@@ -2738,7 +2738,7 @@ export function u_(i, e, t) {
     }),
     ln('enemy:melee', (te) => {
       let he = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos));
-      (ze('hound_step', { pos: he, gain: 1, pitch: 0.8 }),
+      (ze('ground_step', { pos: he, gain: 1, pitch: 0.8 }),
         ze('impact_metal', { pos: he, gain: 0.9, pitch: 0.7 }),
         ze('hurt', { gain: 0.6 }));
     }),
@@ -2746,7 +2746,7 @@ export function u_(i, e, t) {
       let he = te.enemy,
         pe = te.type || (he && he.type),
         ge = Hn(te.pos) || (he && Hn(he.pos));
-      (he && Rs(he), ze(pe === 'hound' ? 'hound_die' : 'gull_die', { pos: ge, gain: 1, jitter: 0.05 }));
+      (he && Rs(he), ze(pe === 'ground' ? 'ground_die' : 'air_die', { pos: ge, gain: 1, jitter: 0.05 }));
     }),
     ln('explosion', (te) => {
       let he = pi(+te.size || 1, 0.3, 3),
@@ -2914,9 +2914,9 @@ export function u_(i, e, t) {
       ke = new Float32Array(16);
     ((ke[0] = ke[5] = ke[10] = ke[15] = 1), (ke[13] = 1.7));
     let Ue = [
-        { type: 'gull', alive: !0, pos: { x: 6, y: 4, z: -9 } },
-        { type: 'hound', alive: !0, pos: { x: -8, y: 0, z: -14 } },
-        { type: 'gull', alive: !0, pos: { x: 0, y: 5, z: -30 } },
+        { type: 'air', alive: !0, pos: { x: 6, y: 4, z: -9 } },
+        { type: 'ground', alive: !0, pos: { x: -8, y: 0, z: -14 } },
+        { type: 'air', alive: !0, pos: { x: 0, y: 5, z: -30 } },
       ],
       ct = { min: { x: -99, y: -9, z: -99 }, max: { x: 99, y: 99, z: 99 } },
       De = {
@@ -2953,12 +2953,12 @@ export function u_(i, e, t) {
               from: 'player',
             }),
             Le.emit('shell:bounce', { pos: { x: 0.6, y: 0, z: 0.2 }, surface: 'concrete' })),
-          Tt % 13 === 0 && Le.emit('enemy:fire', { enemy: Ue[0], pos: Ue[0].pos, type: 'gull' }),
-          Tt % 17 === 0 && Le.emit('enemy:fire', { enemy: Ue[1], pos: Ue[1].pos, type: 'hound' }),
-          Tt % 25 === 0 && Le.emit('enemy:step', { pos: Ue[1].pos, type: 'hound' })),
+          Tt % 13 === 0 && Le.emit('enemy:fire', { enemy: Ue[0], pos: Ue[0].pos, type: 'air' }),
+          Tt % 17 === 0 && Le.emit('enemy:fire', { enemy: Ue[1], pos: Ue[1].pos, type: 'ground' }),
+          Tt % 25 === 0 && Le.emit('enemy:step', { pos: Ue[1].pos, type: 'ground' })),
           Tt === 300 && Le.emit('explosion', { pos: { x: 3, y: 0, z: -5 }, size: 1.5 }),
           Tt === 350 && Le.emit('player:hit', { amount: 20 }),
-          Tt === 360 && ((Ue[0].alive = !1), Le.emit('enemy:killed', { enemy: Ue[0], pos: Ue[0].pos, type: 'gull' })),
+          Tt === 360 && ((Ue[0].alive = !1), Le.emit('enemy:killed', { enemy: Ue[0], pos: Ue[0].pos, type: 'air' })),
           Tt === 400 && (Le.emit('objective:done', { id: 'A', index: 0, total: 3 }), it.setIntensity(0.15)));
       };
     for (let Tt = 1; Tt * gt < pe - 0.01; Tt++)

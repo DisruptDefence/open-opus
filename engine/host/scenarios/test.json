@@ -1,0 +1,19 @@
+{
+  "name": "Reach the observation point, then the pick-up",
+  "scene": "test",
+  "start": { "x": 20, "z": 18, "heading": 0 },
+  "setup": [
+    { "op": "say", "text": "Move north to the observation point", "seconds": 8 },
+    { "op": "mark", "id": "obs", "kind": "objective", "label": "Observation point", "x": 20, "z": 9, "radius": 2.5 },
+    { "op": "spawn", "id": "sentry-1", "kind": "sentry", "x": 60, "z": -80, "heading": 180, "route": [[60, -80], [20, -80], [20, -40], [60, -40]] },
+    { "op": "spawn", "id": "sentry-2", "kind": "ground", "x": 140, "z": 80, "heading": 270, "route": [[140, 80], [100, 80]] },
+    { "op": "spawn", "id": "quad-1", "kind": "quadcopter", "x": 90, "z": -60, "route": [[90, -60], [0, -60], [0, 60], [90, 60]] }
+  ],
+  "rules": [
+    { "when": { "event": "interact", "id": "obs", "action": "reached" },
+      "do": [ { "op": "unmark", "id": "obs" }, { "op": "say", "text": "Observation point reached. Go to the pick-up." },
+              { "op": "mark", "id": "pickup", "kind": "extraction", "label": "Pick-up", "x": 20, "z": 2, "radius": 2.5 } ] },
+    { "when": { "event": "interact", "id": "pickup", "action": "reached" },
+      "do": [ { "op": "say", "text": "Mission complete" }, { "op": "end", "result": "complete" } ] }
+  ]
+}

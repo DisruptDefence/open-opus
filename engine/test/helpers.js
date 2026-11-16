@@ -7,7 +7,7 @@ import { createPhysics } from '../src/physics/physics.js';
 import { installChunk } from '../src/scene/install.js';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const fileFetch = async (p) => { try { const b = readFileSync(p); return { ok: true, status: 200, json: async () => JSON.parse(b.toString('utf8')), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }; } catch { return { ok: false, status: 404 }; } };
+export const fileFetch = async (p) => { try { const b = readFileSync(p); return { ok: true, status: 200, json: async () => JSON.parse(b.toString('utf8')), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }; } catch { return { ok: false, status: 404 }; } };
 
 /** The test scene, every chunk loaded into a terrain and a physics world. */
 export async function loadTestScene() {

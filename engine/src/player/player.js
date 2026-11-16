@@ -1,5 +1,5 @@
 import { Euler, Vector3 } from '../../vendor/three.module.js';
-import { BODY, PORT_BOUNDS, clamp, damp, lerp, saturate, smoothstep } from '../shared/lifted.js';
+import { BODY, clamp, damp, lerp, saturate, smoothstep } from '../shared/lifted.js';
 
 export var PLAYER_TUNING = {
     walk: 3.8,
@@ -40,6 +40,10 @@ export var PLAYER_TUNING = {
     pitchLimit: 1.5,
   },
   rC = Math.sqrt(2 * PLAYER_TUNING.gravity * PLAYER_TUNING.jumpApex);
+const STEP_CLEAR = 0.5; // physics.blocked ignores what a walker steps over; lift the probe by that much
+// OPUS additions to the lifted controller: mantling a low wall or a bank (tuning below), terrain instead of a flat
+// quay (the fall rescue now means "left the scene's bounds"), and the crouch check asked of the physics.
+export var MANTLE = { maxUp: 1.5, reach: 0.7, time: 0.42, minForward: 0.4 };
 export function createPlayer(i) {
   let e = i.camera,
     t = () => (i.render && i.render.post) || n,
@@ -74,6 +78,7 @@ export function createPlayer(i) {
     U = new Vector3(),
     T = new Euler(0, 0, 0, 'YXZ'),
     D = new Vector3(),
+    mantle = null,
     C = {
       pos: new Vector3(),
       eye: new Vector3(),
@@ -98,7 +103,7 @@ export function createPlayer(i) {
       tuning: PLAYER_TUNING,
       reset(F) {
         let X = F || (i.level && i.level.playerStart) || { pos: new Vector3(), yaw: 0 };
-        (C.pos.copy(X.pos),
+        (C.pos.set(X.pos.x, X.pos.y, X.pos.z),
           (C.yaw = X.yaw || 0),
           (C.pitch = 0),
           C.vel.set(0, 0, 0),
@@ -129,7 +134,8 @@ export function createPlayer(i) {
           (S = 0),
           (z = 0),
           (C.hurtPulse = 0),
-          D.copy(C.pos));
+          D.copy(C.pos),
+          (mantle = null));
         let ne = t();
         ((ne.damage = 0), (ne.lowHealth = 0), (ne.ads = 0), K(0));
       },
@@ -172,23 +178,11 @@ export function createPlayer(i) {
       re = saturate(1 - X / (14 + ne * 10)) * (0.35 + 0.35 * ne);
     re > 0.01 && C.addShake(re);
   });
+  // OPUS: is there room to stand up? Asked of the physics (prisms and boxes alike), not of a box list.
   function G() {
-    let F = i.physics && i.physics.boxes;
-    if (!F) return !0;
-    let X = BODY.radius * 0.9,
-      ne = C.pos.y + PLAYER_TUNING.crouchHeight - 0.05,
-      re = C.pos.y + PLAYER_TUNING.standHeight;
-    for (let $ = 0; $ < F.length; $++) {
-      let ue = F[$];
-      if (
-        !ue.bulletOnly &&
-        !(C.pos.x + X < ue.min.x || C.pos.x - X > ue.max.x || C.pos.z + X < ue.min.z || C.pos.z - X > ue.max.z) &&
-        ue.min.y < re &&
-        ue.max.y > ne
-      )
-        return !1;
-    }
-    return !0;
+    let F = i.physics;
+    if (!F || !F.blocked) return !0;
+    return !F.blocked(C.pos.x, C.pos.z, BODY.radius * 0.9, C.pos.y + PLAYER_TUNING.crouchHeight - STEP_CLEAR, PLAYER_TUNING.standHeight - PLAYER_TUNING.crouchHeight + STEP_CLEAR);
   }
   function j() {
     let F = C.pos.x,
@@ -264,6 +258,27 @@ export function createPlayer(i) {
         i.events.emit('player:jump', { pos: C.pos })),
       (C.vel.y -= PLAYER_TUNING.gravity * F * 0.5),
       C.vel.y < -40 && (C.vel.y = -40));
+    if (mantle) {
+      // rise, then step forward onto the ledge; input is ignored for the few tenths of a second it takes
+      mantle.t += F / MANTLE.time;
+      let mk = Math.min(1, mantle.t),
+        up = Math.min(1, mk / 0.65),
+        fw = Math.max(0, (mk - 0.45) / 0.55);
+      C.pos.set(mantle.x0 + (mantle.x1 - mantle.x0) * fw, mantle.y0 + (mantle.y1 - mantle.y0) * (up * up * (3 - 2 * up)), mantle.z0 + (mantle.z1 - mantle.z0) * fw);
+      C.vel.set(0, 0, 0);
+      if (mk >= 1) { mantle = null; C.onGround = !0; l = !0; i.events.emit('player:land', { speed: 1, surface: j(), pos: C.pos }); }
+      C.speed = 0; K(F); ie(F);
+      return;
+    }
+    if (re && me > MANTLE.minForward && i.physics.ledgeAhead && (X.pressed('jump') || (!C.onGround && X.down && X.down('jump')))) {
+      let led = i.physics.ledgeAhead(C.pos, -V, -Y, BODY.radius, PLAYER_TUNING.crouchHeight, MANTLE.reach, MANTLE.maxUp + (C.onGround ? 0 : 0.4));
+      if (led) {
+        mantle = { t: 0, x0: C.pos.x, y0: C.pos.y, z0: C.pos.z, x1: led.x, y1: led.y, z1: led.z };
+        a = 0; g.v -= 1.2;
+        i.events.emit('player:mantle', { pos: C.pos, height: led.y - C.pos.y });
+        return;
+      }
+    }
     let le = C.vel.y,
       R = i.physics.moveCapsule(C.pos, C.vel, F, BODY.radius, o, l) || {};
     R.onGround || (C.vel.y -= PLAYER_TUNING.gravity * F * 0.5);
@@ -284,10 +299,10 @@ export function createPlayer(i) {
           ce > 13 && C.damage((ce - 13) * 7, null),
           (h = 0.35));
       }
-      ((c = 0), (u = 0), C.pos.x <= PORT_BOUNDS.quayX - 1.2 && C.pos.y > -0.5 && D.copy(C.pos));
+      ((c = 0), (u = 0), D.copy(C.pos));
     } else ((c += F), (u = Math.max(u, -C.vel.y)));
     ((l = C.onGround),
-      C.pos.y < PORT_BOUNDS.seaY - 2.2 &&
+      C.pos.y < (i.physics.bounds ? i.physics.bounds.min.y : -50) &&
         (C.pos.copy(D),
         C.vel.set(0, 0, 0),
         (C.onGround = !0),
@@ -332,7 +347,7 @@ export function createPlayer(i) {
       let X = i.physics.moveCapsule(C.pos, C.vel, F, BODY.radius, 0.6, l);
       l = !!(X && X.onGround);
     } catch {}
-    (C.pos.y < PORT_BOUNDS.seaY - 1 && ((C.pos.y = PORT_BOUNDS.seaY - 1), (C.vel.y = 0)),
+    (C.pos.y < -50 && ((C.pos.y = -50), (C.vel.y = 0)),
       (C.speed = 0),
       (C.sprinting = !1),
       (f = damp(f, 0, 10, F)),
