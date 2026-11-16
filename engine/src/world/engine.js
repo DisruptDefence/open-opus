@@ -21,6 +21,7 @@ import { createPhysics } from '../physics/physics.js';
 import { createNav } from '../nav/navgrid.js';
 import { createRender } from '../render/render.js';
 import { createMaterials } from '../materials/materials.js';
+import { withDetail } from '../materials/detail.js';
 import '../materials/outdoor.js';
 import '../materials/facades.js';
 import { createInput } from '../input/input.js';
@@ -38,7 +39,7 @@ import { validatePack, mergePacks } from '../content/pack.js';
 import { createDirector } from '../director/director.js';
 
 export const DEFAULT_MODULES = {
-  render: createRender, mats: createMaterials, input: createInput, fx: createFx, audio: createAudio, player: createPlayer,
+  render: createRender, mats: withDetail(createMaterials), input: createInput, fx: createFx, audio: createAudio, player: createPlayer,
   combat: createCombat, weapon: createWeapon, threats: createThreats, hud: createNullHud, game: createSession,
 };
 const nothing = () => {};
@@ -69,6 +70,10 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   G.renderer = G.render.renderer; G.scene = G.render.scene; G.camera = G.render.camera; G.viewCamera = G.render.viewCamera;
   G.render.setAtmosphere(atmosphere(hour));
   await step('materials', 0.15, async () => { G.mats = await F.mats(G); });
+  if (G.mats.setDetail && !params.nodetail) { // image layer: loads in the background, procedural until then (a photo waits for it)
+    const dp = G.mats.setDetail(m.style && m.style.detail).catch((e) => console.warn('[detail] ' + ((e && e.message) || e)));
+    if (params.shot) await dp;
+  }
   G.mats.uniforms.wet.value = +(params.wet ?? 0); G.render.post.wet = G.mats.uniforms.wet.value;
 
   const w = m.walkable || m.bounds;
