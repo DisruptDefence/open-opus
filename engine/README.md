@@ -54,12 +54,14 @@ a format.
 ## Test it
 
 ```
-node --test                                        # in this folder: about 40 tests, a second or two
+node --test                                        # in this folder: about 55 tests, a few seconds
 ```
 
 The pure modules are tested alone. `test/world-api.test.js` is the contract test: it boots the real engine
 without a screen (`test/headless.js` replaces the modules that need WebGL, sound or a keyboard through the
-engine's own module registry) and plays a mission through the world API.
+engine's own module registry) and plays a mission through the world API. `test/combat.test.js` fights on the same
+simulation: the player's rounds kill each threat kind, and threats notice, warn, take turns, shoot bolts, rush and
+explode as their archetype data says. What the stand-in game has that this engine lacks: `docs/PARITY.md`.
 
 To see it, play a scenario in a headless browser and look at the pictures it saves:
 
