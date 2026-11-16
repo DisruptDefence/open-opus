@@ -59,7 +59,7 @@ import { SOUP, GROUND_SOUP, SURFACE_NAMES } from './style.js';
 import { tri, quad, prism } from './soup.js';
 
 const LIFT_ROAD = 0.03, LIFT_MARK = 0.04, LIFT_MARGIN = 0.02, MARGIN = 0.6, KERB_STONE = 0.15;
-const HARD = new Set([1, 2, 3, 4, 12, 13]); // surfaces that sit beside paving: they get a margin strip
+const HARD = new Set([1, 2, 3, 4]); // surfaces that sit beside paving: they get a margin strip
 
 // ---- the terrain as drawn ------------------------------------------------------------------------------------------
 /** The height of the drawn terrain triangle under (x, z): the planes `drape` uses (not the bilinear baseHeight). */

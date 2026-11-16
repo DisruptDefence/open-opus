@@ -92,6 +92,17 @@ def sidewalk_grid(roads: list) -> dict:
     return grid
 
 
+def crossing_surface(rd: dict, vehicle: list) -> int | None:
+    """The surface class of the street a footway=crossing way crosses (its midpoint within 1.5 m of the carriageway), or None."""
+    pts = rd["pts"]
+    mid = pts[len(pts) // 2]
+    for v in vehicle:
+        half = (num(v["tags"].get("width")) or ROAD_WIDTH[v["tags"]["highway"]]) / 2 + 1.5
+        if any(seg_dist(mid[0], mid[1], a[0], a[1], b[0], b[1]) <= half for a, b in zip(v["pts"], v["pts"][1:])):
+            return v["sf"]
+    return None
+
+
 def step_record(t: dict, pts, ground) -> dict:
     out = {}
     try:
@@ -231,6 +242,10 @@ def build(ctx) -> dict:
     ctx.rules["bare_ground"] = ("Ground no road, area, building or water covers, on 5 m cells: slope over 0.6 (rise over run, terrain model) "
                                 "is rock, 0.25 to 0.6 outside any green is a grassy bank; merged into rectangles in `areas` with k 'bare'.")
     side_grid = sidewalk_grid(f["roads"])
+    ctx.rules["crossing_ways"] = ("A footway=crossing way takes the surface class of the street it crosses, so the street stays one surface; "
+                                  "the `crossings` layer draws the zebra.")
+    vehicle = [{"pts": rd["pts"], "tags": rd["tags"], "sf": surface_class(rd["tags"], rd["tags"]["highway"], street)}
+               for rd in f["roads"] if rd["tags"]["highway"] in VEHICLE and rd["tags"].get("footway") != "sidewalk"]
     roads = []
     for rd in f["roads"]:
         t, hw = rd["tags"], rd["tags"]["highway"]
@@ -239,6 +254,8 @@ def build(ctx) -> dict:
             if t.get(src_key):
                 r[key] = t[src_key]
         r["sf"] = surface_class(t, hw, street)
+        if t.get("footway") == "crossing" and hw not in VEHICLE:
+            r["sf"] = crossing_surface(rd, vehicle) or r["sf"]
         if hw in sw_on and t.get("footway") != "sidewalk":
             side = sidewalk_side(t, hw, street)
             if side is None:
