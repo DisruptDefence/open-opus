@@ -1,3 +1,4 @@
+import { installTouchStyle } from './touch-style.js'; // OPUS: the touch controls' style sheet
 export var h_ = {
     KeyW: 'forward',
     KeyS: 'back',
@@ -284,6 +285,7 @@ export function createInput(i) {
     f.touch ||
       ((f.touch = !0),
       _(),
+      installTouchStyle(),
       M || (M = N()),
       M.root.classList.toggle('on', r),
       document.documentElement.classList.add('is-touch'),

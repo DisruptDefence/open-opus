@@ -36,6 +36,8 @@ Read, in this order:
 3. `docs/WORLD-API.md` — the contract
 4. `docs/SCENE-FORMAT.md` — `opus-scene/1`
 5. `docs/SESSION-PROTOCOL.md` — `opus-session/1` (draft): mission client and session host
+6. `docs/CONTRACTS.md` — every contract, its version and how it may change; `docs/DECISIONS.md` — why
+7. `docs/plans/` — the work, cut into items: `GAMEPLAY-PARITY.md`, `SCENE-DETAIL.md`, `PLATFORM.md`, `ENGINE-SCALE.md`
 
 ## Priorities now (2026-11-16)
 

@@ -69,7 +69,7 @@ larger than 64 KiB. Positions are game metres (`x` east, `z` south, `y` up; `SCE
 | `hello` | `protocol: "opus-session/1"`, `world: 1`, `scenes: ["opus-scene/1"]`, `phone: "tak" \| "fallback" \| "none"`, `resume?: true` | First message on every connection. What the client speaks and which phone screen it has: a real TAK client, a fallback screen, or none. `resume`: section 5 |
 | `start` | — | The trainee pressed Deploy, or deploys again after dying or finishing |
 | `pos` | `x`, `y`, `z`, `heading`, `speed` | The player, five times a second while the world's state is `playing`. From `world.snapshot().self` |
-| `event` | `kind`, `data` | Something the world reported through `world.on(...)`: `state` (died, paused), `entity` (a threat was killed), `interact` (a mark was reached). `data` is the event's payload |
+| `event` | `kind`, `data` | Something the world reported through `world.on(...)`: `state` (died, paused), `entity` (a threat was killed), `interact` (a mark was reached, or one used with a key began, was cancelled or finished). `data` is the event's payload |
 | `phone` | `action`, `data` | Something the trainee did on a **fallback** phone screen (opened a tool, dropped a marker). `data` holds plain values only. A real TAK client is not reported this way (section 4) |
 | `refused` | `seq` | The command with this number could not be applied (`apply()` threw) |
 
@@ -90,6 +90,8 @@ larger than 64 KiB. Positions are game metres (`x` east, `z` south, `y` up; `SCE
 
 The host closes with code `4401` when the connection is not authenticated and `4404` when there is no such
 session for this person. Someone else's session and a missing one are answered the same way.
+It closes with `4406` and a one-sentence reason when the `hello` has no protocol, world version or scene format
+in common with what the session needs (section 4, rule 8).
 
 ## 4. What a host must do
 
@@ -136,12 +138,26 @@ While the socket is down the client shows that progress is not being counted. It
 - Show objective state as sent. It decides nothing about objectives, time or score.
 - Send `start` only from a user gesture.
 
+## 7. Additions decided 2026-11-16 (additive; none is built in this repository)
+
+Each keeps the identifier `opus-session/1`: an older client ignores the new kind and the new fields.
+
+| Where | Addition | Meaning |
+|---|---|---|
+| `deploy` | `resumed?: true`, `elapsed?: seconds` | Sent in answer to `hello { resume: true }` (section 5): the client applies `cmds`, calls `world.start({ at, fadeIn: 0 })` and shows `elapsed` on its clock. `cmds` begins with `clear` and then holds everything that stands. A threat the client reported killed is not sent again |
+| `mission` | `lang?: string`, `scenario?: { id, version }` | The language the texts were resolved in; which scenario, by id only, for a client's own records |
+| `debrief` | `attempt?: string`, `skills?: [{ id, title, credited }]`, `stats?: { … }` | The host's id for this run; the skills this run is evidence for and whether it counted; figures the client reported itself, shown as unverified |
+| host to client | `notice { code, text? }` | Something outside the scenario changed. Codes: `phone-ready`, `phone-lost` (the TAK client went away; objectives that need it cannot be met until it is back), `resumed`, `host-restart`. A client shows `text` when given and otherwise its own words for the code. An unknown code is ignored |
+| `hello` | `lang?: string` | The language the client would like texts in |
+
+**Scene grants are HTTP, not messages.** The reserved kinds `need` and `grant` are withdrawn. A chunked scene is
+fetched file by file from under `scene.url`; a hardened host authorises each request against the session (the
+chunk must lie within the mission's play area and within reach of the last bounded position) and answers 403
+otherwise. A client treats a 403 on a chunk as "not yet" and asks again when it is nearer. Nothing else changes
+for a client, and a reference host serves the files as they are.
+
 ## Not in this document
 
-- **The scenario format**: the file a host reads (objectives and their checks, triggers, anchors used). Not
-  specified. Whether one open format and one open implementation of the checks exist is a maintainer decision.
-- **Scene grants.** A hardened host hands out a chunked scene piece by piece (`SCENE-FORMAT.md` 9). The message
-  kinds `need` (client) and `grant` (host) are reserved for it and not yet specified. Until then `scene.url`
-  names something the client fetches whole.
+- **The scenario format**: the file a host reads. It is `SCENARIO-FORMAT.md` (`opus-scenario/1`, draft).
 - **More than one player.** A session is one person. Collaboration is meant to go through a TAK server, not
   through this socket.

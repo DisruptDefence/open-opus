@@ -1,4 +1,4 @@
-// The threats module: bodies in the world driven by the brains of brain.js over the archetypes of archetypes.js.
+// The threats module: bodies in the world driven by the brains of brain.js over the archetypes of the content pack (content/default.js, or the product's).
 // It keeps the surface the lifted combat and audio modules expect of `enemies` (list, spawn, raycast, aliveCount,
 // clear, alert, update, and the enemy:* events) and replaces what was behind it: two hard-coded machines.
 //
@@ -18,12 +18,12 @@
 //   death      a ground threat drops, sparks and smokes; an air threat spins down and may explode
 //   intensity  the music follows the fight (audio.setIntensity): calm, alerted, in contact
 import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Vector3 } from '../../vendor/three.module.js';
-import { ARCHETYPES } from './archetypes.js';
+import { DEFAULT_PACK } from '../content/default.js';
 import { canSee, canHear, createBrain, validateBehaviour } from './brain.js';
 
 const GRAVITY = 21;
 /** The rhythm of a fight. The values are the stand-in game's tuning constants. */
-export const TUNING = { maxTokens: 2, maxTokensCrowd: 3, crowd: 5, tokenGap: 1.25, exposureUp: 0.1, exposureDown: 0.45, maxBolts: 32, boltLife: 1.3, maxWrecks: 5, wreckSeconds: 12, nearMetres: 26 };
+export const TUNING = DEFAULT_PACK.threatTuning; // the default pack's numbers; a pack's own arrive through createThreats
 const LENS_CALM = [8, 4, 0.7], LENS_HOT = [14, 1, 0.35];
 const between = (v, rng) => (Array.isArray(v) ? v[0] + rng() * (v[1] - v[0]) : +v || 0);
 
@@ -87,7 +87,7 @@ function buildModel(def) {
   return g;
 }
 
-export function createThreats(G, { archetypes = ARCHETYPES, tuning = TUNING } = {}) {
+export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = TUNING } = {}) {
   for (const def of Object.values(archetypes)) { const e = validateBehaviour(def); if (e.length) throw new Error('threats: ' + e.join('; ')); }
   const root = new Group(); root.name = 'enemies'; G.scene.add(root);
   const list = [], rng = G.rng.fork(), UP = new Vector3(0, 1, 0);
@@ -142,6 +142,7 @@ export function createThreats(G, { archetypes = ARCHETYPES, tuning = TUNING } = 
       },
     };
     if (def.type === 'air') t.pos.y = Math.max(t.pos.y, G.physics.groundHeight(t.pos.x, t.pos.z) + (def.body.altitude || 20));
+    if (opts.alerted && G.player) { t.lastKnown = G.player.pos.clone(); t.heard = true; } // starts out looking for the player
     root.add(model); list.push(t); place(t);
     G.events.emit('enemy:spawn', { enemy: t });
     return t;

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARCHETYPES } from '../src/threats/archetypes.js';
+import { DEFAULT_PACK } from '../src/content/default.js';
+const ARCHETYPES = DEFAULT_PACK.threats;
 import { canSee, canHear, createBrain, validateBehaviour } from '../src/threats/brain.js';
 
 test('every archetype is a valid behaviour table, with a ground and an air threat', () => {

@@ -38,7 +38,9 @@ stand-in mission.
   (`engine/README.md`).
 - `scenes/old-quebec.json` — the first map: Old Quebec in real UTM metres, from OpenStreetMap (ODbL,
   © OpenStreetMap contributors) and Natural Resources Canada's HRDEM terrain (Open Government Licence – Canada).
-- `tools/build-scene.py` — the builder that produced it; standard library only.
+- `tools/build-scene.py` — the builder that produced it; standard library only. It takes a place file (`places/<id>.json`) and a
+  style pack (`styles/<name>.json`): `python3 tools/build-scene.py --place places/<id>.json --cache DIR [--offline]`.
+  Its modules are in `tools/scene_builder/` (tests: `python3 -m unittest discover tools/scene_builder`).
 - `phone/` — the in-game phone, outside the engine and on the world API only. Press **T** in `phone/demo.html`:
   the game is held and a phone comes up. Out of the box its screen is a placeholder that says no phone is
   connected and shows the player's true grid reference and heading. A developer who runs `phone/local/run.sh`

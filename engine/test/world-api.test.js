@@ -29,7 +29,7 @@ test('the world exists while the scene loads, then is ready in the title state',
   assert.ok(Object.isFrozen(world));
   for (const name of ['pause', 'resume', 'scene']) assert.equal(typeof world[name], 'function', name);
   assert.equal(typeof world.geo.toUTM, 'function'); assert.equal(typeof world.geo.convergenceDeg, 'number');
-  for (const name of ['ready', 'state', 'on', 'start', 'canHold', 'hold', 'setHoldMode', 'held', 'release', 'snapshot', 'overhead', 'apply']) assert.equal(typeof world[name], 'function', name);
+  for (const name of ['ready', 'state', 'on', 'start', 'canHold', 'hold', 'setHoldMode', 'held', 'release', 'snapshot', 'settings', 'overhead', 'apply']) assert.equal(typeof world[name], 'function', name);
   for (const name of ['toGeo', 'toGame', 'toMGRS', 'headingTrue']) assert.equal(typeof world.geo[name], 'function', 'geo.' + name);
 });
 
@@ -53,7 +53,7 @@ test('snapshot is plain data in the documented shape, and the only list of thing
   const s = world.snapshot();
   assert.ok(isPlain(s), 'no engine object crosses the API');
   assert.ok(isPlain(events));
-  assert.deepEqual(Object.keys(s).sort(), ['entities', 'self', 'time']);
+  assert.deepEqual(Object.keys(s).sort(), ['entities', 'self', 'stats', 'time']);
   assert.ok(s.time > 0.4 && s.time < 0.6);
   for (const k of ['x', 'y', 'z', 'heading', 'speed', 'health']) assert.equal(typeof s.self[k], 'number', 'self.' + k);
   assert.ok(Math.abs(s.self.x - 20) < 0.01 && Math.abs(s.self.z - 18) < 0.01 && Math.abs(s.self.y - 30) < 0.2, 'the player stands where start() put them, on the ground');

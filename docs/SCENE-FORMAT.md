@@ -12,7 +12,7 @@ This document is the format. Three things write or read it today:
 
 | | Matches | Differs |
 |---|---|---|
-| `tools/build-scene.py` → `scenes/old-quebec.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks`; `packaging`; `play`, `extent`; the layers | Buildings have no `id` (4.2), so nothing can refer to one across rebuilds. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. The file was not rebuilt for 2.2: only its georeference block was rewritten (`build-scene.py --georef-only`) |
+| `tools/build-scene.py --place places/<id>.json` → `scenes/<id>.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks` (zone, band and convergence computed from the place's anchor); `packaging`; `play`, `extent`; the layers; `formatMinor: 1` with the manifest keys of 3.3 (`style`, `season`, `ambience`, `sources` with licence URLs and layers) | Buildings carry the additions of 4.2 (`id`, measured heights, roof, façade, storeys, use, `blind`, `front`, `gf`); `pass` (passages) is not written yet. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. Roads, walls, trees and props carry none of the additions of `docs/plans/SCENE-DETAIL.md` section 3 yet |
 | `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The georeference of 2.2, `play`, `extent`; chunks on the absolute grid of 3.1 (the anchor is deliberately off a chunk corner); the container (3.2), raster layers, hashed names, `anchors.json` | Vector layers are JSON in the chunk header, not binary records |
 | The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads 2.2 exactly as written and refuses a block without `vertical.geoid_undulation`; numbers chunks as 3.1 (`engine/src/scene/grid.js`); both tested against the check points of both scenes | Cuts a single file into chunks itself and burns its roads into a surface raster (the format gives that to the pipeline). Each tile of a single file keeps the file's own terrain samples, so it starts up to one cell before the chunk corner |
 
@@ -157,6 +157,20 @@ diffs. `"packaging": "chunked"` is the package above, produced from the same rec
 Georeference, axes, units and the meaning of every field are identical; a reader that lacks the container
 reads only `single`. A missing `packaging` means `single`.
 
+### 3.3 Manifest additions (`formatMinor: 1`)
+
+Additive: a reader of `formatMinor: 0` ignores all of them. Written by the builder from the place file and the
+style pack (`docs/plans/SCENE-DETAIL.md` section 2).
+
+| Key | Meaning |
+|---|---|
+| `formatMinor` | `1` |
+| `style` | the client part of the style pack, verbatim: colour palettes, window and ground-floor proportions, cornice, dormers, chimneys, kerb. Optional; the reader has neutral defaults |
+| `season` | `"summer" \| "autumn" \| "winter" \| "spring"`, from the place file |
+| `ambience` | `{ tod, day, haze, cloud, wet }`: the light the place is best seen in. A host's own switches win |
+| `sources[]` | one entry per source: `name`, `licence`, `licenceUrl`, `attribution`, `layers` it fed (and, for OpenStreetMap, `extract` and `bbox`) |
+| `rules` | one sentence for every value the builder had to invent |
+
 ## 4. Layers
 
 ### 4.1 Terrain
@@ -196,6 +210,25 @@ One record per building part. Arrays of fixed-size records plus one shared verte
 | `heightSource` | `uint8` | `0 measured, 1 tag, 2 levels, 3 rule`: where `hEave` came from (the single-file key `hs`) |
 | `flags` | `uint8` | bit 0 `landmark` (drawn from `models/`, not extruded), bit 1 `noCollide` |
 | `name` | `uint16` | Index into the string table, 0 = none |
+
+**Single-file keys and the additions of `formatMinor: 1`.** In the single file a building record is
+`{ id, r, holes?, g, h, hs, rh, rs, rd, rmt, rp, fa, pal, use, lv, blind?, front?, gf, mh?, k?, n?, … }`, written by the
+builder (`docs/plans/SCENE-DETAIL.md` item 2). An older reader ignores every key it does not know.
+
+| Key | Chunked field | Meaning |
+|---|---|---|
+| `id` | `id` | FNV-1a 32 of `"<osm type>/<osm id>/<ring index>"`; on a clash +1 until free, in ascending source-id order; never 0 |
+| `r`, `holes`, `g` | `ring`, `holes`, `yBase` | ring and holes flat `[x, z, …]`; `g` the lowest ground on the ring |
+| `h` | | top of the roof above `g`; `hs` is `"measured"` (HRDEM surface model, 90th percentile over a 1 m lattice), `"tag"`, `"levels"` or `"rule"` (`heightSource` 0 to 3) |
+| `rh` | `hRoof` | roof above the eave, always written (0 for flat) |
+| `rs`, `rmt`, `fa`, `use` | `roofShape`, `roofMat`, `facade`, `use` | the enums above, resolved by the builder from tags, else by the style pack's weighted rule seeded with `id` |
+| `rd` | `roofDir` | ridge bearing from grid north, whole degrees 0 to 179 (2° steps in the chunked field); 255 = along the longest side |
+| `rp`, `pal` | `roofPalette`, `palette` | index into the scene's `style.roofs[<roofMat>]` and `style.palettes[<facade>]` |
+| `lv` | `levels` | storeys below the eave, always written |
+| `blind` | | edges with no openings: edge `i` runs from ring vertex `i` to `i + 1`, wrapping; a party wall, or a wall within 0.6 m of another building |
+| `front` | | edges that face a street: where doors and shopfronts go |
+| `gf` | `groundFloor` | 0 plain, 1 shopfronts on the `front` edges, 2 large doors |
+| `mh`, `parts`, `part` | | minimum height of a part; an outline drawn from its parts; a part |
 
 Collision is derived, not stored: each part is a prism (ring, `yBase`, `yBase + hEave + hRoof`). Interiors are
 out of scope for version 1; buildings are solid.
