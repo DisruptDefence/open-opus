@@ -236,6 +236,7 @@ def build(ctx) -> dict:
     ctx.rules["sidewalks"] = ("`sw`: none where tagged sidewalk=no|none|separate or where a mapped footway=sidewalk way runs within 6 m "
                               "along most of the road; the tagged side where tagged; else both for the classes in the style pack's "
                               "street.sidewalk.on, else none.")
+    ctx.rules["sidewalk_ways"] = "A way mapped as footway=sidewalk is itself a raised sidewalk (`sw` \"self\"), 1.6 m wide unless tagged."
     ctx.rules["steps"] = "`sc` step_count where tagged, else round(rise / 0.17) and at least 2; `hr` from handrail*= tags (0 none, 1 both sides, 2 centre)."
     ctx.rules["markings"] = "`mk` = 1 (centre line) on primary, secondary and tertiary roads with an asphalt surface; `lit` from lit=yes."
     ctx.rules["crossings"] = "highway=crossing nodes snapped to the nearest road vertex or segment within 1.5 m, [x, z, bearing, road width]; others dropped."
@@ -250,13 +251,16 @@ def build(ctx) -> dict:
     for rd in f["roads"]:
         t, hw = rd["tags"], rd["tags"]["highway"]
         r = {"p": flat(rd["pts"]), "k": hw, "w": round(num(t.get("width")) or ROAD_WIDTH[hw], 1)}
+        if t.get("footway") == "sidewalk":  # a mapped sidewalk: narrower unless tagged, and raised by the kerb ("self")
+            r["w"] = round(num(t.get("width")) or ctx.style.client()["sidewalk"]["width"], 1)
+            r["sw"] = "self"
         for src_key, key in (("name", "n"), ("surface", "s"), ("bridge", "br"), ("tunnel", "tn"), ("covered", "cv")):
             if t.get(src_key):
                 r[key] = t[src_key]
         r["sf"] = surface_class(t, hw, street)
         if t.get("footway") == "crossing" and hw not in VEHICLE:
             r["sf"] = crossing_surface(rd, vehicle) or r["sf"]
-        if hw in sw_on and t.get("footway") != "sidewalk":
+        if hw in sw_on and t.get("footway") != "sidewalk" and hw not in ("footway",):
             side = sidewalk_side(t, hw, street)
             if side is None:
                 side = "no" if has_parallel_sidewalk(rd["pts"], side_grid) else "both"

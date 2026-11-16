@@ -248,7 +248,7 @@ are for the map, markings and kerbs, bridges, and the route graph.
 <!-- item 6 (Ground), formatMinor 1: keys of a road record in the single file; the chunked field names follow 3.2 of docs/plans/SCENE-DETAIL.md -->
 Optional keys on a road (an older reader ignores them): `sf` the resolved surface class (the terrain enum of 4.1;
 `s` stays the source's word); `sw` the sidewalks to draw, `"both"`, `"left"`, `"right"` (of the direction of the
-vertices), absent for none; `sc` and `hr` on steps only (step count; handrail `1` both sides, `2` centre, absent none);
+vertices), `"self"` on a way mapped as footway=sidewalk (the way is itself the raised sidewalk), absent for none; `sc` and `hr` on steps only (step count; handrail `1` both sides, `2` centre, absent none);
 `lit` 1; `mk` 1 = centre line. New layer `crossings`: `[[x, z, bearingDeg, width], …]`, the bearing of the road there
 (0-179), snapped to a road within 1.5 m. Bare ground is written into `areas` as `{ r, k: "bare", s: "rock" | "grass" }`
 (rectangles of merged 5 m cells that no road, area, building or water covers and whose slope is above 0.6, or 0.25 to

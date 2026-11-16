@@ -73,6 +73,12 @@ test('liftRaster: 14 in the sidewalk strip, 0 on the carriageway and beyond; ter
   const tile = tileOf(() => 0, { lift, minX: x0, minZ: z0, n: 13, cell: 2.5 }), s = createSoups(); roadRibbons(s, r, tile, STYLE);
   for (const t of upTris(s.map.get('concrete|tn'))) for (const v of t) if (Math.abs(v[0]) < 8 && Math.abs(Math.abs(v[2]) - 3.8) < 0.5) assert.ok(Math.abs(tile.height(v[0], v[2]) - v[1]) < 1e-9, 'the walker stands on the drawn top');
 });
+test('a way that is itself a sidewalk (sw "self") is raised by the kerb, with faces on its edges and ends, and lifts the walker', () => {
+  const tile = tileOf(() => 0), r = road({ kind: 'footway', cls: 8, surface: 2, width: 1.6, sidewalk: 'self', pts: [-10, 0, 10, 0], len: 20 }), s = createSoups(); roadRibbons(s, r, tile, STYLE);
+  const top = s.map.get('concrete|tn'); assert.ok(Math.abs(upArea(top) - 32) < 0.3); for (const t of upTris(top)) for (const v of t) assert.ok(Math.abs(v[1] - 0.14) < 1e-9);
+  const faces = s.map.get('stone|tn'); let n = 0; for (let i = 0; i < faces.pos.length; i += 9) if (Math.abs(faces.nrm[i + 1]) < 1e-6) n++; assert.ok(n >= 8, `faces ${n}`);
+  const lift = liftRaster([r], -15, -15, 30, STYLE); assert.equal(lift[15 * 30 + 15], 14); assert.equal(lift[12 * 30 + 15], 0);
+});
 test('a 90 degree bend leaves no gap at the joint', () => {
   const tile = tileOf(() => 0), s = createSoups(); roadRibbons(s, road({ pts: [-20, 0, 0, 0, 0, 20], len: 40 }), tile, STYLE);
   const tris = upTris(s.map.get('asphalt|tn')), inTri = (p, t) => { const s1 = (a, b) => (b[0] - a[0]) * (p[1] - a[2]) - (b[2] - a[2]) * (p[0] - a[0]); const e = [s1(t[0], t[1]), s1(t[1], t[2]), s1(t[2], t[0])]; return e.every((v) => v >= -1e-9) || e.every((v) => v <= 1e-9); };

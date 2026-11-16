@@ -142,6 +142,7 @@ function stripQuads(A, B) { const q = []; for (let i = 0; i + 1 < A.length; i++)
 function sidewalkStrips(road, style) {
   const sw = road.sidewalk || 'no', width = style.sidewalk.width, hw = road.width / 2, P = points(road.pts), out = [];
   if (road.steps || P.length < 2) return out;
+  if (sw === 'self') { const L = offsetLine(P, hw), R = offsetLine(P, -hw); return [{ side: 0, inner: L, outer: R, quads: stripQuads(L, R), stone: [] }]; } // a mapped sidewalk way: the way itself is raised
   for (const side of [1, -1]) {
     if (sw !== 'both' && sw !== (side > 0 ? 'left' : 'right')) continue;
     const inner = offsetLine(P, side * hw), outer = offsetLine(P, side * (hw + width));
@@ -198,7 +199,16 @@ function between(P, cum, sa, sb) {
 export function roadRibbons(soups, road, tile, style) {
   const P = points(road.pts); if (P.length < 2) return;
   const hw = road.width / 2, road_ = soupOf(soups, surfaceSoup(road.surface)), L = offsetLine(P, hw), R = offsetLine(P, -hw);
-  for (const q of stripQuads(L, R)) lay(road_, q, tile, LIFT_ROAD);
+  if (road.sidewalk === 'self') { // a way that is itself a sidewalk: raised by the kerb, with a kerb face on both edges and at both ends
+    const stone = soupOf(soups, SOUP.kerb), kerb = style.kerb;
+    for (const q of stripQuads(L, R)) lay(road_, q, tile, kerb);
+    const out = (A) => [A[0][0] - P[0][0], A[0][1] - P[0][1]];
+    wallAlong(stone, L, tile, 0, kerb, out(L)); wallAlong(stone, R, tile, 0, kerb, out(R));
+    const n = P.length - 1, dir = (a, b) => [b[0] - a[0], b[1] - a[1]];
+    wallAlong(stone, [R[0], L[0]], tile, 0, kerb, dir(P[1], P[0])); wallAlong(stone, [L[n], R[n]], tile, 0, kerb, dir(P[n - 1], P[n]));
+    return;
+  }
+  for (const q of stripQuads(L, R)) lay(road_, q, tile, road.cls >= 7 ? LIFT_ROAD + 0.006 : LIFT_ROAD); // footways and stairs over streets: one wins, never two
   const sw = style.sidewalk, kerb = style.kerb, strips = sidewalkStrips(road, style), have = new Set(strips.map((t) => t.side));
   if (HARD.has(road.surface) && !road.steps) {
     const pave = soupOf(soups, GROUND_SOUP[4]);
