@@ -1,0 +1,4 @@
+[
+  { "id": "old-quebec", "place": "Vieux-Québec", "about": "A real place: Old Quebec, built from OpenStreetMap and Natural Resources Canada terrain, on its true UTM grid." },
+  { "id": "test", "place": "Engine test scene", "about": "A generated square kilometre with a town, a cliff and a hill. No map data." }
+]
