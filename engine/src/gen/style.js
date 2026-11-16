@@ -27,7 +27,7 @@ export const SEASONS = ['summer', 'autumn', 'winter', 'spring'];
 /** The textured wall a near façade is cut out of, by façade class (4.2): triplanar, tinted. Also gable walls. */
 export const WALL_SOUP = ['stucco|tv', 'stone|tv', 'rubble|tv', 'brick|tv', 'stucco|tv', 'wood|tv', 'concrete|tv', 'concrete|tv', 'galv|tv', 'stucco|tv', 'concrete|tv'];
 /** The flat far façade, windows painted in the texture, by façade class: uv counts bays and storeys, tinted. */
-export const FACADE_FAR_SOUP = ['facade_stucco|v', 'facade_stone|v', 'facade_stone|v', 'facade_stone|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v'];
+export const FACADE_FAR_SOUP = ['facade_stucco|v', 'facade_stone|v', 'facade_rubble|v', 'facade_brick|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v'];
 /** Roof coverings by roof material (4.2). With a colour (`b.roofColor`) the tinted form `…|tv` of ROOF_TINT_SOUP is used. */
 export const ROOF_SOUP = ['roof_membrane|t', 'roof_zinc|t', 'roof_copper|t', 'roof_zinc|t', 'roof_zinc|t', 'roof_zinc|t', 'roof_membrane|t', 'concrete|t', 'roof_zinc|t', 'roof_zinc|t'];
 export const ROOF_TINT_SOUP = ['roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv'];
