@@ -57,7 +57,7 @@ export function createThreats(G, { archetypes = ARCHETYPES } = {}) {
   function spawn(kind, pos, opts = {}) {
     // `kind` is an archetype id, or the broad class the scene format's anchors use (ground | air)
     const def = archetypes[kind] || Object.values(archetypes).find((d) => d.type === kind);
-    if (!def) { console.warn(`[threats] unknown archetype "${kind}"`); return null; }
+    if (!def) return null;
     const model = buildModel(def), t = {
       id: opts.id || `${def.id}-${nextId++}`, type: def.type, archetype: def.id, def, model,
       pos: new Vector3(pos.x, pos.y, pos.z), vel: new Vector3(), yaw: opts.yaw || 0, alive: true, health: def.body.health,

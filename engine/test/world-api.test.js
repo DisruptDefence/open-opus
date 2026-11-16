@@ -24,6 +24,9 @@ test('the world exists while the scene loads, then is ready in the title state',
   await world.ready();
   assert.equal(world.state(), 'title');
   assert.deepEqual(seen, [{ state: 'title', from: 'loading' }]);
+  assert.ok(Object.isFrozen(world));
+  for (const name of ['pause', 'resume', 'scene']) assert.equal(typeof world[name], 'function', name);
+  assert.equal(typeof world.geo.toUTM, 'function'); assert.equal(typeof world.geo.convergenceDeg, 'number');
   for (const name of ['ready', 'state', 'on', 'start', 'canHold', 'hold', 'setHoldMode', 'held', 'release', 'snapshot', 'overhead', 'apply']) assert.equal(typeof world[name], 'function', name);
   for (const name of ['toGeo', 'toGame', 'toMGRS', 'headingTrue']) assert.equal(typeof world.geo[name], 'function', 'geo.' + name);
 });
@@ -60,6 +63,33 @@ test('snapshot is plain data in the documented shape, and the only list of thing
   world.apply({ op: 'despawn', id: 's1' }); world.apply({ op: 'unmark', id: 'out' });
   assert.deepEqual(world.snapshot().entities.map((e) => e.id), ['obj', 'q1']);
   assert.deepEqual(events.filter((e) => e.change === 'despawn').map((e) => e.id), ['s1', 'out']);
+});
+
+test('scene() describes the place, pause and resume stop and restart play, chunk events report streaming', async () => {
+  const { world, keys, run } = openHeadlessWorld(source());
+  const chunks = []; const off = world.on('chunk', (e) => chunks.push(e));
+  await world.ready();
+  const sc = world.scene();
+  assert.ok(isPlain(sc)); assert.equal(sc.name, 'Engine test scene');
+  for (const b of [sc.bounds, sc.walkable]) assert.ok(b.minX < b.maxX && b.minZ < b.maxZ);
+  assert.ok(Array.isArray(sc.credits));
+  assert.deepEqual(chunks, [], 'the chunks loaded before ready() are not reported: the world starts with them');
+  world.start({ at: { x: 20, z: 18 } }); keys.move.y = 1; run(0.5);
+  world.pause(); assert.equal(world.state(), 'paused'); assert.equal(world.canHold(), false);
+  const z = world.snapshot().self.z; run(1);
+  assert.equal(world.snapshot().self.z, z, 'nothing moves while paused');
+  world.resume(); assert.equal(world.state(), 'playing'); run(0.5);
+  assert.ok(world.snapshot().self.z < z - 1);
+  // far enough to bring new chunks in and let old ones go
+  world.apply({ op: 'place', x: -400, z: -400, now: true });
+  for (let i = 0; i < 20; i++) { run(0.1); await new Promise((r) => setTimeout(r, 2)); } // chunk files are read between frames
+  assert.ok(Math.abs(world.snapshot().self.x - -400) < 3);
+  assert.ok(chunks.every((c) => Number.isInteger(c.cx) && Number.isInteger(c.cz) && typeof c.live === 'boolean'));
+  assert.ok(chunks.some((c) => c.live) && chunks.some((c) => !c.live), JSON.stringify(chunks));
+  off(); const n = chunks.length;
+  world.apply({ op: 'place', x: 20, z: 18, now: true });
+  for (let i = 0; i < 20; i++) { run(0.1); await new Promise((r) => setTimeout(r, 2)); }
+  assert.equal(chunks.length, n, 'a listener that was removed hears nothing');
 });
 
 test('apply refuses what it cannot do', async () => {
