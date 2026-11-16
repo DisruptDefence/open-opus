@@ -64,4 +64,25 @@ needs a rebuild by the builder to carry them; the renders in section 5 used a te
 
 ## 5. Renders against references
 
-See the end of this file (filled in after the renders).
+Three fixed views (1 upper street, 3 Porte Saint-Louis, 5 lower street) were rendered at `q=high` under
+`/tmp/opus-heavy.lock` and compared by eye with street, gate and lower-town photographs. The palette change alone
+barely shows (view 1 before and after look almost the same): palettes only choose among tints the buildings already
+carry, so the change is a small hue shift. The structural gaps dominate, biggest first:
+
+1. **No roofs read at street level.** Real streets are bounded by steep red, blue, grey and copper roofs with dormers
+   and chimneys against the sky; the render shows flat-topped walls running out of frame, and the Porte Saint-Louis
+   view has no gate arch or tower at all (a plain wall and a boxy tower with a black cap).
+2. **Wall texture scale and type.** Blocks about 0.5 m high with dark joints read as giant bathroom tiles on four- and
+   five-storey brick or stone blocks; real rubble is small, irregular, pale-mortared, and brick is small. Window
+   glass is dark navy and uniform, where real panes show lighter, warmer reflection and white 6-over-6 bars.
+3. **Ground.** Street is dark navy asphalt with white square slabs for pavement; real streets are warm-grey asphalt or
+   fine setts with narrow flag pavements. Petit-Champlain's cobbles (view 5) are the best match: it shows the
+   right idea, but the pattern is a random polygon network, not rows of setts.
+4. **Light and colour balance.** Everything sits in cold blue shade; the real cue is warm sunlit stone against blue
+   shade, with sky and haze lower in saturation.
+5. **Life.** No awnings, hanging signs, lamps, planters, flags, trees, or people; the buildings are a uniform 4 to 5
+   storeys where the real town mixes 2 to 3 storey houses with taller blocks.
+6. **Variety.** Façade class repeats; Place Royale's dressed corner quoins, string courses and chimneys at gable ends
+   are absent.
+
+Section 3's tiles are not drawn by the engine yet, so none of the above reflects the shipped textures.
