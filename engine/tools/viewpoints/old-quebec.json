@@ -1,12 +1,64 @@
 {
-  "scene": "../scenes/old-quebec.json",
-  "note": "The fixed viewpoints every change to the look of Old Quebec is judged from. Game metres; heading in degrees from grid north.",
-  "views": [
-    { "id": "1-upper-street", "what": "Rue Saint-Louis, upper town, at street level", "x": -191.6, "z": 125.4, "heading": 52, "pitch": 4 },
-    { "id": "2-place-darmes", "what": "Place d'Armes toward the Château", "x": 62, "z": -112, "heading": 160, "pitch": 12 },
-    { "id": "3-porte-saint-louis", "what": "Porte Saint-Louis and the wall, from inside", "x": -312, "z": 220, "heading": 230, "pitch": 6 },
-    { "id": "4-terrasse", "what": "Terrasse Dufferin toward the river and the lower town", "x": 186, "z": 62, "heading": 48, "pitch": -8 },
-    { "id": "5-lower-street", "what": "Rue du Petit-Champlain, lower town", "x": 247.8, "z": -40, "heading": 179, "pitch": 5 },
-    { "id": "6-overview", "what": "The town from above the river (not a street view: for the skyline and the cliff)", "x": 420, "z": 60, "y": 110, "heading": 285, "pitch": -14, "fov": 55 }
-  ]
+ "scene": "../scenes/old-quebec.json",
+ "note": "The fixed viewpoints every change to the look of Old Quebec is judged from. Game metres; heading in degrees from grid north.",
+ "views": [
+  {
+   "id": "1-upper-street",
+   "what": "Rue Saint-Louis, upper town, at street level",
+   "x": -191.6,
+   "z": 125.4,
+   "heading": 52,
+   "pitch": 4
+  },
+  {
+   "id": "2-place-darmes",
+   "what": "Place d'Armes toward the Château",
+   "x": 62,
+   "z": -112,
+   "heading": 160,
+   "pitch": 12
+  },
+  {
+   "id": "3-porte-saint-louis",
+   "what": "Porte Saint-Louis and the wall, from inside",
+   "x": -312,
+   "z": 220,
+   "heading": 230,
+   "pitch": 6
+  },
+  {
+   "id": "4-terrasse",
+   "what": "Terrasse Dufferin toward the river and the lower town",
+   "x": 186,
+   "z": 62,
+   "heading": 48,
+   "pitch": -8
+  },
+  {
+   "id": "5-lower-street",
+   "what": "Rue du Petit-Champlain, lower town",
+   "x": 247.8,
+   "z": -40,
+   "heading": 179,
+   "pitch": 5
+  },
+  {
+   "id": "6-overview",
+   "what": "The town from above the river (not a street view: for the skyline and the cliff)",
+   "x": 420,
+   "z": 60,
+   "y": 110,
+   "heading": 285,
+   "pitch": -14,
+   "fov": 55
+  },
+  {
+   "id": "10-sv-saint-louis-52",
+   "what": "Rue Saint-Louis at no. 52, matching a street-level reference photo (46.8112502, -71.2082071, bearing 50.7)",
+   "x": -108.9,
+   "z": 58.1,
+   "heading": 50.7,
+   "pitch": -8
+  }
+ ]
 }
