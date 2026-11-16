@@ -10,3 +10,6 @@ __pycache__/
 *.pyc
 .worktrees/
 .cache/
+
+# private look-references (copyrighted photos, never committed or shipped)
+reference/private/
