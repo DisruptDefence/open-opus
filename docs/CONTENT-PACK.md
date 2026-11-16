@@ -43,3 +43,14 @@ Neither argument is modified.
   deep-merged, so a changed sentry is written out in full.
 - `threatTuning`, `player`, `hud.words`: merged by key.
 - `hud.elements`, `loadout`: replaced when `extra` has them.
+
+<!-- weapon: item D -->
+## Weapons
+
+The player's weapon is `weapons[loadout[0]]`; `weapons/weapon.js` reads `name`, `magSize`, `reserve`, `rpm`,
+`damage` and `range` from it (the view model stays the engine's carbine; `view` is carried, not read). The
+snapshot's `self.weapon.id` is the pack key and `name` is the pack's name. A weapon without `reserve` has 0 and
+without `range` 300 m. `weakMultiplier` is **not read yet**: `combat.js` takes 2.2 as a literal. Only the first
+weapon of the loadout is used; several weapons and switching are not built. The engraving plate on the view
+model is blank.
+<!-- /weapon -->
