@@ -309,3 +309,35 @@ test('the player dies under fire: state dead, player:dead, and the host can read
   assert.ok(world.snapshot().self.health <= 0);
   assert.ok(world.snapshot().entities.some((e) => e.state === 'engage'), 'the sentries were engaging');
 });
+
+test('photo mode: the camera stands where the pose says, the HUD goes, and leaving gives the game back', async () => {
+  const { world, keys, run, hudCalls, engine } = openHeadlessWorld(source());
+  await assert.rejects(world.photo({ x: 0, z: 0 }), /still loading/);
+  assert.equal(world.photographing(), false);
+  await world.ready();
+  const seen = []; world.on('photo', (e) => seen.push(e));
+  await assert.rejects(world.photo({ x: 'east' }), /x and z/);
+  const took = await world.photo({ x: 60, z: -40, height: 12, heading: 90, pitch: -10, fov: 50 });
+  assert.ok(isPlain(took)); assert.equal(world.photographing(), true);
+  run(0.1);
+  const G = engine().G, cam = G.camera, ground = G.physics.groundHeight(60, -40);
+  assert.ok(Math.abs(cam.position.x - 60) < 1e-6 && Math.abs(cam.position.z + 40) < 1e-6 && Math.abs(cam.position.y - ground - 12) < 1e-6, 'the camera is 12 m above the ground at the pose');
+  assert.ok(Math.abs(took.y - cam.position.y) < 0.01); assert.equal(took.heading, 90); assert.equal(cam.fov, 50);
+  const dir = cam.getWorldDirection(cam.position.clone());
+  assert.ok(dir.x > 0.97 && Math.abs(dir.z) < 0.02 && dir.y < -0.15, 'heading 90 looks east, pitch -10 looks down');
+  assert.deepEqual(hudCalls.at(-1), ['show', false]); assert.equal(keys.gameplay, false);
+  assert.equal(world.state(), 'title', 'photo mode is not a state of play');
+  await world.photo({ x: 61, z: -40, y: 80 }); run(0.05);
+  assert.equal(cam.position.y, 80, 'an absolute height is taken as given');
+  assert.deepEqual(seen, [{ on: true }], 'moving the camera is not entering again');
+  const st = world.stats(); assert.ok(isPlain(st)); assert.ok(st.chunksLive > 0 && st.sceneTriangles > 0 && typeof st.frameMs === 'number' && st.quality === 'low', 'stats() is plain numbers about the frame and the scene');
+  assert.equal(await world.photo(null), null); assert.equal(world.photographing(), false);
+  assert.notEqual(cam.fov, 50, 'the field of view is the game\'s again');
+  world.start({ at: { x: 20, z: 18 } }); run(0.2);
+  assert.ok(Math.abs(cam.position.x - 20) < 0.5, 'after leaving, the camera is the player\'s');
+  await world.photo({ x: 60, z: -40 }); run(0.1);
+  assert.equal(keys.gameplay, false);
+  await world.photo(null);
+  assert.equal(keys.gameplay, true, 'leaving during play gives the keys back'); assert.deepEqual(hudCalls.at(-1), ['show', true]);
+  assert.deepEqual(seen, [{ on: true }, { on: false }, { on: true }, { on: false }]);
+});

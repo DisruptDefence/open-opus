@@ -45,7 +45,7 @@ const RADIUS = { test: 1, low: 1, medium: 1, high: 2, ultra: 2 }; // chunks of f
 /** Boot the engine on a scene source (scene/source.js). Returns the engine object the world API is built on. */
 export async function createEngine({ source, params = {}, modules = {}, onProgress = () => {} }) {
   const F = { ...DEFAULT_MODULES, ...modules }, clock = createClock();
-  const G = { THREE, params, events: createEvents(), rng: createRng(+(params.seed || 4207)), time: clock.time, clock, quality: pickQuality(params.q || ''), hold: { mode: null } };
+  const G = { THREE, params, events: createEvents(), rng: createRng(+(params.seed || 4207)), time: clock.time, clock, quality: pickQuality(params.q || ''), hold: { mode: null }, photo: null };
   const step = async (label, k, fn) => { onProgress(label, k); await new Promise((r) => setTimeout(r, 0)); return fn(); };
   const vec = (x, y, z) => new THREE.Vector3(x, y, z);
   const m = source.manifest;
@@ -98,6 +98,11 @@ export async function createEngine({ source, params = {}, modules = {}, onProgre
     if (G.game.state !== 'paused' && dt > 0) { upd('fx', dt); upd('ground', dt); upd('mats', dt); }
     upd('level', dt); // streaming goes on whatever the clock does
   }
+  function posePhoto() {
+    const c = G.camera, p = G.photo;
+    c.position.set(p.x, p.y, p.z); c.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+    if (c.fov !== p.fov) { c.fov = p.fov; c.updateProjectionMatrix(); }
+  }
   let last = performance.now(), smooth = 0, frames = 0, running = true;
   const hooks = [], drawn = [];
   const fixed = params.dt ? +params.dt : undefined; // a fixed step makes a run repeatable (tests, replays)
@@ -109,6 +114,7 @@ export async function createEngine({ source, params = {}, modules = {}, onProgre
     for (const fn of hooks) safe('hook', () => fn(fixed ?? Math.min(real, 0.1)));
     simulate(dt);
     upd('audio', dt); upd('hud', dt);
+    if (G.photo) safe('photo', posePhoto); // photo mode: the camera is the caller's, whatever the player does
     safe('render', () => G.render.frame(dt));
     safe('input.endFrame', () => G.input.endFrame && G.input.endFrame());
     if (++frames === 2) for (const res of drawn.splice(0)) res();

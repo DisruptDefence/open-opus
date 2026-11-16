@@ -86,7 +86,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     playerStart: start,
     objectives: [], extraction: null, enemySpawns: [], zones: m.zones || [], interiorBoxes: [], cinematicPath: [], coverPoints: [],
     groundSurfaceAt: (x, z) => { const s = G.terrain.surfaceAt(x, z); return s === 'unknown' ? 'concrete' : s; },
-    update() { if (G.player) stream(G.player.pos.x, G.player.pos.z); },
+    update() { const at = G.photo || (G.player && G.player.pos); if (at) stream(at.x, at.z); }, // in photo mode the scene follows the camera
     stream, preload, stats: () => ({ ...stats }),
     setRadius(r) { radius = r; },
     get radius() { return radius; },

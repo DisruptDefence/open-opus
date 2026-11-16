@@ -69,13 +69,22 @@ To see it, play a scenario in a headless browser and look at the pictures it sav
 PLAYWRIGHT=/path/to/node_modules/playwright node tools/play.mjs test out/        # or: old-quebec
 ```
 
+To take the fixed pictures of a scene (photo mode: no HUD, no weapon, the camera at each viewpoint of
+`tools/viewpoints/<scene>.json`), with the frame time, draw calls and triangles of each view:
+
+```
+PLAYWRIGHT=/path/to/node_modules/playwright node tools/photo.mjs tools/viewpoints/old-quebec.json out/ after
+```
+
+Every change to how a scene looks is shown from those viewpoints, before and after.
+
 Playwright is not a dependency: point `PLAYWRIGHT` at any installed copy. Software WebGL draws a few frames a
 second, so a run takes about a minute. The exit code is 0 only when the mission reached `complete`.
 
 ## Tools
 
 - `tools/make-test-scene.mjs` writes `scenes/test/`, the generated scene package the tests use. Same code, same bytes.
-- `tools/play.mjs` is the browser run above.
+- `tools/play.mjs` is the browser run above; `tools/photo.mjs` takes the fixed pictures.
 - `tools/lift.cjs` is how the lifted modules were cut out of the stand-in game's bundle (`../AGENTS.md`, rule 8).
   The lifted files have been edited by hand since: never give it `src/` as its output folder; lift into a scratch
   folder and bring single files across.

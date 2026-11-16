@@ -55,11 +55,26 @@ interface WorldApi {
   overhead(opts?: { x?: number; z?: number; halfWidth?: number; halfHeight?: number; pxPerMetre?: number }):
     Promise<{ image: ImageBitmap; width: number; height: number; bounds: Box }>;
 
+  // photo mode: the camera leaves the player. No HUD, no weapon, no player input; the scene streams round the camera
+  photo(pose: PhotoPose | null): Promise<PhotoPose | null>;   // resolves when the scene round the camera is loaded; null leaves
+  photographing(): boolean;
+
+  // what the last frame cost: for budgets, captures and a host's own quality choice
+  stats(): { quality: string; frameMs: number;  // the quality tier; smoothed time between frames, milliseconds
+             calls: number; triangles: number;  // draw calls and triangles of the last frame, shadow pass included
+             chunksLive: number; sceneTriangles: number; buildMs: number };   // scene chunks at full detail, their triangles, time spent meshing them
+
   // scenario commands
   apply(cmd: ScenarioCommand): void;            // throws a ScenarioCommandError when it cannot be applied
 }
 
 type Pose = { x: number; z: number; y?: number; heading?: number };
+type PhotoPose = { x: number; z: number;
+                   y?: number;                  // the camera's height in game metres; or
+                   height?: number;             // metres above the ground at (x, z), 1.7 when neither is given
+                   heading?: number;            // degrees clockwise from grid north
+                   pitch?: number;              // degrees, up positive, −89 to 89
+                   fov?: number };              // vertical field of view in degrees, 10 to 120 (60)
 type Box  = { minX: number; maxX: number; minZ: number; maxZ: number };
 ```
 
@@ -77,9 +92,20 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `shot` | `{ ammo }` | The player fired |
 | `say` | `{ text }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
+| `photo` | `{ on }` | Photo mode began or ended |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
 
 An event is a report, not a decision. The engine says a mark was reached; what that is worth is the host's.
+
+## Photo mode
+
+`photo(pose)` puts the camera where the pose says, in any state from `title` on, and hides the HUD and the
+weapon; the player's keys and mouse do nothing while it lasts. The promise resolves with the pose as taken (with
+the `y` the camera stands at) once the chunks round the camera are live, so a picture taken after it shows the
+place and not the far ring. Calling it again moves the camera. `photo(null)` gives the view, the HUD and the
+weapon back. It does not stop the clock: a caller that wants a still world calls it in `title`, or pauses. It is
+for pictures, the overhead-free kind: before-and-after captures, a scene author's fly-round, a host's briefing
+shot. Leave it before `start()` or `hold()`, which put the HUD back themselves. Added 2026-11-16.
 
 ## Scenario commands
 
