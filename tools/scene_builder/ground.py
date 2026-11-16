@@ -180,10 +180,10 @@ def bare_areas(ctx, roads: list) -> list:
     for g in ctx.features["green"]:
         paint(green, g["ring"], g["holes"])
     for rd in roads:
-        half = round(num(rd["tags"].get("width")) or ROAD_WIDTH[rd["tags"]["highway"]], 1) / 2 + 1.0
+        half = round(num(rd["tags"].get("width")) or ROAD_WIDTH[rd["tags"]["highway"]], 1) / 2 + 1.5
         for a, b in zip(rd["pts"], rd["pts"][1:]):
             for i, j, x, z in cells_in((min(a[0], b[0]), max(a[0], b[0]), min(a[1], b[1]), max(a[1], b[1])), half + CELL):
-                if seg_dist(x, z, a[0], a[1], b[0], b[1]) <= half + CELL * 0.5:
+                if seg_dist(x, z, a[0], a[1], b[0], b[1]) <= half:
                     covered[j * nx + i] = 1
     kind = bytearray(nx * nz)  # 0 none, 1 rock, 2 grass
     for j in range(nz):
