@@ -1,27 +1,22 @@
 // The HUD's style sheet, one string, inserted once as a <style> element by hud.js. Plain and tactical: one monospace
 // system font, white, one amber accent. Everything scales with the viewport height (the root's font size), and every
 // element sits on a soft dark backing so it reads over a bright scene and a dark one.
-export const HUD_CSS = `
+// the reference HUD's three faces, bundled (fonts/): Big Shoulders Display for numbers, Barlow Condensed for labels, IBM Plex Mono for the reserve.
+const font = (family, weight, file) => `@font-face { font-family: '${family}'; font-weight: ${weight}; font-display: swap; src: url(${new URL('./fonts/' + file, import.meta.url).href}) format('truetype'); }`;
+export const HUD_FONTS = [
+  font('Big Shoulders Display', 700, 'BigShouldersDisplay-700.ttf'), font('Barlow Condensed', 600, 'BarlowCondensed-600.ttf'), font('IBM Plex Mono', 500, 'IBMPlexMono-500.ttf'),
+].join('\n');
+export const HUD_CSS = HUD_FONTS + `
 .oh { position: absolute; inset: 0; overflow: hidden; pointer-events: none; user-select: none; color: #f2f4ef; --amber: #ffb020; --red: #ff5a40; --back: rgba(8,10,12,.52);
+  /* the reference HUD's tokens (game/ui.css :root) that the health and ammunition use */
+  --bone: #e8e4da; --bone-dim: rgba(232, 228, 218, .64); --bone-faint: rgba(232, 228, 218, .24); --signal: #ffb347; --alarm: #ff5a40;
+  --f-display: 'Big Shoulders Display', 'Impact', 'Haettenschweiler', 'Arial Narrow', sans-serif; --f-label: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --shadow: 0 0 2px rgba(0, 0, 0, .75), 0 1px 5px rgba(0, 0, 0, .55);
+  --gl: max(16px, env(safe-area-inset-left, 0px)); --gr: max(16px, env(safe-area-inset-right, 0px)); --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
   font: 600 clamp(10px, 2.2vh, 20px)/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; text-shadow: 0 1px 2px #000, 0 0 4px rgba(0,0,0,.7); }
 .oh[hidden] { display: none; }
 .oh * { box-sizing: border-box; }
 .oh .pan { background: var(--back); border-radius: .25em; padding: .3em .6em; }
-
-.oh-compass { position: absolute; top: 1em; left: 50%; width: min(46vw, 40em); transform: translateX(-50%); text-align: center; }
-.oh-compass .hdg { display: inline-block; min-width: 3.6em; padding: .1em .5em; font-size: 1.25em; letter-spacing: .12em; background: var(--back); border-radius: .2em; }
-.oh-compass .hdg::after { content: '\\00b0'; }
-.oh-compass .win { position: relative; height: 3.3em; margin-top: .15em; overflow: hidden; background: var(--back); border-radius: .25em;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
-.oh-compass .strip { position: absolute; left: 0; top: 0; height: 100%; will-change: transform; }
-.oh-compass .tk { position: absolute; top: 1.35em; width: 1px; height: .45em; background: rgba(255,255,255,.55); }
-.oh-compass .tk.m { height: .75em; background: #fff; }
-.oh-compass .tn { position: absolute; top: .1em; transform: translateX(-50%); font-size: .8em; opacity: .85; }
-.oh-compass .tn.l { font-size: 1em; color: var(--amber); opacity: 1; }
-.oh-compass .caret { position: absolute; left: 50%; top: 0; width: 0; height: 0; margin-left: -.35em; border: .35em solid transparent; border-top-color: #fff; }
-.oh-compass .tags { position: absolute; left: 0; right: 0; bottom: .2em; height: 1.2em; }
-.oh-compass .tag { position: absolute; top: 0; transform: translateX(-50%); font-size: .8em; line-height: 1.5em; padding: 0 .35em; color: #111; background: var(--amber); border-radius: .2em; white-space: nowrap; text-shadow: none; }
-.oh-compass .tag.extraction { background: #30ff90; }
 
 .oh-tag { position: absolute; left: 0; top: 0; text-align: center; font-size: .85em; line-height: 1.15; white-space: nowrap; will-change: transform; }
 .oh-tag i { display: block; width: .7em; height: .7em; margin: 0 auto .15em; background: var(--c, var(--amber)); transform: rotate(45deg); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
@@ -56,25 +51,43 @@ export const HUD_CSS = `
 .oh-radio .who { color: var(--amber); letter-spacing: .08em; text-transform: uppercase; margin-right: .6em; }
 .oh-radio[hidden] { display: none; }
 
-.oh-health { position: absolute; left: 1.2em; bottom: 1em; }
-.oh-health .k, .oh-ammo .k { font-size: .75em; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
-.oh-health .n { font-size: 2.3em; line-height: 1; margin-right: .3em; }
-.oh-health .segs { display: flex; gap: .2em; margin-top: .3em; }
-.oh-health .segs i { width: 1.1em; height: .55em; background: rgba(255,255,255,.22); }
-.oh-health .segs i.on { background: #fff; }
-.oh-health.crit .n, .oh-health.crit .segs i.on { color: var(--red); background-color: var(--red); }
-.oh-health.crit .n { background: none; }
-.oh-health.hurt .n { color: #fff; }
-.oh-health.full { opacity: .72; }
+/* Health and ammunition: the reference HUD's (game/ui.css), class names and values as there, scoped under .oh. */
+.oh .h-k { font: 600 11px/1 var(--f-label); letter-spacing: .26em; text-transform: uppercase; color: rgba(232, 228, 218, .72); }
+.oh .h-health, .oh .h-ammo { text-shadow: var(--shadow); color: var(--bone); }
+.oh .h-health { position: absolute; left: var(--gl); bottom: calc(22px + var(--sab)); opacity: 0; transition: opacity .6s; }
+.oh .h-health.on { opacity: 1; transition-duration: .12s; }
+.oh .h-hp-row { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; }
+.oh .h-hp-n { font: 700 34px/.82 var(--f-display); letter-spacing: .02em; min-width: 1.6em; }
+.oh .h-hp-bar { display: flex; gap: 3px; padding-bottom: 2px; }
+.oh .h-hp-bar i { width: 15px; height: 5px; background: var(--bone); box-shadow: 0 0 2px rgba(0, 0, 0, .6); }
+.oh .h-hp-bar i.off { background: transparent; box-shadow: inset 0 0 0 1px var(--bone-faint); }
+.oh .h-health.crit .h-hp-n { color: var(--alarm); } .oh .h-health.crit .h-hp-bar i:not(.off) { background: var(--alarm); }
 
-.oh-ammo { position: absolute; right: 1.2em; bottom: 1em; text-align: right; max-width: 20em; }
-.oh-ammo .n { font-size: 2.3em; line-height: 1; }
-.oh-ammo .r { font-size: 1.15em; opacity: .85; margin-left: .3em; }
-.oh-ammo .pips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .12em; margin-top: .3em; }
-.oh-ammo .pips i { width: .3em; height: .8em; background: rgba(255,255,255,.2); }
-.oh-ammo .pips i.on { background: #fff; }
-.oh-ammo .cue { color: var(--amber); font-size: .95em; min-height: 1.25em; }
-.oh-ammo .cue.empty, .oh-ammo.low .n { color: var(--red); }
+.oh .h-ammo { position: absolute; right: var(--gr); bottom: calc(20px + var(--sab)); text-align: right; }
+.oh .h-cue { height: 16px; font: 600 12px/16px var(--f-label); letter-spacing: .26em; margin-right: -.26em; text-transform: uppercase; color: var(--signal); opacity: 0; }
+.oh .h-cue.on { opacity: 1; } .oh .h-cue.urgent { color: var(--alarm); animation: oh-blink .7s steps(2, jump-none) infinite; }
+@keyframes oh-blink { 0% { opacity: 1; } 100% { opacity: .35; } }
+.oh .h-ammo-row { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; }
+.oh .h-ammo-n { font: 700 76px/.8 var(--f-display); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.oh .h-ammo-r { font: 500 15px/1 var(--f-mono); color: var(--bone); padding-bottom: 3px; }
+.oh .h-ammo-r::before { content: '/ '; color: var(--bone-dim); }
+.oh .h-ammo.low .h-ammo-n { color: var(--signal); }
+.oh .h-pips { display: flex; justify-content: flex-end; gap: 2px; margin: 9px 0 7px; }
+.oh .h-pips i { width: 3px; height: 11px; background: var(--bone); box-shadow: 0 0 2px rgba(0, 0, 0, .5); }
+.oh .h-pips i.off { background: var(--bone-faint); box-shadow: none; }
+.oh .h-ammo.low .h-pips i:not(.off) { background: var(--signal); }
+.oh .h-wname { font: 600 11px/1 var(--f-label); letter-spacing: .28em; margin-right: -.28em; text-transform: uppercase; color: rgba(232, 228, 218, .82); }
+/* touch layout: keep the thumbs' corners clear (the reference HUD's) */
+.oh.is-touch .h-ammo { bottom: auto; top: calc(64px + var(--sat)); }
+.oh.is-touch .h-ammo-n { font-size: 44px; } .oh.is-touch .h-pips { margin: 6px 0 5px; } .oh.is-touch .h-pips i { height: 7px; width: 2px; }
+.oh.is-touch .h-health { bottom: auto; top: calc(128px + var(--sat)); }
+.oh.is-touch .oh-feed { top: calc(150px + var(--sat)); }
+@media (max-width: 760px) {
+  .oh .h-ammo-n { font-size: 56px; }
+  .oh.is-touch .h-ammo { top: calc(78px + var(--sat)); }
+  .oh.is-touch .h-health { top: calc(150px + var(--sat)); }
+}
+@media (prefers-reduced-motion: reduce) { .oh .h-cue.urgent { animation: none; } }
 
 .oh-x { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 .oh-x i { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.65); }
