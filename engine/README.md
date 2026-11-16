@@ -41,6 +41,7 @@ Switches of the development page, as query parameters:
 | `scene` | a scene to load instead of the scenario's |
 | `q` | quality: `test`, `low`, `medium`, `high`, `ultra` |
 | `tod`, `wet`, `haze`, `cloud`, `day` | hour of day (0–24), wetness (0–1), haze and cloud (0–1), day of the year |
+| `look` | JSON object laid over the scene's `ambience.look`: grade, exposure, sky and haze, bounce light (keys in `docs/SCENE-FORMAT.md`), e.g. `look={"vignette":0.2,"bounce":[0.1,0.08,0.06]}` (URL-encoded) |
 | `noaudio` | no sound |
 | `autostart` | deploy without the click (no pointer lock and no sound without a click, by the browser's rule) |
 | `dt` | a fixed simulation step in seconds, for a repeatable run |

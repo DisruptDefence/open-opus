@@ -7,7 +7,7 @@ import { ScenarioCommandError } from '../director/command-error.js';
 
 /**
  * @param source   a scene source (scene/source.js), or a promise of one
- * @param params   switches: q (quality), tod, wet, haze, seed, noaudio, dt (fixed step), radius, x, z
+ * @param params   switches: q (quality), tod, day, wet, haze, cloud, look (JSON, over the scene's ambience.look), seed, noaudio, dt (fixed step), radius, x, z
  * @param content  a content pack (opus-content/1, docs/CONTENT-PACK.md) or a promise of one, merged over the default pack
  * @param modules  factories that replace an engine module, e.g. { hud: createDevHud }
  * @param onProgress  (label, fraction) while loading

@@ -169,9 +169,29 @@ style pack (`docs/plans/SCENE-DETAIL.md` section 2).
 | `style.window.types` | window types a place may use, by name: `w`, `h` (metres; `h` includes an arched head), `sill` (above the floor; default `style.window.sill`), `reveal` (default `style.window.reveal`), `head` `flat` \| `segmental` \| `round`, `glaze` the pane pattern (`casement`, `sash22`, `sash66`, `sash11`, `french`, `single`), `kind: "round"` with `d` for a round window set on the wall. The name `blind` is a bricked-up window (no glass). A name the reader does not know is a `casement`. Objects merge with the reader's neutral types key by key: a pack adds or changes a type by data alone |
 | `style.window.mix` | `{ ground, upper, top }`: for each storey class (`top` is the attic storey of a house of three storeys or more) a table type name to weight. One type is drawn per building and storey from the building's `id`; `blind` is mixed into single bays by its share of the weights. The painted far façade follows the same tables |
 | `season` | `"summer" \| "autumn" \| "winter" \| "spring"`, from the place file |
-| `ambience` | `{ tod, day, haze, cloud, wet }`: the light the place is best seen in. A host's own switches win |
+| `ambience` | `{ tod, day, haze, cloud, wet, look }`: the light the place is best seen in. A host's own switches win. `look` is described below |
 | `sources[]` | one entry per source: `name`, `licence`, `licenceUrl`, `attribution`, `layers` it fed (and, for OpenStreetMap, `extract` and `bbox`) |
 | `rules` | one sentence for every value the builder had to invent |
+
+**`ambience.look`** is an optional object; every key is optional and a missing, malformed or unknown key is ignored (a reader that does not know `look` ignores it). A host's `look` switch (URL-encoded JSON) is laid over the scene's, key by key. Colours are linear, three numbers `[r, g, b]`.
+
+| Key | Meaning | Default |
+|---|---|---|
+| `exposure` | multiplies the renderer's manual exposure | `1` |
+| `key`, `minExposure`, `maxExposure` | eye adaptation: target brightness and the clamp | `0.12`, `0.6`, `2` |
+| `env` | sky light on shaded surfaces (multiplies the renderer's base environment intensity) | `1` |
+| `sun` | multiplies the sun's intensity | `1` |
+| `sunTint` | multiplies the sun's colour | `[1,1,1]` |
+| `skySat` | saturation of zenith, horizon, far horizon and fog (0 grey, 1 as computed, above 1 more) | `1` |
+| `skyTint` | multiplies zenith, horizon, far horizon and fog | `[1,1,1]` |
+| `bounce` | colour times intensity of light arriving from below (ground bounce); all zero = none | `[0,0,0]` |
+| `shadows`, `highlights` | split-tone multipliers for shadows and highlights | `[1,1,1]` each |
+| `lift`, `gain` | final grade: `colour * gain + lift` | `[0.004,0.004,0.004]`, `0.992` |
+| `curve` | strength of the S-curve | `0.22` |
+| `saturation` | multiplies the gameplay-driven saturation | `1` |
+| `vignette`, `ca`, `grain`, `sharpen` | vignette, chromatic aberration, film grain, sharpening | `0.12`, `0.0004`, `0.02`, `0.3` |
+| `bloom`, `agx` | bloom strength; share of the AgX curve against ACES | `0.065`, `0.25` |
+| `farHaze`, `fogSigma` | volumetric haze: far-distance share and density | `0.42`, `0.0034` |
 
 ## 4. Layers
 
