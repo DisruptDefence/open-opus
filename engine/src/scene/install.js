@@ -3,7 +3,7 @@
 // every solid here comes from the function that draws it (gen/mesher.js), so what is drawn is what collides.
 //
 //   ground     the chunk's heights, plus the sidewalks' lift (gen/ground.js liftRaster), in one height tile
-//   buildings  one prism per piece (gen/passage.js): a piece that starts above the ground is walked under
+//   buildings  one prism per piece (gen/passage.js), with the piece's holes (a courtyard is open, as drawn): a piece that starts above the ground is walked under
 //   walls      one prism per ring of gen/structures.js wallRings (a rail collides as its thin ring)
 //   props      from the kit's collider (gen/props.js): a post stops a walker and a shot but closes no nav cell
 //   trees      the trunk
@@ -29,7 +29,7 @@ export function installChunk(physics, terrain, c, style) {
       // solid from below its lowest ground to the top of its roof (SCENE-FORMAT 4.2: collision is derived); a part
       // or a piece that starts above the ground is solid from there, and a body passes under it
       const from = p.yMin != null && p.yMin > b.yBase + 0.01 ? p.yMin : b.yBase - 3;
-      if (top > from) physics.addPrism(p.ring, from, top, { tag, surface: FACADE_SURFACE[b.facade] || 'concrete', ref: b });
+      if (top > from) physics.addPrism(p.ring, from, top, { tag, holes: p.holes, surface: FACADE_SURFACE[b.facade] || 'concrete', ref: b });
     }
   }
   for (const w of c.walls) for (const r of wallSolids(w, groundAt)) physics.addPrism(r.ring, r.yBase, r.yTop, { tag, surface: w.material === 8 ? 'metal' : 'concrete', ref: w });

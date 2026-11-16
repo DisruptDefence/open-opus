@@ -53,13 +53,14 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
   /**
    * A prism: `ring` is a flat [x0, z0, x1, z1, …] outline (either winding, closed implicitly), solid from yBase to yTop.
    * opts: surface, tag (to remove a chunk's solids together), bulletOnly (stops shots, not walkers), playerOnly
-   * (stops walkers, not shots), noNav (ignored by the nav grid), sightOnly is not modelled.
+   * (stops walkers, not shots), noNav (ignored by the nav grid), sightOnly is not modelled. holes: flat rings of
+   * the same kind that are NOT solid (a courtyard): inside, closest point and rays all follow the outline with its holes.
    */
   function addPrism(ring, yBase, yTop, opts = {}) {
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (let i = 0; i < ring.length; i += 2) { x0 = Math.min(x0, ring[i]); x1 = Math.max(x1, ring[i]); z0 = Math.min(z0, ring[i + 1]); z1 = Math.max(z1, ring[i + 1]); }
     const s = { ring, min: vec(x0, yBase, z0), max: vec(x1, yTop, z1), surface: opts.surface || 'concrete', tag: opts.tag,
-      bulletOnly: !!opts.bulletOnly, playerOnly: !!opts.playerOnly, noNav: !!opts.noNav, ref: opts.ref, _s: 0 };
+      holes: opts.holes && opts.holes.length ? opts.holes : null, bulletOnly: !!opts.bulletOnly, playerOnly: !!opts.playerOnly, noNav: !!opts.noNav, ref: opts.ref, _s: 0 };
     insert(s);
     return s;
   }
@@ -78,6 +79,12 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     }
     return c;
   }
+  /** Inside the solid as drawn: even-odd over its outline and its holes. */
+  function insideS(s, x, z) {
+    if (!inside(s.ring, x, z)) return false;
+    if (s.holes) for (const h of s.holes) if (inside(h, x, z)) return false;
+    return true;
+  }
   const hit = { x: 0, z: 0, d: 0 };
   /** Closest point of the outline to (x, z): fills `hit` and returns the distance. */
   function closest(r, x, z) {
@@ -91,6 +98,13 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     return (hit.d = Math.sqrt(best));
   }
 
+  /** Closest point of any edge of the solid, holes included: fills `hit`, returns the distance. */
+  function closestS(s, x, z) {
+    let best = closest(s.ring, x, z), bx = hit.x, bz = hit.z;
+    if (s.holes) for (const h of s.holes) { const d = closest(h, x, z); if (d < best) { best = d; bx = hit.x; bz = hit.z; } }
+    hit.x = bx; hit.z = bz; return (hit.d = best);
+  }
+
   // ---- ground ----------------------------------------------------------------------------------------------------
   /**
    * The floor a body with its feet at `feetY` stands on at (x, z): the terrain, or the top of a solid under it that
@@ -102,7 +116,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     const lim = feetY + STEP + EPS;
     near(x - radius, z - radius, x + radius, z + radius, (s) => {
       if (s.bulletOnly || s.max.y <= h || s.max.y > lim) return;
-      if (inside(s.ring, x, z) || (radius > 0 && closest(s.ring, x, z) < radius)) h = s.max.y;
+      if (insideS(s, x, z) || (radius > 0 && closestS(s, x, z) < radius)) h = s.max.y;
     });
     return h;
   }
@@ -110,7 +124,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
   function groundHeight(x, z, below = Infinity) {
     let h = terrain.height(x, z);
     if (Number.isNaN(h)) h = 0;
-    near(x, z, x, z, (s) => { if (!s.bulletOnly && s.max.y > h && s.max.y <= below && inside(s.ring, x, z)) h = s.max.y; });
+    near(x, z, x, z, (s) => { if (!s.bulletOnly && s.max.y > h && s.max.y <= below && insideS(s, x, z)) h = s.max.y; });
     return h;
   }
 
@@ -125,7 +139,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
       near(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius, (s) => {
         if (s.bulletOnly || s.max.y <= lo || s.min.y >= hi) return;
         if (pos.x + radius < s.min.x || pos.x - radius > s.max.x || pos.z + radius < s.min.z || pos.z - radius > s.max.z) return;
-        const isIn = inside(s.ring, pos.x, pos.z), d = closest(s.ring, pos.x, pos.z);
+        const isIn = insideS(s, pos.x, pos.z), d = closestS(s, pos.x, pos.z);
         if (!isIn && d >= radius) return;
         let nx = pos.x - hit.x, nz = pos.z - hit.z;
         if (d < 1e-6) { nx = 1; nz = 0; } else { nx /= d; nz /= d; }
@@ -199,7 +213,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
         // head against the underside of something
         const top = pos.y + height;
         near(pos.x, pos.z, pos.x, pos.z, (s) => {
-          if (!s.bulletOnly && s.min.y > pos.y + STEP && s.min.y < top && s.max.y > top && inside(s.ring, pos.x, pos.z)) { pos.y = s.min.y - height; vel.y = 0; res.hitCeil = true; }
+          if (!s.bulletOnly && s.min.y > pos.y + STEP && s.min.y < top && s.max.y > top && insideS(s, pos.x, pos.z)) { pos.y = s.min.y - height; vel.y = 0; res.hitCeil = true; }
         });
       }
     }
@@ -209,7 +223,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
 
   function surfaceUnder(x, z, y) {
     let name = terrain.surfaceAt(x, z), top = terrain.height(x, z);
-    near(x, z, x, z, (s) => { if (!s.bulletOnly && s.max.y <= y + 0.05 && s.max.y > top && inside(s.ring, x, z)) { top = s.max.y; name = s.surface; } });
+    near(x, z, x, z, (s) => { if (!s.bulletOnly && s.max.y <= y + 0.05 && s.max.y > top && insideS(s, x, z)) { top = s.max.y; name = s.surface; } });
     return name === 'unknown' ? 'concrete' : name;
   }
 
@@ -222,7 +236,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     if (!terrain.loaded(x, z)) return null;
     let top = terrain.height(x, z);
     near(x - radius, z - radius, x + radius, z + radius, (s) => {
-      if (!s.bulletOnly && s.max.y > top && s.max.y <= pos.y + maxUp + EPS && (inside(s.ring, x, z) || closest(s.ring, x, z) < radius * 0.5)) top = s.max.y;
+      if (!s.bulletOnly && s.max.y > top && s.max.y <= pos.y + maxUp + EPS && (insideS(s, x, z) || closestS(s, x, z) < radius * 0.5)) top = s.max.y;
     });
     const up = top - pos.y;
     if (up <= STEP || up > maxUp) return null;
@@ -230,7 +244,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     let free = true;
     near(x - radius, z - radius, x + radius, z + radius, (s) => {
       if (s.bulletOnly || s.max.y <= top + STEP || s.min.y >= top + height) return;
-      if (inside(s.ring, x, z) || closest(s.ring, x, z) < radius) free = false;
+      if (insideS(s, x, z) || closestS(s, x, z) < radius) free = false;
     });
     return free ? { x, y: top, z } : null;
   }
@@ -240,10 +254,8 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
   function raycast(origin, dir, max = 200, forWalker = false) {
     const ox = origin.x, oy = origin.y, oz = origin.z, dx = dir.x, dy = dir.y, dz = dir.z;
     let best = max, bs = null, bnx = 0, bny = 1, bnz = 0;
-    const test = (s) => {
-      if (forWalker ? s.bulletOnly : s.playerOnly) return;
-      const r = s.ring, y0 = s.min.y, y1 = s.max.y;
-      // walls
+    const wallsOf = (s, r) => {
+      const y0 = s.min.y, y1 = s.max.y;
       for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
         const ax = r[j], az = r[j + 1], ex = r[i] - ax, ez = r[i + 1] - az, den = dx * ez - dz * ex;
         if (Math.abs(den) < 1e-9) continue;
@@ -254,9 +266,15 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
         const l = Math.hypot(ex, ez) || 1; bnx = ez / l; bny = 0; bnz = -ex / l;
         if (bnx * dx + bnz * dz > 0) { bnx = -bnx; bnz = -bnz; }
       }
+    };
+    const test = (s) => {
+      if (forWalker ? s.bulletOnly : s.playerOnly) return;
+      const r = s.ring, y0 = s.min.y, y1 = s.max.y;
+      // walls: the outline and the edges of every hole (the ray's normal is turned to face the ray)
+      wallsOf(s, r); if (s.holes) for (const h of s.holes) wallsOf(s, h);
       // caps
-      if (dy < -1e-9 && oy > y1) { const t = (y1 - oy) / dy; if (t < best && inside(r, ox + dx * t, oz + dz * t)) { best = t; bs = s; bnx = 0; bny = 1; bnz = 0; } }
-      else if (dy > 1e-9 && oy < y0) { const t = (y0 - oy) / dy; if (t < best && inside(r, ox + dx * t, oz + dz * t)) { best = t; bs = s; bnx = 0; bny = -1; bnz = 0; } }
+      if (dy < -1e-9 && oy > y1) { const t = (y1 - oy) / dy; if (t < best && insideS(s, ox + dx * t, oz + dz * t)) { best = t; bs = s; bnx = 0; bny = 1; bnz = 0; } }
+      else if (dy > 1e-9 && oy < y0) { const t = (y0 - oy) / dy; if (t < best && insideS(s, ox + dx * t, oz + dz * t)) { best = t; bs = s; bnx = 0; bny = -1; bnz = 0; } }
     };
     // walk the cells the ray crosses
     const hl = Math.hypot(dx, dz), s = ++stamp;
@@ -294,7 +312,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     let b = false;
     near(x - r, z - r, x + r, z + r, (s) => {
       if (b || s.bulletOnly || s.noNav || s.max.y <= y + STEP || s.min.y >= y + height) return;
-      if (inside(s.ring, x, z) || closest(s.ring, x, z) < r) b = true;
+      if (insideS(s, x, z) || closestS(s, x, z) < r) b = true;
     });
     return b;
   }
