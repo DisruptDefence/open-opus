@@ -47,7 +47,16 @@
     "trim": ["#e8e4da", "#d9d2c0", "#8f8a80"], "frames": ["#f0ede4", "#f0ede4", "#f0ede4", "#2f5a45", "#7d1b1a", "#3e7c7a", "#e8b923", "#1f2326"],
     "doors": ["#7a1620", "#254a38", "#243a5a", "#1f2326", "#6b4a2e", "#e0b020"], "awnings": ["#7a2f27", "#27462f", "#e8e4da", "#243a5a"],
     "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.2,
-                "panes": [2, 4] },
+                "panes": [2, 4],
+                "types": {
+                  "sash66": { "w": 1.0, "h": 1.75, "glaze": "sash66" }, "sash22": { "w": 0.95, "h": 1.65, "glaze": "sash22" },
+                  "arched": { "w": 0.95, "h": 2.15, "glaze": "sash66", "head": "segmental" },
+                  "arch_round": { "w": 0.95, "h": 2.3, "glaze": "sash22", "head": "round", "reveal": 0.2 },
+                  "casement": { "w": 1.05, "h": 1.7, "glaze": "casement" }, "attic": { "w": 0.85, "h": 1.15, "glaze": "sash22" } },
+                "mix": {
+                  "ground": { "sash66": 3, "arched": 2, "casement": 1, "blind": 0.2 },
+                  "upper": { "sash66": 4, "sash22": 2, "casement": 2, "arch_round": 0.3, "french": 0.2, "blind": 0.2 },
+                  "top": { "attic": 3, "sash22": 2, "roundel": 0.6 } } },
     "groundFloor": { "doorWidth": 1.05, "doorHeight": 2.25, "shopPier": 0.45, "shopSill": 0.5, "fascia": 0.55, "awning": 0.4 },
     "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.6, "depth": 0.05 },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
