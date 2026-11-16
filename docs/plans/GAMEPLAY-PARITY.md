@@ -55,7 +55,7 @@ Not violations: `engine/host/**` (a throwaway host and its scenarios), `engine/s
 6. Commits are small, in plain sentences, with no co-author line.
 7. Numbers in an item are the specification. Do not retune. If a number cannot work, report it.
 
-**Status, 2026-11-16, evening.** Merged to `main`: C, A, D, E. Being executed: B (branch `gp-hud`), F (branch `gp-input`). Not started: G, H, I. J is decided (lift the two machine rigs; last section) and is executed by the planning model now that C and A are merged.
+**Status, 2026-11-16, evening.** Merged to `main`: C, A, D, E. Being executed: B (branch `gp-hud`), F (branch `gp-input`). Not started: G, H, I. J is built on branch `threats` (machines lifted, people procedural, hit reactions, voices; section J).
 
 ## Order and dependencies
 
@@ -65,7 +65,7 @@ C  content packs ──► A  world API, director, session ──► B  HUD ─�
                                                      ├──► E  sound as data
                                                      ├──► F  input
                                                      └──► I  clean-up and the guard test
-J  threat figures: open, stays with Fable
+J  threat figures: built on branch threats (section J)
 ```
 
 B, D, E, F and I run in parallel: they share no file. C then A are done first, one after the other, because both
@@ -82,7 +82,7 @@ touch `engine/src/world/**`, which is also shared with the scene-detail branch: 
 | G host pages: pause, settings, end screens, waves | high (rows 6, 8) | rewrite | Sonnet |
 | H browser checks | none (proof) | tool | Sonnet |
 | I clean-up and guard | none (hygiene) | edit | Sonnet |
-| J threat figures | high (row 4) | open | Fable + maintainer |
+| J threat figures | high (row 4) | built (branch `threats`) | Fable + maintainer |
 
 Why nothing is lifted in items A to I: the HUD's script (lines 850–852) could be cut out, but its style sheet is
 in the stand-in's page, where `lift.cjs` does not reach, and its content is that mission's (relays, "Control");
@@ -513,27 +513,52 @@ graph starts and plays.
 
 ---
 
-## J. Threat figures (open; stays with Fable and the maintainer)
+## J. Threat figures (built 2026-11-16, branch `threats`; looks and voices wait for a person)
 
-Parity row 4 is the largest remaining visible difference and has no settled design. Three ways:
+Parity row 4. Decided by the maintainer on 2026-11-16 (last section, items 1, 2 and 3): lift the two machine rigs;
+threats are machines **and** people; people are procedural, ours, in the generated style of the machines, rigged
+on the lifted rig builder; hit feedback on people is a flinch, a spoiled aim for 0.4 s, a limp after a leg hit and
+damage by body zone, never gore; voices are synthesised, and judged by a person before they stay.
 
-1. **Lift** the stand-in's two rigs and their animation: lines 825–836 (rig class `iu`, skinning helper `pm`,
-   builders `Z_` and `j_`) and the animation halves of 838 and 841. In 838 and 841 animation and behaviour are
-   one function each, so `lift.cjs` cannot separate them: it is a lift followed by hand surgery. To cut out: the
-   type names, the stencilled hull numbers, the searchlight tied to the renderer's light pool. Result: two good
-   machine figures, both the stand-in's look, selected by `body.figure`.
-2. **A model format**: figures are glTF files named by the pack; needs a loader (three's `GLTFLoader` is an
-   add-on file, not in `vendor/`), an animation contract (idle, walk, aim, die) and licensed models.
-3. **Keep the box figures** and improve them a little (a foot-planted walk for the quadruped, a gimbal).
+**Built** (`engine/src/threats/figures/`, `docs/DECISIONS.md` O-8):
 
-A person deployed against people, not machines, changes which of these is worth doing: that is a product
-decision. Until it is taken nobody builds J.
+| Item | What | Where |
+|---|---|---|
+| J1 machines | `lift.cjs` cuts the rig builder `iu`, its instancer `pm`, the leg IK `q_` and the rigs `Z_`, `j_` (bundle 825-836) into `rigs.js`, with a far tier from the same bones; the animation halves of 838 and 841 cut by hand into `quadruped.js` (diagonal pairs of planted feet, sprung body, turret and head tracking, recoil, flinch, crash onto the belly) and `quadcopter.js` (attitude from its acceleration, rotors, strobes, gimbal, a lost rotor; the searchlight lent from the render light pool to the nearest one). Stencilled numbers, type names and the stand-in's behaviour are left out. The quadruped's weak point is now its head (a sphere), as in the stand-in, not the top of a cylinder | `rigs.js`, `quadruped.js`, `quadcopter.js`, `lift.config.json` (`handCut`) |
+| J2 people (FR-6) | `person.js`: our soldier from rounded boxes, lathed limbs and balls at the joints; helmet, cap or bare head; plate carrier, pouches, a pack on some; gloves, boots, a carbine with a weapon light (the lens that flares before a burst). Clothing, gear, skin and boot colours from `body.look`; four looks per archetype, picked by the threat's id. Poses worked out as joints every frame: a gait whose feet stand where they land (walk: always a foot down; run: moments in the air), hips on the legs, a spine that leans and twists to the aim, the rifle low on patrol, at the ready when alert, in the shoulder to aim and fire with recoil, hands on it by two-bone IK, the head on what it looks at, a crouch in cover, the fall when killed with the rifle dropped beside the body. Archetypes `sentry` (helmets) and `patrol` (caps as often as helmets, packs, a little slower to notice) | `person.js`, `content/default.js` |
+| J3 reactions (FR-7) | Hit volumes are capsules along the bones (head, torso, arm, leg); `zones` multipliers from the pack (people: head 4, torso 1, arm 0.55, leg 0.7); `reactions`: aim spoiled 0.4 s (the burst being announced or fired stops), limp at 0.55 of speed for 6 s after a leg hit, a stop of 0.35 s after a round of 30 or more; the flinch is the figure's | `threats.js`, `combat.js`, `content/default.js` |
+| FR-8 voices | Our formant synthesiser: `voice_pain` (4), `voice_death` (3), `voice_contact` (3) barks, per-actor pitch, one at a time, no repeat; `engine/tools/voices-wav.mjs` writes them as WAV files | `audio/voice.js` |
+
+**Budgets** (measured by `test/figures.test.js` and `engine/tools/figure-shot.mjs`):
+
+| Figure | Triangles near / far (beyond 18 m) | Draws per figure (+ the same again for shadows) |
+|---|---|---|
+| person | 5 554 with helmet and pack, 5 306 with a cap / 1 117 | 5 (cloth, gear, skin, metal, lens) |
+| quadruped (lifted) | 17 344 / 3 544 | 4 (shell, metal, glow, lens) |
+| quadcopter (lifted) | 13 788 with its lamp beam and rotor discs / 3 000 | 6 |
+
+Twelve people inside 18 m are 67 000 triangles and 60 draws. Geometry is built once per look and shared; a figure
+owns only its skeleton and its lens material. Skinned meshes are not instanced (three.js has no instanced skinning);
+a squad of twelve is twelve skeletons of 19 bones.
+
+**Pictures** (before and after, the same places): `engine/tools/figure-shot.mjs` sets `distance` (one person at 5, 15
+and 40 m, Old Quebec viewpoint 1), `gallery` (every kind; a person in each pose), `street` (viewpoints 1 and 10 with
+people and machines), `look` (close-ups in the test scene, `SCENE=test`).
+
+**What only a person can judge, and is asked of the maintainer:** whether the people read as people and the look is
+the one wanted (colours, kit, proportions) or a CC0 model is wanted soon after; the gait and the fall in motion; the
+voices (`node engine/tools/voices-wav.mjs outDir` and listen); the zone numbers (a head round kills) and the
+reaction times in a fight; whether the `impact_enemy` clang, made for machines, should become a duller sound on
+people.
+
+**Not built:** people that throw, reload or take a knee to fire; ragdolls (the fall is scripted); a CC0 model format
+(a later figure, `plans/FORK-REUSE.md` C option 3).
 
 ## What stays with Fable
 
 | What | Why |
 |---|---|
-| J, above | Open design and a product decision |
+| J, above | Built; the look, the gait and the voices are judged by a person |
 | Review of item A's diff against `WORLD-API.md` | The contract is the one thing every host depends on |
 | Review of item B's pictures | Whether a HUD reads at a glance is judgement |
 | Tuning after the first human play | The numbers here are the stand-in's, made for a 70 m container yard with machines. In a street 300 m long with human sentries, sight 45–55 m, the 8–18 m firing band and the rush may be wrong. Change them in the pack, with a person playing |
@@ -549,7 +574,7 @@ pointer lock in a real browser; touch.
 
 ## Decisions needed from the maintainer
 
-1. **Threat figures** (J): lift the two machine rigs, a model format, or boxes for now.
+1. **Threat figures** (J): decided and built (last section, items 1 to 3).
 2. **Machines or people.** The default pack has a person (`sentry`), a four-legged machine (`crawler`) and a
    quadcopter. The crawler's rush is the stand-in's; is a rushing machine wanted in a tactical trainer at all?
 3. **An `intro` state.** A5 fades in without one. The stand-in holds the player still for 3.5 s behind a place
@@ -567,3 +592,8 @@ pointer lock in a real browser; touch.
 2. **Threats are both machines and people.** The machine kinds stay; human threats are added as archetypes of the
    same system (perception, warning, turns to shoot, cover). Human figures need a source of models and animation,
    which is not chosen yet: until it is, a human archetype uses a plain figure and says so.
+3. **People are procedural, ours, rigged on the lifted rig builder** (2026-11-16, later the same day): in the
+   generated style of the machines; no mesh, texture or voice from the `saltline-ghoul` fork (provenance unknown,
+   rejected); CC0 humanoid models only later. **Hit feedback on people**: a flinch, a spoiled aim for 0.4 s after a
+   hit, a limp after a leg hit, damage by body zone; no gore. **Voices synthesised** (FR-8), built as a hook with a
+   few barks and listened to by a person before they stay. Built in item J.

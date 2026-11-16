@@ -9,6 +9,7 @@
 //   distance  one person at 5, 15 and 40 m in Old Quebec, viewpoint 1, facing the camera (three pictures)
 //   gallery   every archetype, then a person in each pose (idle, walk, run, aim, fire, hit, crouch, dead), at 7 m
 //   street    Old Quebec viewpoints 1 and 10 with a few threats standing and walking in the street
+//   look      (with SCENE=test) close-ups of every look of the people and of their poses, in the quick test scene
 //
 // The world is left in `title`, so nothing moves by itself: each figure is posed through the threats module's `pose`
 // (an engine-internal call for tools and tests, reached with engineOf like the headless tests do). A figure without
@@ -29,7 +30,10 @@ const views = JSON.parse(readFileSync(join(here, 'viewpoints', 'old-quebec.json'
 const view = (id) => views.find((v) => v.id.startsWith(id));
 const base = process.env.ENGINE_URL || 'http://127.0.0.1:9760/engine/dev.html';
 const v1 = view('1-'), v10 = view('10-');
-const url = `${base}?scene=../scenes/old-quebec.json&noaudio=1&shot=1&x=${v1.x}&z=${v1.z}&${process.env.QUERY || 'q=high&tod=15'}`;
+// SCENE=test: the generated test scene, quick to load, for the `look` set only (close-ups while a figure is worked on)
+const quick = process.env.SCENE === 'test';
+const url = quick ? `${base}?scene=test&noaudio=1&shot=1&x=20&z=18&${process.env.QUERY || 'q=medium&tod=15'}`
+  : `${base}?scene=../scenes/old-quebec.json&noaudio=1&shot=1&x=${v1.x}&z=${v1.z}&${process.env.QUERY || 'q=high&tod=15'}`;
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -49,6 +53,7 @@ async function stage(items) {
       if (!G.threats.knows(it.kind)) it.kind = 'sentry'; // an older pack (a "before" picture)
       world.apply({ op: 'spawn', id: it.id, kind: it.kind, x: it.x, z: it.z, heading: it.heading, ...(it.y !== undefined ? { y: it.y } : {}) });
       const t = G.threats.list.find((x) => x.id === it.id);
+      if (it.hover !== undefined) t.pos.y = G.physics.groundHeight(t.pos.x, t.pos.z) + it.hover; // an air threat brought down into the picture
       if (it.pose && G.threats.pose) G.threats.pose(t, it.pose);
       else if (G.threats.place) G.threats.place(t);
       out.push({ id: it.id, kind: t.archetype, posed: !!(it.pose && G.threats.pose), pos: [t.pos.x, t.pos.y, t.pos.z].map((v) => +v.toFixed(2)) });
@@ -76,13 +81,22 @@ try {
   await page.addStyleTag({ content: '#ui, #boot { display: none !important }' });
   const cam = (v, extra = {}) => ({ x: v.x, z: v.z, heading: v.heading, pitch: v.pitch, fov: v.fov || 60, ...extra });
 
+  if (sets.includes('look')) { // close-ups: front and three-quarter, every look of the two human archetypes, and the poses
+    const c = { x: 20, z: 24, heading: 0 };
+    const row = (kind, n, d, pose, turn = 0) => Array.from({ length: n }, (_, i) => ({ id: kind[0] + i, kind, ...ahead(c, d, (i - (n - 1) / 2) * 1.0), heading: facing(c) + turn, pose }));
+    await stage([...row('sentry', 4, 4.2, { anim: 'idle', t: 1 }), ...row('patrol', 4, 6, { anim: 'idle', t: 1 }, 30)]);
+    await picture('look', 'looks', cam(c, { pitch: -8, fov: 55 }));
+    const poses = [['walk', { speed: 1.4 }], ['run', { speed: 4.5 }], ['aim', {}], ['crouch', {}], ['dead', { t: 2.5 }]];
+    await stage(poses.map(([a, o], i) => ({ id: 'q' + i, kind: 'sentry', ...ahead(c, 5, (i - 2) * 1.3), heading: facing(c) - 70, pose: { anim: a, t: 0.8, ...o } })));
+    await picture('look', 'poses', cam(c, { pitch: -9, fov: 58 }));
+  }
   if (sets.includes('distance')) for (const d of [5, 15, 40]) {
     await stage([{ id: 'p', kind: 'sentry', ...ahead(v1, d), heading: facing(v1), pose: { anim: 'idle', t: 1.3 } }]);
     await picture('distance', d + 'm', cam(v1, { pitch: d < 10 ? -6 : 0 }));
   }
   if (sets.includes('gallery')) {
     const kinds = ['sentry', 'patrol', 'crawler', 'quadcopter'];
-    await stage(kinds.map((k, i) => ({ id: 'k' + i, kind: k, ...ahead(v1, 8, (i - 1.5) * 1.9), heading: facing(v1) - 25, pose: { anim: 'idle', t: 1 } })));
+    await stage(kinds.map((k, i) => ({ id: 'k' + i, kind: k, ...ahead(v1, 8, (i - 1.5) * 1.9), heading: facing(v1) - 25, hover: k === 'quadcopter' ? 2.2 : undefined, pose: { anim: 'idle', t: 1 } })));
     await picture('gallery', 'kinds', cam(v1, { pitch: -4 }));
     const poses = [['idle', {}], ['walk', { speed: 1.4 }], ['run', { speed: 4.5 }], ['aim', {}], ['fire', {}], ['hit', { zone: 'torso' }], ['crouch', {}], ['dead', { t: 2.5 }]];
     await stage(poses.map(([a, o], i) => ({ id: 'g' + i, kind: 'sentry', ...ahead(v1, 9, (i - 3.5) * 1.3), heading: facing(v1) - 60, pose: { anim: a, t: 0.9, ...o } })));
@@ -96,7 +110,7 @@ try {
       { id: 's2', kind: 'patrol', ...ahead(v, 15, 1.8), heading: v.heading + 160, pose: { anim: 'walk', speed: 1.4, t: 1.1 } },
       { id: 's3', kind: 'patrol', ...ahead(v, 24, -2.5), heading: v.heading + 90, pose: { anim: 'walk', speed: 1.4, t: 0.5 } },
       { id: 's4', kind: 'crawler', ...ahead(v, 19, 3.2), heading: facing(v) - 30, pose: { anim: 'walk', speed: 1.5, t: 1 } },
-      { id: 's5', kind: 'quadcopter', ...ahead(v, 22, 0), heading: facing(v), pose: { anim: 'idle', t: 1 } },
+      { id: 's5', kind: 'quadcopter', ...ahead(v, 22, 0), heading: facing(v), hover: 6, pose: { anim: 'idle', t: 1 } },
     ]);
     await picture('street', v.id.split('-')[0], cam(v));
   }

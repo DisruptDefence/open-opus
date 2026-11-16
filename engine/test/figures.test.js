@@ -91,9 +91,9 @@ test('a ray meets a capsule where it should', () => {
 // ---- the person ------------------------------------------------------------------------------------------------
 const person = (id = 'p', kind = 'sentry') => createFigure(stubG(), DEFAULT_PACK.threats[kind], id);
 
-test('the person: within budget (near 6 500, far 1 500 triangles), one draw per material, looks that differ by id', () => {
+test('the person: within budget (near 6 000, far 1 500 triangles), one draw per material, looks that differ by id', () => {
   const G = stubG(), tris = figureTriangles(G);
-  for (const k of ['person-helmet', 'person-cap']) { assert.ok(tris[k].near <= 6500, `${k} near ${tris[k].near}`); assert.ok(tris[k].far <= 1500, `${k} far ${tris[k].far}`); }
+  for (const k of ['person-helmet', 'person-cap']) { assert.ok(tris[k].near <= 6000, `${k} near ${tris[k].near}`); assert.ok(tris[k].far <= 1500, `${k} far ${tris[k].far}`); }
   const f = person(); assert.ok(f.mesh.isSkinnedMesh); assert.equal(f.mesh.material.length, f.mesh.geometry.groups.length); assert.ok(f.mesh.skeleton.bones.length >= 17);
   const geos = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((id) => createFigure(G, DEFAULT_PACK.threats.patrol, id).mesh.geometry));
   assert.ok(geos.size >= 2, `${geos.size} looks among eight patrol members`);

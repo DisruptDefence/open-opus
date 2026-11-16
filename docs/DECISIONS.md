@@ -72,10 +72,27 @@ the gameplay bar is measured against.
 at a time against those tests, smallest and most felt first, each judged by a person before the old file goes.
 **Rejected.** Rewriting in place, or all at once: no way to tell a change of feel from a bug.
 
+## O-8. Threat figures: lifted machines, procedural people, no gore (2026-11-16)
+
+**Context.** Threats were boxes. The maintainer decided threats are machines and people, that the stand-in's two
+machine rigs are wanted, that human figures are our own procedural ones for now, and that a hit on a person shows
+as a flinch, a spoiled aim, a limp and damage by zone, without blood.
+**Decision.** A figure is a module of `threats/figures/` named by `body.figure`, driven by a view of the threat each
+frame (`figures/index.js`: root, lens, update, muzzle, fired, hit, die, setFar, zones). The machines are the lifted
+rig builder and rigs (`rigs.js`, by `lift.cjs`) with their animation cut by hand from their behaviour
+(`quadruped.js`, `quadcopter.js`). The person (`person.js`) is ours, on the same builder: 18 bones, rigid skinning,
+joints worked out each frame (planted feet, IK arms on the rifle), looks from the pack. Hit volumes are capsules
+along the bones; zones and reactions are pack data. Voices are synthesised (`audio/voice.js`).
+**Consequence.** A CC0 humanoid model can later be one more figure behind the same contract, named by the pack,
+once a loader and its licence are decided. `threats.js` holds no geometry.
+**Rejected.** The `saltline-ghoul` fork's mesh and voices (provenance unknown, evidence of a commercial game,
+`plans/FORK-REUSE.md` A2). Blood, decals and dismemberment. Keyframed clips for the person: no source, and the
+machines already move procedurally.
+
 ## For the maintainer
 
 | # | Decision | Options | Recommendation | Blocks |
 |---|---|---|---|---|
 | 1 | Publish the skill-tree format and viewer here | Format and viewer; format only; neither | Format and viewer, with an example set. The core tree file itself is a separate choice | `plans/PLATFORM.md` PL-5 |
 | 2 | Licence of this repository | Apache-2.0, MIT, GPLv3, none yet | — (his) | A tagged release |
-| 3 | A source of human figures and animation, and of vehicle models | Artists; a licensed library; none | — (a purchase) | Human threats beyond a plain figure; parked vehicles |
+| 3 | A source of human figures and animation, and of vehicle models | Artists; a licensed library; none | — (a purchase). People are procedural for now (O-8); a model would plug in as one more figure | Human threats beyond the procedural figure; parked vehicles |
