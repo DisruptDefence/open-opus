@@ -1713,6 +1713,9 @@ float metalnessFactor = metalness * slORM.b;
 #elif defined( USE_NORMALMAP_TANGENTSPACE )
   { vec3 mapN = texture2D(normalMap, slUv).xyz * 2.0 - 1.0;
     mapN.xy *= normalScale * (1.0 - 0.45 * slWetK * slUp);
+    #ifdef SL_LIVE
+      mapN.xy *= 1.0 - slLiveFlat;
+    #endif
     normal = normalize(tbn * mapN); }
 #endif
 #ifdef SL_LIVE

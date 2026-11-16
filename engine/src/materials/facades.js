@@ -35,9 +35,9 @@ void surf(vec2 uv){
   float lum, h, ao = 1.0, r = 0.92;
   if (uP.x < 0.5){                                    // render: trowel waves, streaks, hairline cracks
     float streak = fbm(uv * vec2(24.0, 1.0), vec2(24.0, 2.0), 4, 64.0);
-    lum = 0.5 * (0.9 + 0.16 * mid) * (0.94 + 0.12 * big) * (1.0 - smoothstep(0.5, 0.85, streak) * 0.12);
+    lum = 0.5 * (0.9 + 0.16 * mid) * (0.94 + 0.12 * big) * (1.0 - smoothstep(0.5, 0.85, streak) * 0.06);
     float crack = smoothstep(0.011, 0.003, abs(fbm(uv + 0.2, vec2(3.0), 4, 66.0) - 0.5)) * smoothstep(0.55, 0.7, big);
-    lum *= 1.0 - crack * 0.5; ao = 1.0 - crack * 0.5;
+    lum *= 1.0 - crack * 0.3; ao = 1.0 - crack * 0.3;
     h = 0.5 + (fine - 0.5) * 0.4 + (wave - 0.5) * 0.35 - crack * 0.25;
   } else {                                            // masonry: grain, pits, soot
     float pit = smoothstep(0.7, 0.82, fbm(uv, vec2(200.0), 3, 78.0));
@@ -59,7 +59,7 @@ uniform float uBwSt[6];    // cumulative weights of the window states
 uniform vec4 uBwOpt;       // x: odd-one-out chance, y: lit window glow, z: grime, w: unused
 uniform vec4 uBwN;         // palette sizes: frames, trim, shutters, glass
 uniform vec3 uBwF[8]; uniform vec3 uBwTr[8]; uniform vec3 uBwSh[8]; uniform vec3 uBwG[4];
-float slLiveH = 0.0; vec3 slLiveEm = vec3(0.0);
+float slLiveH = 0.0, slLiveFlat = 0.0; vec3 slLiveEm = vec3(0.0);
 
 // ---- hash: the same arithmetic as gen/wallvar.js ----
 uint lvP(uint v){ uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
@@ -115,13 +115,13 @@ void lvMasonry(float x, float y, uint bid, float kind, float aa, float warp, out
     c = mix(c, c * 0.5, smoothstep(0.86, 1.0, u2) * 0.9);                  // burnt
     c = mix(c, lvL(0.58, 0.42, 0.30), step(0.97, u1) * 0.8);               // pale
     if (hdr > 0.5) c *= 0.82;                                              // vitrified headers
-    c *= 0.9;
+    c *= 1.3;
   } else {
     float wb = lvU(lvH(bid, 22u)); wb = wb * wb * 0.55; float contrast = mix(0.5, 1.25, lvU(lvH(bid, 23u)));
     vec3 base = mix(lvL(0.50, 0.49, 0.46), lvL(0.68, 0.66, 0.60), u0);
     vec3 warm = mix(lvL(0.56, 0.50, 0.40), lvL(0.42, 0.38, 0.34), u1);
     c = mix(base, warm, clamp(wb + step(0.86, u2) * 0.5, 0.0, 1.0));
-    c *= 1.0 + (u1 - 0.5) * 0.35 * contrast * (kind > 1.5 ? 1.6 : 1.0);
+    c *= (1.0 + (u1 - 0.5) * 0.35 * contrast * (kind > 1.5 ? 1.6 : 1.0)) * 1.3;
   }
   float m = lvU(lvH(bid, 24u));
   vec3 mortar = m < 0.4 ? lvL(0.60, 0.57, 0.52) : (m < 0.65 ? lvL(0.45, 0.45, 0.43) : (m < 0.8 ? lvL(0.28, 0.27, 0.25) : (m < 0.92 ? lvL(0.62, 0.55, 0.42) : lvL(0.76, 0.75, 0.72))));
@@ -131,22 +131,26 @@ void lvMasonry(float x, float y, uint bid, float kind, float aa, float warp, out
   ao = mix(0.55, 1.0, face * smoothstep(0.0, 0.02, edge));
   rough = mix(0.97, 0.86, face);
 }
+float lvNz(vec2 p, float s){
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(slH(vec3(i, s)), slH(vec3(i + vec2(1.0, 0.0), s)), f.x), mix(slH(vec3(i + vec2(0.0, 1.0), s)), slH(vec3(i + 1.0, s)), f.x), f.y);
+}
 // the weathering of any wall: tone drift, stains, streaks of rain, damp, salt, patches of repair. x, y in metres on the wall;
 // base: height above the ground (m) or -1 when it is not known.
 void lvWeather(inout vec3 c, inout float h, inout float ao, float x, float y, float base, uint bid, float kind, float aa){
-  float gr = mix(0.45, 1.5, lvU(lvH(bid, 31u)));
-  vec3 q = vec3(x, y, lvU(lvH(bid, 32u)) * 37.0);
-  c *= 1.0 + (slN3(q * vec3(0.11, 0.09, 1.0)) - 0.5) * 0.36 + (slN3(q * vec3(0.37, 0.33, 1.0) + 5.0) - 0.5) * 0.14;
-  c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), slN3(q * vec3(0.07, 0.07, 1.0) + 9.0));
-  float st = slN3(q * vec3(0.5, 0.45, 1.0) + 3.0) * 0.6 + slN3(q * vec3(1.3, 1.1, 1.0) + 1.0) * 0.4;
-  c *= 1.0 - smoothstep(0.52, 0.72, st) * 0.32 * gr;
-  float sx = slN3(vec3(x * 6.0, y * 0.45, q.z)) * slN3(vec3(x * 21.0, y * 0.8, q.z + 3.0));
-  float sm = smoothstep(0.35, 0.65, slN3(vec3(x * 0.55, y * 0.12, q.z + 8.0)));
-  c *= 1.0 - smoothstep(0.14, 0.4, sx) * sm * 0.3 * gr;
+  float gr = mix(0.5, 1.25, lvU(lvH(bid, 31u))) * uBwOpt.z;
+  float sd = floor(lvU(lvH(bid, 32u)) * 61.0);
+  c *= 1.0 + (lvNz(vec2(x, y) * vec2(0.11, 0.09), sd + 0.0) - 0.5) * 0.36 + (lvNz(vec2(x, y) * vec2(0.37, 0.33), sd + 5.0) - 0.5) * 0.14;
+  c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), lvNz(vec2(x, y) * vec2(0.07, 0.07), sd + 9.0));
+  float st = lvNz(vec2(x, y) * vec2(0.5, 0.45), sd + 3.0) * 0.6 + lvNz(vec2(x, y) * vec2(1.3, 1.1), sd + 1.0) * 0.4;
+  c *= 1.0 - smoothstep(0.52, 0.72, st) * 0.22 * gr;
+  float sx = lvNz(vec2(x * 6.0, y * 0.45), sd) * lvNz(vec2(x * 21.0, y * 0.8), sd + 3.0);
+  float sm = smoothstep(0.35, 0.65, lvNz(vec2(x * 0.55, y * 0.12), sd + 8.0));
+  c *= 1.0 - smoothstep(0.14, 0.4, sx) * sm * 0.2 * gr;
   if (base >= 0.0){
-    float dm = 1.0 - smoothstep(0.1, 1.15, base + (slN3(q * vec3(1.7, 1.7, 1.0) + 2.0) - 0.5) * 0.7);
+    float dm = 1.0 - smoothstep(0.1, 1.15, base + (lvNz(vec2(x, y) * vec2(1.7, 1.7), sd + 2.0) - 0.5) * 0.7);
     c *= 1.0 - dm * 0.26 * gr; c.g *= 1.0 + dm * 0.05;
-    float ef = smoothstep(0.6, 0.78, slN3(q * vec3(2.3, 2.3, 1.0) + 4.0)) * (1.0 - smoothstep(0.8, 2.2, base)) ;
+    float ef = smoothstep(0.6, 0.78, lvNz(vec2(x, y) * vec2(2.3, 2.3), sd + 4.0)) * (1.0 - smoothstep(0.8, 2.2, base)) ;
     c = mix(c, lvL(0.74, 0.73, 0.69), ef * 0.28);
   }
   // patches of repair: a rectangle of another tone, a little proud, with a dark edge
@@ -171,7 +175,7 @@ void lvRender(float x, float y, uint bid, float aa, out vec3 col, out float h, o
 }
 
 // ---- the window of one bay ----
-void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3 wallCol, inout vec3 col, inout float h, inout float ao, inout float rough, inout vec3 em){
+void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3 wallCol, inout vec3 col, inout float h, inout float ao, inout float rough, inout vec3 em, inout float flatN){
   uint hs = lvH(lvH(bid, stor), 77u), hbv = lvH(lvH(bid, bayI), stor * 131u + 5u);
   int cls = stor == 0u ? 0 : (stor == 1u ? 1 : 2);
   bool odd = lvU(lvH(hs, bayI + 3u)) < uBwOpt.x;
@@ -210,6 +214,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
   else if (hood == 3){ float yy = q.y - (hh + sw + 0.01); hd = step(abs(q.x), hx + 0.1) * smoothstep(-aa, aa, yy) * (1.0 - smoothstep(-aa, aa, yy - 0.13)); }
   float dress = max(max(mSur, lint), max(sil, hd));
   dress *= 1.0 - mOpen;
+  flatN = max(flatN, dress * 0.8);
   col = mix(col, trimA, dress); h = mix(h, 0.02 + sil * 0.03 + hd * 0.015, dress); rough = mix(rough, 0.8, dress); ao = mix(ao, 1.0, dress);
   ao *= 1.0 - 0.45 * (1.0 - dress) * (1.0 - mOpen) * smoothstep(0.16, 0.0, -(q.y + sw + 0.07)) * step(q.y, -sw - 0.07) * step(abs(q.x), a + 0.1) * T2.z;
   // inside the opening
@@ -246,7 +251,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
       vec3 wood = frameC * (0.95 + 0.1 * pr);
       col = mix(col, mix(gl, wood, fr), mOpen); rough = mix(rough, mix(gr, 0.55, fr), mOpen);
       h = mix(h, depth + fr * 0.045, mOpen); ao = mix(ao, mix(0.85, 0.95, fr) * mix(0.62, 1.0, smoothstep(0.0, 0.2, -d)), mOpen);
-      em = mix(em, emi, mOpen * (1.0 - fr));
+      em = mix(em, emi, mOpen * (1.0 - fr)); flatN = max(flatN, mOpen);
     }
   }
   // shutters, open (a leaf each side of the opening) or closed (over it)
@@ -260,7 +265,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
     float slat = 1.0 - smoothstep(0.004, 0.004 + aa, abs(fract(q.y / 0.04) - 0.5) * 0.04 - 0.008);
     float split = closed * (1.0 - smoothstep(0.004, 0.006 + aa, abs(q.x)));
     vec3 sc = shutC * (1.0 - 0.28 * slat - 0.4 * split);
-    col = mix(col, sc, sm); h = mix(h, 0.03 - slat * 0.006, sm); rough = mix(rough, 0.7, sm); ao = mix(ao, 0.9 - 0.2 * slat, sm); em = mix(em, vec3(0.0), sm);
+    flatN = max(flatN, sm * 0.7); col = mix(col, sc, sm); h = mix(h, 0.03 - slat * 0.006, sm); rough = mix(rough, 0.7, sm); ao = mix(ao, 0.9 - 0.2 * slat, sm); em = mix(em, vec3(0.0), sm);
   }
 }
 
@@ -282,26 +287,26 @@ void slLiveApply(inout vec4 samp, inout vec4 orm, vec3 tint, vec3 pos, vec3 a, b
   lvWeather(col, h, ao, x, y, base, bid, kind, aa);
   vec3 wall = col;
   vec3 fin = col * tint * samp.rgb;                 // the wall: its own colour, the building's tint, the baked detail
-  vec3 em = vec3(0.0);
+  vec3 em = vec3(0.0); float flatN = 0.0;
   if (!near){
     float sh = 3.2, bw = 3.0;
     float stor = floor(y / sh), ys = y - stor * sh, bay = floor(x / bw), xc = x - (bay + 0.5) * bw;
     uint su = lvI(stor), bu = lvI(bay);
     // window: drawn on the lit colour, the dressing in absolute colours
     vec3 abs0 = fin; float h0 = h, ao0 = ao, r0 = rough;
-    lvWindow(vec2(xc, ys), bw, bid, bu, su, aa, wall * tint, abs0, h0, ao0, r0, em);
+    lvWindow(vec2(xc, ys), bw, bid, bu, su, aa, wall * tint, abs0, h0, ao0, r0, em, flatN);
     // string course at the floor line, with the shadow it throws
     if (lvU(lvH(bid, 51u)) > 0.3){
       float band = smoothstep(2.99 - aa, 3.02 + aa, ys) * 1.0;
       vec3 trimC = uBwTr[int(lvU(lvH(bid, 64u)) * uBwN.y)] * (0.93 + 0.1 * lvU(lvH(bid, 66u)));
       abs0 = mix(abs0, trimC, band); h0 = mix(h0, 0.035 + smoothstep(3.14, 3.17, ys) * 0.0, band); r0 = mix(r0, 0.8, band);
-      ao0 *= 1.0 - 0.45 * smoothstep(2.74, 3.0, ys) * (1.0 - band);
+      ao0 *= 1.0 - 0.45 * smoothstep(2.74, 3.0, ys) * (1.0 - band); flatN = max(flatN, band * 0.8);
     }
     fin = abs0; h = h0; ao = ao0; rough = r0;
   }
   samp.rgb = fin / max(tint, vec3(0.04)); samp.a = 1.0;
   orm.r *= ao; orm.g = clamp(rough + (orm.g - 0.9) * 0.5, 0.05, 1.0);
-  slLiveH = h; slLiveEm = em;
+  slLiveH = h; slLiveEm = em; slLiveFlat = flatN;
 }
 `;
 
