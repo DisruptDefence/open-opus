@@ -36,18 +36,52 @@ CREST_REACH = 14.0     # m: how far in from the mapped edge the crest of the slo
 CREST_SLACK = 0.6      # m: the crest is the first point from the outside within this of the highest ground on the way in
 
 
+def _first_cross(ring):
+    """The first pair of edges (i, j) that cross, with the crossing point, or None."""
+    n = len(ring)
+
+    def ccw(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    for i in range(n):
+        a, b = ring[i], ring[(i + 1) % n]
+        for j in range(i + 2, n):
+            if (j + 1) % n == i:
+                continue
+            c, d = ring[j], ring[(j + 1) % n]
+            if ccw(a, b, c) * ccw(a, b, d) < 0 and ccw(c, d, a) * ccw(c, d, b) < 0:
+                t = ccw(c, d, a) / (ccw(c, d, a) - ccw(c, d, b))
+                return i, j, (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+    return None
+
+
+def _untangle(ring):
+    """A ring with its loops cut out: where edge i crosses edge j the vertices between them are dropped (the loop of the shorter way round)."""
+    ring = list(ring)
+    for _ in range(len(ring)):
+        c = _first_cross(ring)
+        if c is None:
+            return ring
+        i, j, pt = c
+        inner = ring[i + 1:j + 1]
+        outer = ring[j + 1:] + ring[:i + 1]
+        ring = (outer + [pt]) if abs(ring_area(inner)) < abs(ring_area(outer)) or len(inner) < len(outer) else (inner + [pt])
+        ring = [p for k, p in enumerate(ring) if k == 0 or p != ring[k - 1]]
+    return ring
+
+
 def crest_ring(ctx, ring, holes, drop: float):
     """The outer ring cut back to the crest. A mapped platform edge often lies down the bank (the survey of the outline is not the survey
     of the terrain), so a rail on it would stand below the walking surface. Edges whose outside drops by more than `drop` metres within 4 m
     are cut into pieces of about 5 m and each new vertex is moved in along the normal to the first point within 0.6 m of the highest
-    ground in the next 14 m; a vertex that would land within 1.5 m of a hole, or move out, stays. Other edges are untouched."""
+    ground in the next 14 m (the distances are smoothed along the edge); a vertex that would land within 1.5 m of a hole stays. Loops the moves make
+    at corners are cut out. Other edges are untouched."""
     n = len(ring)
-    out: list[tuple[float, float]] = []
+    pts: list[tuple[float, float, float, float, float]] = []      # x, z, normal x, normal z, distance to move in
     for i in range(n):
         p, q = ring[i], ring[(i + 1) % n]
         l = math.hypot(q[0] - p[0], q[1] - p[1])
         if l < 0.5:
-            out.append(p)
+            pts.append((p[0], p[1], 0.0, 0.0, 0.0))
             continue
         nx, nz = _outward(ring, p, q, 0.6)
         mx, mz = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
@@ -55,16 +89,21 @@ def crest_ring(ctx, ring, holes, drop: float):
         k = max(1, math.ceil(l / 5.0)) if dropping else 1
         for s in range(k):
             x, z = p[0] + (q[0] - p[0]) * s / k, p[1] + (q[1] - p[1]) * s / k
+            t_star = 0.0
             if dropping:
                 prof = [ctx.ground(x - nx * t, z - nz * t) for t in [j * 0.5 for j in range(int(CREST_REACH / 0.5) + 1)]]
                 top = max(prof)
                 t_star = next(j * 0.5 for j, h in enumerate(prof) if h >= top - CREST_SLACK)
-                if t_star > 0:
-                    x2, z2 = x - nx * t_star, z - nz * t_star
-                    if not any(inside((x2, z2), h) or _near(x2, z2, h, 1.5) for h in holes):
-                        x, z = x2, z2
-            out.append((x, z))
-    return out
+            pts.append((x, z, nx, nz, t_star))
+    ts = [pt[4] for pt in pts]                                      # the median of three along the ring takes out single spikes
+    sm = [sorted([ts[i - 1], ts[i], ts[(i + 1) % len(ts)]])[1] if ts[i] > 0 else 0.0 for i in range(len(ts))]
+    out = []
+    for (x, z, nx, nz, _), t in zip(pts, sm):
+        x2, z2 = x - nx * t, z - nz * t
+        if t > 0 and any(inside((x2, z2), h) or _near(x2, z2, h, 1.5) for h in holes):
+            x2, z2 = x, z
+        out.append((x2, z2))
+    return _untangle(out)
 
 
 def _near(x, z, ring, d) -> bool:
