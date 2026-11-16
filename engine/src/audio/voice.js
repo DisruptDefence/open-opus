@@ -42,8 +42,8 @@ export function synthBark(sr, rng, s) {
     const f = f0(t) * (1 + 0.012 * Math.sin(TAU * 5.3 * t) + jit);
     ph += f / sr; if (ph >= 1) ph -= 1;
     const g = ph < 0.6 ? Math.sin((Math.PI * ph) / 0.6) ** 2 : 0; // the glottal pulse, then its derivative (lip radiation)
-    src[i] = (g - prev) * 6 * voiced(t) * amp(t); prev = g;
-    noise[i] = (rng() * 2 - 1) * (s.breath ?? 0.1) * amp(t);
+    src[i] = ((g - prev) / ((Math.PI / 0.6) * (f / sr))) * voiced(t) * amp(t); prev = g; // about ±1 whatever the pitch
+    noise[i] = (rng() * 2 - 1) * (s.breath ?? 0.1) * 0.35 * amp(t);
   }
   const v = s.vowels, F = (k) => curve(v.map((r) => [r[0], r[k]]));
   const ex = new Float32Array(n); for (let i = 0; i < n; i++) ex[i] = src[i] + noise[i];
