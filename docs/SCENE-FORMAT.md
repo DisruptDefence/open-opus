@@ -12,7 +12,7 @@ This document is the format. Three things write or read it today:
 
 | | Matches | Differs |
 |---|---|---|
-| `tools/build-scene.py --place places/<id>.json` → `scenes/<id>.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks` (zone, band and convergence computed from the place's anchor); `packaging`; `play`, `extent`; the layers; `formatMinor: 1` with the manifest keys of 3.3 (`style`, `season`, `ambience`, `sources` with licence URLs and layers) | Buildings carry the additions of 4.2 (`id`, measured heights, roof, façade, storeys, use, `blind`, `front`, `gf`); `pass` (passages) is not written yet. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. Roads, walls, trees and props carry none of the additions of `docs/plans/SCENE-DETAIL.md` section 3 yet |
+| `tools/build-scene.py --place places/<id>.json` → `scenes/<id>.json` (single file) | The georeference of 2.2 with `h0`, `vertical`, `checks` (zone, band and convergence computed from the place's anchor); `packaging`; `play`, `extent`; the layers; `formatMinor: 1` with the manifest keys of 3.3 (`style`, `season`, `ambience`, `sources` with licence URLs and layers) | Buildings carry the additions of 4.2 (`id`, measured heights, roof, façade, storeys, use, `blind`, `front`, `gf`); `pass` (passages) is written for roads through gate buildings and `tunnel=building_passage` (the builder also levels the terrain along such a way), and walls carry `t`, `m`, `hp`, `cr` and `rail` from the style pack. Terrain is quantised at 0.1 m (`unit`), not `yMin`/`yScale`, and its grid starts at the extent's corner, not on a chunk corner. Roads, trees and props carry none of the additions of `docs/plans/SCENE-DETAIL.md` section 3 yet |
 | `engine/tools/make-test-scene.mjs` → `engine/scenes/test/` (chunked) | The georeference of 2.2, `play`, `extent`; chunks on the absolute grid of 3.1 (the anchor is deliberately off a chunk corner); the container (3.2), raster layers, hashed names, `anchors.json` | Vector layers are JSON in the chunk header, not binary records |
 | The engine's reader (`engine/src/geo/georef.js`, `engine/src/scene/`) | Reads 2.2 exactly as written and refuses a block without `vertical.geoid_undulation`; numbers chunks as 3.1 (`engine/src/scene/grid.js`); both tested against the check points of both scenes | Cuts a single file into chunks itself and burns its roads into a surface raster (the format gives that to the pipeline). Each tile of a single file keeps the file's own terrain samples, so it starts up to one cell before the chunk corner |
 
@@ -251,7 +251,7 @@ Polylines. Per segment: `class` (`1 city_wall, 2 retaining_wall, 3 wall, 4 fence
 7 barrier_block, 8 gate`), `height`, `thickness`, `material` (façade enum), `flags`: `blocksMove`,
 `blocksShot`, `blocksSight`, `walkableTop` (ramparts), `open` (a gate that is open). Collision: a prism from
 the offset polyline. A fortification wide enough to stand on is modelled as a building part with a flat roof
-or as a landmark, not as a wall.
+or as a landmark, not as a wall. Additions of `formatMinor: 1`: `t` thickness, `m` material, `hp` parapet (a wall that holds ground back; no `h`), `cr` crenels, `rail` (a rail: posts and rails, drawn near), see `docs/plans/SCENE-DETAIL.md` 3.3.
 
 Cliffs are terrain. Nav closes cells steeper than a rise over run of 1.0 (45°).
 
