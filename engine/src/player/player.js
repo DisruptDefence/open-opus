@@ -42,7 +42,7 @@ export var PLAYER_TUNING = {
   rC = Math.sqrt(2 * PLAYER_TUNING.gravity * PLAYER_TUNING.jumpApex);
 const STEP_CLEAR = 0.5; // physics.blocked ignores what a walker steps over; lift the probe by that much
 // OPUS additions to the lifted controller: mantling a low wall or a bank (tuning below), terrain instead of a flat
-// quay (the fall rescue now means "left the scene's bounds"), and the crouch check asked of the physics.
+// floor (the fall rescue now means "left the scene's bounds"), and the crouch check asked of the physics.
 export var MANTLE = { maxUp: 1.5, reach: 0.7, time: 0.42, minForward: 0.4 };
 export function createPlayer(i) {
   let e = i.camera,
@@ -310,7 +310,7 @@ export function createPlayer(i) {
         (_ = 0.6),
         (C.yaw += Math.PI),
         C.damage(12, null),
-        i.events.emit('player:rescued', {})),
+        i.events.emit('player:outOfBounds', {})),
       (C.speed = Math.hypot(C.vel.x, C.vel.z)));
     let se = C.crouching
       ? PLAYER_TUNING.stride.crouch
