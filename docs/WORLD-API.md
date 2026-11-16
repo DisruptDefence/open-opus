@@ -102,6 +102,7 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
 | `photo` | `{ on }` | Photo mode began or ended |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
+| `error` | `{ module, message }` | A part of the engine threw inside a frame (`module`: `threats`, `player`, `render`, `hook`, `clock` …). Said once per module and kept: the frame loop never stops, the failing part loses its own update, nothing is switched off. Additive; a host that ignores it sees the same engine |
 
 An event is a report, not a decision. The engine says a mark was reached; what that is worth is the host's.
 

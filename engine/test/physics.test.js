@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGrid, createTerrain } from '../src/terrain/heightfield.js';
 import { createPhysics, STEP } from '../src/physics/physics.js';
-import { loadTestScene, walk, fixture, installAll } from './helpers.js';
+import { loadTestScene, walk, fixture, installAll, oldQuebec as oldQuebecScene } from './helpers.js';
 import { jsonSource } from '../src/scene/source.js';
 import { PROP_KIT } from '../src/gen/props.js';
 
@@ -118,4 +118,48 @@ test('collision is what is drawn: a walker passes under a part that floats, and 
     // an unknown kind in the scene is skipped, not an error: nothing stands at its place
     assert.equal(physics.blocked(75, 12, 0.3, terrain.height(75, 12)), false);
   } finally { for (const k of Object.keys(PROP_KIT)) delete PROP_KIT[k]; Object.assign(PROP_KIT, had); }
+});
+
+// ---- courtyards: a prism with holes (FR-2) ------------------------------------------------------------------------
+const square = (x, z, w) => [x, z, x + w, z, x + w, z + w, x, z + w];
+function courtyard() { // 20 x 20 m building, 8 x 8 m hole in the middle, ground at 0, building from -3 to 10
+  const { physics } = flat();
+  physics.addPrism(square(10, 10, 20), -3, 10, { holes: [square(16, 16, 8)] });
+  return physics;
+}
+test('a walker in a courtyard stays in it and is stopped by the inner walls', () => {
+  const physics = courtyard();
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const r = walk(physics, { x: 20, y: 0, z: 20 }, dx, dz, 4, 3);
+    assert.ok(Math.abs(r.pos.x - 20) <= 4 - 0.31 && Math.abs(r.pos.z - 20) <= 4 - 0.31, `held inside the hole: ${r.pos.x.toFixed(2)}, ${r.pos.z.toFixed(2)}`);
+    assert.ok(Math.max(Math.abs(r.pos.x - 20), Math.abs(r.pos.z - 20)) > 3, 'and reached the wall');
+  }
+  assert.equal(physics.blocked(20, 20, 0.3, 0), false, 'the nav grid sees the courtyard as open');
+  assert.equal(physics.blocked(16.1, 20, 0.3, 0), true); assert.equal(physics.blocked(12, 12, 0.3, 0), true, 'and the building as shut');
+  assert.equal(physics.groundHeight(20, 20), 0, 'no roof over the courtyard'); assert.equal(physics.groundHeight(12, 12), 10);
+});
+test('rays: from the courtyard outwards meets the inner wall at 4 m, from above lands on the ground, from outside meets the outer wall', () => {
+  const physics = courtyard();
+  const a = physics.raycast({ x: 20, y: 1, z: 20 }, { x: 1, y: 0, z: 0 }, 50);
+  assert.ok(a && Math.abs(a.dist - 4) < 1e-6 && a.box, `inner wall at ${a && a.dist}`); assert.ok(a.normal.x < 0, 'its normal points into the hole');
+  const down = physics.raycast({ x: 20, y: 30, z: 20 }, { x: 0, y: -1, z: 0 }, 100);
+  assert.ok(down && down.box === null && Math.abs(down.dist - 30) < 1e-6, 'the ground in the hole, not the roof');
+  const roof = physics.raycast({ x: 12, y: 30, z: 12 }, { x: 0, y: -1, z: 0 }, 100); assert.ok(roof && roof.box && Math.abs(roof.dist - 20) < 1e-6, 'the roof beside it');
+  const out = physics.raycast({ x: 5, y: 1, z: 20 }, { x: 1, y: 0, z: 0 }, 50); assert.ok(out && Math.abs(out.dist - 5) < 1e-6);
+  assert.equal(physics.lineOfSight({ x: 20, y: 1, z: 20 }, { x: 23, y: 1, z: 22 }), true, 'sight inside the courtyard is clear'); assert.equal(physics.lineOfSight({ x: 20, y: 1, z: 20 }, { x: 5, y: 1, z: 20 }), false);
+});
+test('a passage leads into a courtyard: a walker goes in along the way and is held by the courtyard walls', async () => {
+  const { passagePieces } = await import('../src/gen/passage.js'), { building } = await import('./helpers.js');
+  const { physics } = flat(), b = building(square(10, 10, 20), { yBase: 0, yMin: 0, hEave: 9, hRoof: 1, holes: [[15, 17, 21, 17, 21, 23, 15, 23]], blind: new Set(), front: new Set(), passages: [{ x1: 9, z1: 20, x2: 31, z2: 20, w: 10, h: 4.5 }] });
+  const pieces = passagePieces(b); assert.ok(pieces.length >= 3 && pieces.some((p) => p.holes.length === 1), 'the courtyard lies in a piece');
+  for (const p of pieces) physics.addPrism(p.ring, p.yMin > 0.01 ? p.yMin : -3, 10, { holes: p.holes });
+  const into = walk(physics, { x: 4, y: 0, z: 20 }, 1, 0, 3, 5); assert.ok(into.pos.x > 15.5, `walked in along the passage and stands in the courtyard, x = ${into.pos.x.toFixed(2)}`);
+  const held = walk(physics, { x: 18, y: 0, z: 20 }, 0, 1, 3, 3); assert.ok(held.pos.z < 25, 'and beyond the courtyard the piece beside the way holds'); void held;
+});
+test('the scene installer gives the physics the holes of the published scene: an Old Quebec courtyard is open to walk in', async () => {
+  const { physics, chunks } = await installAll(jsonSource(oldQuebecScene()));
+  const holed = [...physics.solids].filter((s) => s.holes);
+  assert.ok(holed.length >= 2, `holed solids: ${holed.length}`);
+  const s = holed.find((q) => q.ref.id === 1620611482), h = s.holes[0], cx = (h[0] + h[2] + h[4] + h[6]) / 4, cz = (h[1] + h[3] + h[5] + h[7]) / 4;
+  assert.equal(physics.blocked(cx, cz, 0.3, physics.terrain.height(cx, cz)), false, 'the centre of the courtyard of building 1620611482 is open'); void chunks;
 });

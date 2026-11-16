@@ -113,14 +113,23 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   await step('first light', 0.92, () => G.render.onLevelReady());
 
   // ---- the frame ------------------------------------------------------------------------------------------------
-  const errs = {}, safe = (name, fn) => { try { return fn(); } catch (e) { if (!errs[name]) { errs[name] = 1; console.error(`[loop] ${name} threw: ${(e && e.stack) || e}`); } } };
+  // A module that throws loses its own update and nothing else: the loop goes on, and the host is told once per stage
+  // (event `engine:error { module, message }`, surfaced by the world API as `error`). Nothing is disabled automatically.
+  const errs = {}, safe = (name, fn) => {
+    try { return fn(); } catch (e) {
+      if (!errs[name]) {
+        errs[name] = 1; console.error(`[loop] ${name} threw: ${(e && e.stack) || e}`);
+        try { G.events.emit('engine:error', { module: name, message: String((e && e.message) || e) }); } catch (e2) { console.error('[loop] engine:error listener threw: ' + e2); }
+      }
+    }
+  };
   const upd = (name, dt) => { const mod = G[name]; if (mod && mod.update) safe(name, () => mod.update(dt)); };
   /** One simulation step of `dt` seconds (already scaled). */
   function simulate(dt) {
-    const active = safe('game', () => G.game.update(dt)) !== false && G.game.state !== 'title' && G.game.state !== 'paused';
+    const state = safe('game', () => G.game.state), active = safe('game', () => G.game.update(dt)) !== false && state !== 'title' && state !== 'paused';
     if (active && dt > 0) { upd('player', dt); upd('weapon', dt); upd('threats', dt); upd('director', dt); }
     else if (active) upd('player', 0); // frozen: the camera still follows the view angles (the hold tilts the view)
-    if (G.game.state !== 'paused' && dt > 0) { upd('fx', dt); upd('ground', dt); upd('mats', dt); }
+    if (state !== 'paused' && dt > 0) { upd('fx', dt); upd('ground', dt); upd('mats', dt); }
     upd('level', dt); // streaming goes on whatever the clock does
   }
   function posePhoto() {
@@ -133,16 +142,18 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   const fixed = params.dt ? +params.dt : undefined; // a fixed step makes a run repeatable (tests, replays)
   function frame() {
     if (!running) return;
-    const now = performance.now(), real = (now - last) / 1000; last = now; smooth = smooth ? smooth * 0.95 + real * 0.05 : real;
-    const dt = clock.tick(real, fixed);
-    upd('input', dt);
-    for (const fn of hooks) safe('hook', () => fn(fixed ?? Math.min(real, 0.1)));
-    simulate(dt);
-    upd('audio', dt); upd('hud', dt);
-    if (G.photo) safe('photo', posePhoto); // photo mode: the camera is the caller's, whatever the player does
-    safe('render', () => G.render.frame(dt));
-    safe('input.endFrame', () => G.input.endFrame && G.input.endFrame());
-    if (++frames === 2) for (const res of drawn.splice(0)) res();
+    try {
+      const now = performance.now(), real = (now - last) / 1000; last = now; smooth = smooth ? smooth * 0.95 + real * 0.05 : real;
+      const dt = safe('clock', () => clock.tick(real, fixed)) ?? 0;
+      upd('input', dt);
+      for (const fn of hooks) safe('hook', () => fn(fixed ?? Math.min(real, 0.1)));
+      safe('simulate', () => simulate(dt));
+      upd('audio', dt); upd('hud', dt);
+      if (G.photo) safe('photo', posePhoto); // photo mode: the camera is the caller's, whatever the player does
+      safe('render', () => G.render.frame(dt));
+      safe('input.endFrame', () => G.input.endFrame && G.input.endFrame());
+    } catch (e) { safe('frame', () => { throw e; }); } // nothing above may stop the loop: whatever got here is logged and told once
+    finally { if (++frames === 2) for (const res of drawn.splice(0)) safe('drawn', res); }
   }
   G.renderer.setAnimationLoop(frame);
 
