@@ -393,10 +393,10 @@ wallRings(wall, groundAt) -> [{ ring, yBase, yTop }]           // collision, and
 wall(soups, wall, groundAt, style)                             // base; near when wall.rail
 // gen/ground.js
 drape(tri3, tile) -> [[[x, y, z] x 3], ...]                    // a plan triangle cut along the terrain's own triangles
-roadRibbons(soups, road, tile, style)                          // near, cut to the cell by the mesher
+roadRibbons(soups, road, tile, style, others)                  // near, cut to the cell by the mesher; others = the cell's roads (optional): a sidewalk is cut across the mouth of a street that ends on it
 steps(soups, road, groundAt, style)                            // near, cut to the cell; called instead of roadRibbons when road.steps
 crossing(soups, c, tile, style)                                // near, cut to the cell
-liftRaster(roads, x0, z0, n, style) -> Uint8Array(n * n) | null    // centimetres per 1 m cell: sidewalks. null = none
+liftRaster(roads, x0, z0, n, style) -> Uint8Array(n * n) | null    // centimetres per 1 m cell: sidewalks, cut at junction mouths as drawn. null = none
 // gen/props.js
 PROP_KIT[kind] = { build(soups, x, y, z, yaw, variant, style), collider: null | { r, h, nav } | { hw, hd, h, nav } }   // near and collision
 // gen/trees.js
@@ -414,6 +414,16 @@ below the ground otherwise; walls are one prism per ring of `wallRings` (a rail 
 props are `PROP_KIT[kind].collider` turned with the prop's yaw, `noNav` unless `nav` is true, so a lamp post stops
 a walker and a bullet but does not close a nav cell; trees are their trunk. Stairs stay the sloped ground they are
 in the terrain; the drawn treads stay within one riser of it. A kerb is lower than a step (`STEP = 0.45`).
+
+**Street wear and the ground's image sets** (2026-11-16). `roadRibbons` also lays thin alpha decals (`SOUP.wear`, material `wear`,
+one texture in four bands: grit and leaves against the kerb and the foot of the walls, tyre tracks, asphalt patches with a sealed
+seam, oil stains) and manhole covers, placed by distance along the whole way from numbers drawn from the way's own length, so two
+cells draw one thing; `style.wear` = `{ gutter, tracks, patches, oil, manholes }` scales each (0 = none). The style pack's
+`client.detail` maps a ground material to a catalogue set (`set`, a fallback list), may add `alt` (a second set that patches the first
+where a slow world noise is high: `cover`, `edge`, `size`, `tone`, `hue`) and `tint` ([r, g, b] to warm or cool the set); the ground
+materials also carry a slow tone drift (`STREET` in `materials/outdoor.js`). A road's `others` argument lets the sidewalk stop at
+a street's mouth: a street ending on another cuts that sidewalk by its width (widened for the angle); a way ending on another
+street stops at its kerb; a way that goes straight on, or bends into the next, is not a junction.
 
 **What changed from the first draft of this section, and why** (found while building it):
 

@@ -16,23 +16,30 @@ reference/private/
 
 # the full CC0 library (526 sets, ~500 MB) stays local: re-fetch with tools/textures/; only the sets the style packs use are committed
 assets/textures/pbr/*
-!assets/textures/pbr/asphalt012/
+!assets/textures/pbr/asphalt022/
+!assets/textures/pbr/asphalt_01/
+!assets/textures/pbr/asphalt_02/
 !assets/textures/pbr/brick_wall_006/
 !assets/textures/pbr/bricks003/
 !assets/textures/pbr/bricks076a/
 !assets/textures/pbr/bricks102/
-!assets/textures/pbr/cobblestone_floor_04/
 !assets/textures/pbr/concrete016/
+!assets/textures/pbr/concrete_pavement_02/
 !assets/textures/pbr/grass003/
+!assets/textures/pbr/grass004/
 !assets/textures/pbr/gravel013/
+!assets/textures/pbr/gravel_road/
 !assets/textures/pbr/ground015/
 !assets/textures/pbr/medieval_blocks_05/
 !assets/textures/pbr/metal019/
 !assets/textures/pbr/metal035/
 !assets/textures/pbr/old_stone_wall/
-!assets/textures/pbr/pavement_03/
-!assets/textures/pbr/pavingstones041/
-!assets/textures/pbr/pavingstones126a/
+!assets/textures/pbr/pavement_01/
+!assets/textures/pbr/pavingstones108/
+!assets/textures/pbr/pavingstones119/
+!assets/textures/pbr/pavingstones131/
 !assets/textures/pbr/plaster003/
 !assets/textures/pbr/rock041/
-!assets/textures/pbr/worn_asphalt/
+!assets/textures/pbr/rock045/
+!assets/textures/pbr/stony_dirt_path/
+!assets/textures/pbr/withered_grass/

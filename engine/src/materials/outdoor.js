@@ -140,6 +140,58 @@ void surf(vec2 uv){
   emit(col * (0.55 + 0.5 * leaf) * (0.8 + 0.4 * fine), 1.0, leaf * 0.8 + fine * 0.1, 0.45 + 0.55 * leaf, 0.85, 0.0);
 }`;
 
+
+// Street wear laid over the ground as thin decals (gen/ground.js): one texture in four bands, alpha-blended, so the whole
+// street needs one extra draw call. The band is picked by v (a quarter each; the decal's own coordinate runs 0.08..0.92 of
+// the band, so the mip levels never mix two bands): 0 gutter grit and fallen leaves (0 = at the kerb or wall), 1 tyre track,
+// 2 a repaired patch of asphalt with its sealed seam (u and v span the patch), 3 an oil stain (u and v span the blob).
+GENERATORS.wear = `
+void surf(vec2 uv){
+  float band = floor(uv.y * 4.0), u = uv.x, v = fract(uv.y * 4.0);
+  float gr = fbm(vec2(u, v), vec2(24.0, 6.0), 4, 101.0), fine = fbm(vec2(u, v), vec2(140.0, 36.0), 3, 102.0), big = fbm(vec2(u, v), vec2(3.0, 2.0), 3, 103.0);
+  vec3 col = L(0.1, 0.1, 0.1); float a = 0.0, r = 0.9;
+  if (band < 0.5) {
+    float edge = pow(1.0 - sat((v - 0.08) / 0.84), 1.15);
+    vec4 lf = vor(vec2(u * 20.0, v * 5.0), vec2(20.0, 5.0), 105.0);
+    float leaf = step(0.55, lf.z) * smoothstep(0.34, 0.12, lf.x) * smoothstep(0.7, 0.2, v);
+    vec3 soil = mix(L(0.14, 0.12, 0.10), L(0.27, 0.22, 0.15), fine);
+    vec3 lc = mix(L(0.32, 0.20, 0.07), L(0.20, 0.22, 0.07), lf.w);
+    a = edge * (0.22 + 0.35 * smoothstep(0.3, 0.75, big)) * (0.6 + 0.9 * gr);
+    col = mix(soil, lc, leaf); a = max(a, leaf * 0.85);
+    a *= smoothstep(0.0, 0.1, 1.0 - v) * smoothstep(0.0, 0.04, v);
+    r = 0.95;
+  } else if (band < 1.5) {
+    float prof = smoothstep(0.1, 0.4, v) * smoothstep(0.9, 0.6, v);
+    a = prof * (0.1 + 0.2 * smoothstep(0.3, 0.75, gr)) * (0.6 + 0.8 * fine);
+    col = L(0.05, 0.048, 0.045); r = 0.5;
+  } else if (band < 2.5) {
+    float e = min(min(u, 1.0 - u) * 0.5, min(v, 1.0 - v)) - 0.04;
+    float body = smoothstep(0.0, 0.012, e), seam = smoothstep(0.045, 0.03, e) * body;
+    vec3 fresh = mix(L(0.19, 0.185, 0.18), L(0.26, 0.25, 0.235), fine) * (0.85 + 0.3 * big);
+    col = mix(fresh, L(0.02, 0.02, 0.022), seam * 0.9); a = body;
+    r = mix(0.82, 0.3, seam);
+  } else {
+    float d = length(vec2((u - 0.5) * 2.0, (v - 0.5) * 2.0)) + (gr - 0.5) * 0.55 + (fine - 0.5) * 0.12;
+    a = smoothstep(0.78, 0.2, d) * 0.62 * smoothstep(0.0, 0.1, min(min(u, 1.0 - u), min(v, 1.0 - v)));
+    col = mix(L(0.045, 0.04, 0.035), L(0.08, 0.075, 0.07), smoothstep(0.7, 0.1, d)); r = 0.3 + 0.3 * smoothstep(0.1, 0.7, d);
+  }
+  emit(col, a, 0.5, 1.0, r, 0.0);
+}`;
+
+
+// road paint, worn: uP.x = how worn. The texture's alpha is where the paint colour (the material's tint) still covers; where
+// it has chipped away the grey grit of the road shows. A line is a few centimetres wide, so the wear is fine-grained.
+GENERATORS.paint = `
+void surf(vec2 uv){
+  float amt = uP.x;
+  float fine = fbm(uv, vec2(180.0), 3, 111.0), mid = fbm(uv, vec2(28.0), 4, 112.0), big = fbm(uv, vec2(4.0), 4, 113.0);
+  float worn = smoothstep(0.5 - 0.2 * amt, 0.82, mid * 0.55 + big * 0.45 + (fine - 0.5) * 0.45);
+  float cover = 1.0 - worn * (0.3 + 0.35 * amt);
+  float scuff = smoothstep(0.62, 0.9, fbm(uv * vec2(1.0, 0.25), vec2(6.0, 2.0), 3, 114.0)) * 0.3;
+  vec3 under = L(0.15, 0.145, 0.14) * (0.7 + 0.6 * fine);
+  emit(under, sat(cover - scuff), 0.45 + cover * 0.1 + fine * 0.06, 0.8 + 0.2 * cover, mix(0.9, 0.62, cover), 0.0);
+}`;
+
 // texture sets: `tile` is metres per repeat (one number, or [u, v])
 Object.assign(SETS, {
   cobble: { fn: 'cobble', size: 1, tile: 2.5, bump: 5 },
@@ -156,15 +208,18 @@ Object.assign(SETS, {
   roof_copper: { fn: 'roof', size: 0.5, tile: 2, bump: 4, p: [1], seed: 2 },
   roof_membrane: { fn: 'roof', size: 0.5, tile: 3, bump: 1.5, p: [2], seed: 4 },
   leaves: { fn: 'leaves', size: 0.5, tile: 3, bump: 6 },
+  wear: { fn: 'wear', size: 1, tile: 4, bump: 0 },
 });
 
 // wet: how rain changes a surface; macro: large-scale variation. The numbers follow the library's own entries
 // for porous ground (asphalt) and for sealed surfaces (painted concrete).
+// STREET: tone drifting over several metres (amplitude, roughness, 1 / metres, grime), so a long street is not one flat shade
+const STREET = [0.5, 0.18, 0.1, 0.4];
 const POROUS = [0.45, 0.3, 0.5, 0], SEALED = [0.15, 0.55, 0.6, 0.3], MACRO = [0.22, 0.12, 0.35, 0.35];
 Object.assign(MATERIALS, {
-  cobble: def('cobble', { wet: [0.4, 0.5, 0.55, 0.2], macro: MACRO }),
-  paving: def('paving', { wet: [0.35, 0.45, 0.55, 0.1], macro: MACRO }),
-  grass: def('grass', { wet: [0.2, 0.15, 0.4, 0], macro: [0.3, 0.2, 0.3, 0.6] }),
+  cobble: def('cobble', { wet: [0.4, 0.5, 0.55, 0.2], macro: STREET }),
+  paving: def('paving', { wet: [0.35, 0.45, 0.55, 0.1], macro: STREET }),
+  grass: def('grass', { wet: [0.2, 0.15, 0.4, 0], macro: [0.4, 0.2, 0.12, 0.6] }),
   rock: def('rock', { wet: POROUS, macro: [0.3, 0.2, 0.5, 0.5] }),
   dirt: def('dirt', { wet: [0.5, 0.25, 0.5, 0], macro: MACRO }),
   gravel: def('gravel', { wet: POROUS, macro: MACRO }),
@@ -176,6 +231,12 @@ Object.assign(MATERIALS, {
   roof_copper: def('roof_copper', { wet: SEALED, macro: MACRO }),
   roof_membrane: def('roof_membrane', { wet: SEALED, macro: MACRO }),
   leaves: def('leaves', { wet: [0.1, 0.3, 0.4, 0], macro: [0.3, 0.25, 0.3, 0.7] }),
+  wear: def('wear', { tint: 3, transparent: true, wet: [0, 1, 0, 0], macro: [0, 0, 1, 0] }),
+});
+
+// the library's asphalt, with the same slow drift (their own table is for a floor of a few metres)
+Object.assign(MATERIALS, {
+  asphalt: def('asphalt', { wet: [0.45, 0.3, 0.5, 0], macro: STREET }),
 });
 
 // plain names for what the scene format calls a surface, mapped onto the library's own entries

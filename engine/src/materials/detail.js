@@ -19,9 +19,16 @@ uniform sampler2D uDtMap; uniform sampler2D uDtNrm; uniform sampler2D uDtOrm;
 uniform vec4 uDt;   // x strength, y normal, z rough mix, w ao mix
 uniform vec4 uDtA;  // rgb average colour of the set (linear), w far distance in m
 uniform vec4 uDtB;  // x 1/tile u, y 1/tile v, z base brightness, w hue kept
+uniform vec4 uDtT;  // rgb colour multiplier (warm / cool the set)
+#ifdef SL_DETAIL_ALT
+uniform sampler2D uDtMap2; uniform sampler2D uDtNrm2; uniform sampler2D uDtOrm2;
+uniform vec4 uDtC;  // x noise threshold, y softness, z noise frequency (1/m), w unused
+uniform vec4 uDtD;  // rgb average colour of the patch set, w its tone
+uniform vec4 uDtE;  // x 1/tile u, y 1/tile v, z hue kept, w 1 once the patch set is loaded
+#endif
 vec2 slDnX = vec2(0.0); vec2 slDnY = vec2(0.0); vec2 slDnZ = vec2(0.0); float slDtF = 0.0;
 vec2 dtHash(vec2 p){ p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return fract(sin(p) * 43758.5453); }
-void dtSample(vec2 q, vec2 dx, vec2 dy, out vec3 col, out vec2 nrm, out vec3 orm){
+void dtSample(sampler2D tMap, sampler2D tNrm, sampler2D tOrm, vec2 q, vec2 dx, vec2 dy, out vec3 col, out vec2 nrm, out vec3 orm){
   vec2 c = floor(q), f = q - c; const float B = 0.12;
   vec2 s = vec2(f.x < B ? -1.0 : (f.x > 1.0 - B ? 1.0 : 0.0), f.y < B ? -1.0 : (f.y > 1.0 - B ? 1.0 : 0.0));
   vec2 w1 = vec2(s.x < 0.0 ? 0.5 * (1.0 - f.x / B) : (s.x > 0.0 ? 0.5 * (1.0 - (1.0 - f.x) / B) : 0.0), s.y < 0.0 ? 0.5 * (1.0 - f.y / B) : (s.y > 0.0 ? 0.5 * (1.0 - (1.0 - f.y) / B) : 0.0));
@@ -30,10 +37,27 @@ void dtSample(vec2 q, vec2 dx, vec2 dy, out vec3 col, out vec2 nrm, out vec3 orm
     float w = (i == 0 ? 1.0 - w1.x : w1.x) * (j == 0 ? 1.0 - w1.y : w1.y);
     if (w < 0.002) continue;
     vec2 uv = q + dtHash(c + vec2(float(i) * s.x, float(j) * s.y));
-    col += w * textureGrad(uDtMap, uv, dx, dy).rgb;
-    nrm += w * (textureGrad(uDtNrm, uv, dx, dy).xy * 2.0 - 1.0);
-    orm += w * textureGrad(uDtOrm, uv, dx, dy).rgb;
+    col += w * textureGrad(tMap, uv, dx, dy).rgb;
+    nrm += w * (textureGrad(tNrm, uv, dx, dy).xy * 2.0 - 1.0);
+    orm += w * textureGrad(tOrm, uv, dx, dy).rgb;
   }
+}
+// one projection axis: the colour multiplier (relative to the set's own average, hue kept by uDtB.w), the normal and AO/rough/height; am = share of the patch set
+vec3 dtAxis(vec2 q, vec2 dx, vec2 dy, vec2 q2, vec2 dx2, vec2 dy2, float am, out vec2 nrm, out vec3 orm){
+  vec3 c, o, res = vec3(0.0); vec2 n; nrm = vec2(0.0); orm = vec3(0.0);
+  if (am < 0.999) {
+    dtSample(uDtMap, uDtNrm, uDtOrm, q, dx, dy, c, n, o);
+    float lum = max(dot(uDtA.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.02);
+    res = mix(clamp(c / max(uDtA.rgb, vec3(0.02)), 0.0, 3.0), clamp(c / lum, 0.0, 3.0), uDtB.w) * (1.0 - am); nrm = n * (1.0 - am); orm = o * (1.0 - am);
+  }
+#ifdef SL_DETAIL_ALT
+  if (am > 0.001) {
+    dtSample(uDtMap2, uDtNrm2, uDtOrm2, q2, dx2, dy2, c, n, o);
+    float lum = max(dot(uDtD.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.02);
+    res += mix(clamp(c / max(uDtD.rgb, vec3(0.02)), 0.0, 3.0), clamp(c / lum, 0.0, 3.0), uDtE.z) * (uDtD.w * am); nrm += n * am; orm += o * am;
+  }
+#endif
+  return res;
 }
 #endif
 `;
@@ -44,16 +68,23 @@ const BLOCK = `
     slDtF = uDt.x * (1.0 - smoothstep(uDtA.w * 0.55, uDtA.w, dtDist));
     vec2 dtI = uDtB.xy; vec2 dqx = vSlPos.zy * dtI, dqy = vSlPos.xz * dtI, dqz = vSlPos.xy * dtI;
     vec2 dxx = dFdx(dqx), dyx = dFdy(dqx), dxy = dFdx(dqy), dyy = dFdy(dqy), dxz = dFdx(dqz), dyz = dFdy(dqz);
+    vec2 eqx = dqx, eqy = dqy, eqz = dqz, ex1 = dxx, ey1 = dyx, ex2 = dxy, ey2 = dyy, ex3 = dxz, ey3 = dyz; float dam = 0.0;
+#ifdef SL_DETAIL_ALT
+    if (uDtE.w > 0.5 && slDtF > 0.004) {
+      float dn = slN3(vSlPos * uDtC.z) * 0.65 + slN3(vSlPos * (uDtC.z * 2.9) + 7.7) * 0.35;
+      dam = smoothstep(uDtC.x - uDtC.y, uDtC.x + uDtC.y + 1e-4, dn);
+      vec2 dtJ = uDtE.xy; eqx = vSlPos.zy * dtJ; eqy = vSlPos.xz * dtJ; eqz = vSlPos.xy * dtJ;
+      ex1 = dFdx(eqx); ey1 = dFdy(eqx); ex2 = dFdx(eqy); ey2 = dFdy(eqy); ex3 = dFdx(eqz); ey3 = dFdy(eqz);
+    }
+#endif
     if (slDtF > 0.004) {
-      vec3 dc = vec3(0.0), dorm = vec3(0.0), c1, o1; vec2 n1; float dw = 0.0;
-      if (slTw.x > 0.03) { dtSample(dqx, dxx, dyx, c1, n1, o1); dc += c1 * slTw.x; dorm += o1 * slTw.x; slDnX = n1; dw += slTw.x; }
-      if (slTw.y > 0.03) { dtSample(dqy, dxy, dyy, c1, n1, o1); dc += c1 * slTw.y; dorm += o1 * slTw.y; slDnY = n1; dw += slTw.y; }
-      if (slTw.z > 0.03) { dtSample(dqz, dxz, dyz, c1, n1, o1); dc += c1 * slTw.z; dorm += o1 * slTw.z; slDnZ = n1; dw += slTw.z; }
+      vec3 dc = vec3(0.0), dorm = vec3(0.0), o1; vec2 n1; float dw = 0.0;
+      if (slTw.x > 0.03) { dc += dtAxis(dqx, dxx, dyx, eqx, ex1, ey1, dam, n1, o1) * slTw.x; dorm += o1 * slTw.x; slDnX = n1; dw += slTw.x; }
+      if (slTw.y > 0.03) { dc += dtAxis(dqy, dxy, dyy, eqy, ex2, ey2, dam, n1, o1) * slTw.y; dorm += o1 * slTw.y; slDnY = n1; dw += slTw.y; }
+      if (slTw.z > 0.03) { dc += dtAxis(dqz, dxz, dyz, eqz, ex3, ey3, dam, n1, o1) * slTw.z; dorm += o1 * slTw.z; slDnZ = n1; dw += slTw.z; }
       dc /= dw; dorm /= dw;
-      float dLum = max(dot(uDtA.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.02);
-      vec3 dRel = clamp(dc / max(uDtA.rgb, vec3(0.02)), 0.0, 3.0), dHue = clamp(dc / dLum, 0.0, 3.0);
       float dM = 1.0 + uSlMacro.x * 2.0 * (slMac * 0.65 + slMac2 * 0.35 - 0.5);
-      vec3 dAlb = diffuse * uDtB.z * mix(dRel, dHue, uDtB.w) * dM;
+      vec3 dAlb = diffuse * uDtB.z * uDtT.rgb * dc * dM;
       diffuseColor.rgb = mix(diffuseColor.rgb, dAlb, slDtF);
       slORM.r = mix(slORM.r, dorm.r, slDtF * uDt.w);
       slORM.g = mix(slORM.g, dorm.g, slDtF * uDt.z);
@@ -96,6 +127,7 @@ export function withDetail(create) {
       const st = live.get(name);
       if (!st || !T.userData || !T.userData.sl || !T.defines || T.defines.SL_TRIPLANAR === undefined || T.userData.dt) return;
       T.userData.dt = true; T.defines.SL_DETAIL = '';
+      if (st.spec.alt) T.defines.SL_DETAIL_ALT = '';
       const prev = T.onBeforeCompile, key = T.customProgramCacheKey ? T.customProgramCacheKey() : '';
       T.onBeforeCompile = (sh, r) => {
         prev && prev(sh, r);
@@ -103,7 +135,7 @@ export function withDetail(create) {
         if (!p.ok) { console.warn('[detail] shader markers not found; detail layer off'); return; }
         sh.fragmentShader = p.src; Object.assign(sh.uniforms, st.uniforms);
       };
-      T.customProgramCacheKey = () => key + 'dt';
+      T.customProgramCacheKey = () => key + (st.spec.alt ? 'dta' : 'dt');
       T.needsUpdate = true;
     }
     mats.get = (name, opts) => {
@@ -125,7 +157,10 @@ export function withDetail(create) {
       let loaded = 0;
       for (const [name, spec] of res.materials) {
         const u = { uDtMap: { value: dummies.map }, uDtNrm: { value: dummies.nrm }, uDtOrm: { value: dummies.orm }, uDt: { value: new THREE.Vector4(0, spec.normal, spec.rough, spec.ao) },
-          uDtA: { value: new THREE.Vector4(0.3, 0.3, 0.3, Math.min(spec.far, budget.far)) }, uDtB: { value: new THREE.Vector4(1, 1, spec.base, spec.hue) } };
+          uDtA: { value: new THREE.Vector4(0.3, 0.3, 0.3, Math.min(spec.far, budget.far)) }, uDtB: { value: new THREE.Vector4(1, 1, spec.base, spec.hue) }, uDtT: { value: new THREE.Vector4(spec.tint[0], spec.tint[1], spec.tint[2], 1) } };
+        if (spec.alt) Object.assign(u, { uDtMap2: { value: dummies.map }, uDtNrm2: { value: dummies.nrm }, uDtOrm2: { value: dummies.orm },
+          uDtC: { value: new THREE.Vector4(spec.alt.threshold, spec.alt.edge, 1 / spec.alt.size, 0) }, uDtD: { value: new THREE.Vector4(0.3, 0.3, 0.3, spec.alt.tone) },
+          uDtE: { value: new THREE.Vector4(1, 1, spec.alt.hue, 0) } });
         live.set(name, { uniforms: u, spec });
         for (const T of seen.get(name) || []) attach(T, name);
       }
@@ -137,6 +172,13 @@ export function withDetail(create) {
           u.uDtMap.value = set.map; u.uDtNrm.value = set.normal || dummies.nrm; u.uDtOrm.value = set.orm;
           u.uDtA.value.set(entry.avg[0], entry.avg[1], entry.avg[2], u.uDtA.value.w); u.uDtB.value.x = 1 / tile[0]; u.uDtB.value.y = 1 / tile[1];
           u.uDt.value.x = spec.strength; loaded++; break;
+        }
+        if (spec.alt && live.get(name).uniforms.uDt.value.x > 0) for (const entry of spec.alt.entries) { // the patch set, after the main one
+          const set = await loader.load(entry);
+          if (!set) continue;
+          const u = live.get(name).uniforms, tile = [entry.tile[0] * spec.alt.scale, entry.tile[1] * spec.alt.scale];
+          u.uDtMap2.value = set.map; u.uDtNrm2.value = set.normal || dummies.nrm; u.uDtOrm2.value = set.orm;
+          u.uDtD.value.set(entry.avg[0], entry.avg[1], entry.avg[2], spec.alt.tone); u.uDtE.value.set(1 / tile[0], 1 / tile[1], spec.alt.hue, 1); loaded++; break;
         }
       }
       mats.detail = { sets: loaded, materials: [...res.materials.keys()], tier: budget.name, root };

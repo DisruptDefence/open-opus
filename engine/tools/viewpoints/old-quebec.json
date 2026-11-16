@@ -53,6 +53,14 @@
    "fov": 55
   },
   {
+   "id": "7-place-royale",
+   "what": "Place Royale, a sett square, from its north-east corner (ground texture check)",
+   "x": 322,
+   "z": -128,
+   "heading": 235,
+   "pitch": 6
+  },
+  {
    "id": "8-frontenac",
    "what": "The Château Frontenac from Rue du Fort / Place d'Armes: tower, turrets, copper roofs",
    "x": 126,
@@ -60,6 +68,14 @@
    "heading": 183,
    "pitch": 16,
    "fov": 62
+  },
+  {
+   "id": "8-sett-street",
+   "what": "Rue Notre-Dame / Sous-le-Fort, a sett street in the lower town, at street level",
+   "x": 302,
+   "z": -105,
+   "heading": 180,
+   "pitch": 5
   },
   {
    "id": "9-terrasse",
