@@ -36,10 +36,10 @@ void surf(vec2 uv){
   float solid = max(isFrame, bar);
   float sky = smoothstep(0.0, 1.0, q.y);
   float refl = fbm(q * vec2(1.0, 2.0), vec2(3.0, 5.0), 3, 103.0);
-  vec3 glass = mix(L(0.030, 0.040, 0.055), L(0.16, 0.21, 0.27), sky * 0.7 + refl * 0.5);
-  if (shop) glass = mix(L(0.16, 0.11, 0.06), L(0.20, 0.26, 0.32), smoothstep(0.1, 0.8, q.y) * 0.8 + refl * 0.3);   // a lit shop behind the pane
+  vec3 glass = mix(L(0.055, 0.060, 0.065), L(0.34, 0.40, 0.46), sky * 0.75 + refl * 0.4);
+  if (shop) glass = mix(L(0.30, 0.22, 0.13), L(0.30, 0.36, 0.42), smoothstep(0.1, 0.8, q.y) * 0.8 + refl * 0.3);   // a lit shop behind the pane
   float curtain = smoothstep(0.62, 0.7, fbm(q, vec2(2.0, 1.0), 3, 104.0)) * (shop ? 0.0 : 0.6) * step(q.y, 0.55);
-  glass = mix(glass, L(0.30, 0.26, 0.20), curtain * 0.5);
+  glass = mix(glass, L(0.62, 0.58, 0.50), curtain * 0.7);
   vec3 paint = L(0.88, 0.87, 0.84) * (0.9 + 0.2 * fine);
   vec3 col = mix(glass, paint, solid);
   float inner = smoothstep(0.0, 0.12, frameD) * (1.0 - isFrame);
@@ -55,7 +55,7 @@ void surf(vec2 uv){
   float glazed = panel * step(0.667, uv.y);
   vec3 wood = L(0.86, 0.85, 0.82) * (0.88 + 0.2 * fine);
   vec3 col = mix(wood, wood * 0.82, panel);
-  vec3 gl = mix(L(0.02, 0.03, 0.04), L(0.10, 0.13, 0.17), uv.y);
+  vec3 gl = mix(L(0.05, 0.055, 0.06), L(0.26, 0.31, 0.36), uv.y);
   col = mix(col, gl, glazed);
   float knob = smoothstep(0.03, 0.02, length(uv - vec2(0.85, 0.5)));
   col = mix(col, L(0.5, 0.42, 0.2), knob);
