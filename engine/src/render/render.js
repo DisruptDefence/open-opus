@@ -10,6 +10,7 @@ import {
   DataUtils,
   DepthTexture,
   DirectionalLight,
+  HemisphereLight,
   FloatType,
   HalfFloatType,
   LinearFilter,
@@ -41,6 +42,7 @@ import {
   WebGLRenderTarget,
   WebGLRenderer,
 } from '../../vendor/three.module.js';
+import { DEFAULT_LOOK } from '../core/atmosphere.js';
 import { BODY, QUALITY_TIERS, SKY, SUN, vf, zc } from '../shared/lifted.js';
 
 export var Ug = `
@@ -581,6 +583,8 @@ uniform vec3 uSunCol;
 uniform vec2 uSunUv;
 uniform float uTime, uAspect, uBloom, uDirt, uStreak, uFlare, uCA, uVignette;
 uniform float uDamage, uLowHealth, uAds, uFlash, uFade, uSaturation, uSunOn, uThunder, uAgxMix;
+uniform vec3 uGradeSh, uGradeHi, uGradeLift;
+uniform float uGradeGain, uGradeCurve, uGradeSat;
 
 // ---- AgX (Filament/Blender fit, as in three.js) ----
 const mat3 SL_REC2020_TO_SRGB = mat3(vec3(1.6605, -0.1246, -0.0182), vec3(-0.5876, 1.1329, -0.1006), vec3(-0.0728, -0.0083, 1.1187));
@@ -659,15 +663,12 @@ void main(){
 
   // ---- grade (display-linear) ----
   float l = luma(col);
-  // split tone: teal shadows, warm highlights
-  vec3 sh = vec3(0.80, 1.01, 1.13), hi = vec3(1.07, 1.0, 0.90);
-  col *= mix(sh, hi, smoothstep(0.03, 0.55, l));
-  // gentle S-curve
-  col = mix(col, col * col * (3.0 - 2.0 * col), 0.22);
-  // lifted, slightly teal blacks
-  col = col * 0.988 + vec3(0.006, 0.0085, 0.011);
-  // saturation (gameplay driven)
-  float sat = uSaturation * (1.0 - 0.65 * uLowHealth) * (1.0 - 0.5 * uDamage);
+  // split tone, S-curve, gain and lift: all from the look (uGrade*)
+  col *= mix(uGradeSh, uGradeHi, smoothstep(0.03, 0.55, l));
+  col = mix(col, col * col * (3.0 - 2.0 * col), uGradeCurve);
+  col = col * uGradeGain + uGradeLift;
+  // saturation (gameplay driven, times the look's)
+  float sat = uSaturation * uGradeSat * (1.0 - 0.65 * uLowHealth) * (1.0 - 0.5 * uDamage);
   l = luma(col);
   col = mix(vec3(l), col, sat);
   // vignette: base + low health + ADS tightening
@@ -784,8 +785,8 @@ ${fe}`,
       maxExposure: 2,
       adaptTau: 1.5,
       agxMix: 0.25,
-      ca: 0.0013,
-      vignette: 0.3,
+      ca: DEFAULT_LOOK.ca,
+      vignette: DEFAULT_LOOK.vignette,
       grain: 0.02,
       sharpen: 0.3,
       lookPower: 1.18,
@@ -957,6 +958,12 @@ ${fe}`,
         uSunOn: { value: 0 },
         uThunder: { value: 0 },
         uAgxMix: { value: g.agxMix },
+        uGradeSh: { value: new Vector3(...DEFAULT_LOOK.shadows) },
+        uGradeHi: { value: new Vector3(...DEFAULT_LOOK.highlights) },
+        uGradeLift: { value: new Vector3(...DEFAULT_LOOK.lift) },
+        uGradeGain: { value: DEFAULT_LOOK.gain },
+        uGradeCurve: { value: DEFAULT_LOOK.curve },
+        uGradeSat: { value: 1 },
       },
       { defines: { LOOK_POWER: g.lookPower.toFixed(3), LOOK_SAT: g.lookSat.toFixed(3) } },
     ),
@@ -1247,6 +1254,17 @@ ${fe}`,
     rt: y,
     size: M,
     TUNE: g,
+    /** OPUS: the look's grade, haze and bloom. The per-frame settings in `g` are read every frame; the rest are written here. */
+    setLook(k) {
+      const gu = Q.uniforms;
+      (gu.uGradeSh.value.set(...k.shadows), gu.uGradeHi.value.set(...k.highlights), gu.uGradeLift.value.set(...k.lift));
+      ((gu.uGradeGain.value = k.gain), (gu.uGradeCurve.value = k.curve), (gu.uGradeSat.value = k.saturation));
+      Object.assign(g, { key: k.key, minExposure: k.minExposure, maxExposure: k.maxExposure, vignette: k.vignette, ca: k.ca, grain: k.grain, sharpen: k.sharpen, bloom: k.bloom, agxMix: k.agx, volFarHaze: k.farHaze, volSigma: k.fogSigma });
+      (E.uKey.value = g.key, E.uMinE.value = g.minExposure, E.uMaxE.value = g.maxExposure);
+      (H.uniforms.uSigma.value = g.volSigma, H.uniforms.uFarHaze.value = g.volFarHaze);
+      (Q.uniforms.uCA.value = g.ca, Q.uniforms.uVignette.value = g.vignette, Q.uniforms.uBloom.value = g.bloom, Q.uniforms.uAgxMix.value = g.agxMix);
+      (K.uniforms.uGrain.value = g.grain, K.uniforms.uSharpen.value = g.sharpen);
+    },
     autoExposure: !0,
     pass: l,
     quad: s,
@@ -1335,6 +1353,10 @@ export async function createRender(i) {
     (h.shadow.radius = 1),
     (h.shadow.autoUpdate = !0),
     r.add(h, h.target));
+  // OPUS: ground bounce, light arriving from below (the look's `bounce`); off while it is black
+  let bounce = new HemisphereLight(0x000000, 0x000000, 1),
+    lookExposure = 1;
+  ((bounce.name = 'bounce'), (bounce.visible = !1), r.add(bounce));
   let d = !1;
   try {
     d = qy(f, { taps: i.quality.name === 'low' ? 10 : 16, searchTaps: 8 });
@@ -1491,7 +1513,7 @@ export async function createRender(i) {
   }
   function G() {
     (n.toneMapping !== ACESFilmicToneMapping && (n.toneMapping = ACESFilmicToneMapping),
-      (n.toneMappingExposure = 0.6 * N.exposure * (1 - Math.min(1, Math.max(0, N.post.fade)))),
+      (n.toneMappingExposure = 0.6 * N.exposure * lookExposure * (1 - Math.min(1, Math.max(0, N.post.fade)))),
       n.setRenderTarget(null),
       n.clear(),
       (n.shadowMap.needsUpdate = !0),
@@ -1533,7 +1555,7 @@ export async function createRender(i) {
         sun: h,
         dt: ie,
         post: N.post,
-        exposure: N.exposure,
+        exposure: N.exposure * lookExposure,
         time: i.time ? i.time.t : T / 60,
         fast: M,
         thunder: w.value,
@@ -1599,6 +1621,12 @@ export async function createRender(i) {
             (n.toneMapping = re),
             (n.toneMappingExposure = $));
         }
+      },
+      // OPUS: the look (core/atmosphere.js DEFAULT_LOOK): grade, post settings, environment, exposure factor, bounce light.
+      setLook(k) {
+        ((N.look = k), (lookExposure = k.exposure));
+        (A && A.setLook && A.setLook(k), (r.environmentIntensity = Jy * k.env));
+        (bounce.groundColor.setRGB(k.bounce[0], k.bounce[1], k.bounce[2]), (bounce.visible = k.bounce.some((v) => v > 0)));
       },
       // OPUS: sun, sky and haze as data. SUN and SKY are shared objects: the sky, the post chain and the weapon
       // read them through their uniforms, so writing them here moves everything together.
