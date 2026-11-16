@@ -557,3 +557,11 @@ pointer lock in a real browser; touch.
 5. **Where ambience lives**: scene or pack.
 6. **`core/session.js` and `core/clock.js`** have no named owner between the two running branches; this plan
    gives `session.js` to item A.
+
+## Decisions taken by the maintainer (2026-11-16)
+
+1. **Threat figures: lift the two machine rigs** from the stand-in (item J), as mechanisms and models driven by the
+   archetype data; item J starts once items C and A are merged.
+2. **Threats are both machines and people.** The machine kinds stay; human threats are added as archetypes of the
+   same system (perception, warning, turns to shoot, cover). Human figures need a source of models and animation,
+   which is not chosen yet: until it is, a human archetype uses a plain figure and says so.
