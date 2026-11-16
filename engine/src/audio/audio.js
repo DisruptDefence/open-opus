@@ -1856,6 +1856,10 @@ export async function createAudio(i) {
   return t ? u_(i, t, null) : (console.warn('[audio] WebAudio unavailable \u2014 running silent'), iC());
 }
 export function u_(i, e, t) {
+  // The ambient bed is the place's, not the stand-in's rainy container port: rain follows the scene's wetness (0 = dry),
+  // the sea is off unless the pack says so, wind has a level. Pack: content.sounds.bed = { rain: 'wet' | 0..1, sea: 0..1, wind: 0..1 }.
+  const bed = (k, d) => { const b = (i.content && i.content.sounds && i.content.sounds.bed) || {}; const v = b[k]; return typeof v === 'number' ? v : d; },
+    bedRain = () => { const b = (i.content && i.content.sounds && i.content.sounds.bed) || {}; const v = b.rain; return typeof v === 'number' ? v : Math.max(0, Math.min(1, +((i.mats && i.mats.uniforms && i.mats.uniforms.wet && i.mats.uniforms.wet.value) || 0))); };
   let n = i.events,
     s = Math.random,
     o = () => (t ? !0 : e.state === 'running'),
@@ -2628,11 +2632,11 @@ export function u_(i, e, t) {
       (w.gain.value = me),
       (nn -= te) <= 0 && ((nn = 3 + s() * 6), (ut = 0.12 + s() * 0.88)),
       (pt += (ut - pt) * ye(0.5)),
-      Oe.rain.setGain(fe * (1 - 0.93 * P) * 0.95),
-      Oe.rainIn.setGain(fe * P * 0.95),
-      Oe.wind.setGain(fe * (0.3 + 0.7 * pt) * (1 - 0.65 * P) * 0.75),
+      Oe.rain.setGain(fe * (1 - 0.93 * P) * 0.95 * bedRain()),
+      Oe.rainIn.setGain(fe * P * 0.95 * bedRain()),
+      Oe.wind.setGain(fe * (0.3 + 0.7 * pt) * (1 - 0.65 * P) * 0.75 * bed('wind', 0.75) / 0.75),
       Oe.wind.setPitch(0.9 + 0.25 * pt),
-      Oe.sea.setGain(fe * (1 - 0.5 * P) * 1),
+      Oe.sea.setGain(fe * (1 - 0.5 * P) * bed('sea', 0)),
       Oe.sea.setPos([33, -1, pi(re.z, -28, 26)]),
       ue || zo(te),
       (Y = Math.max(0, Y - te * (pn.size ? 0.045 : 0.14))));

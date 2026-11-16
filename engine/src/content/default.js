@@ -97,7 +97,7 @@ export const DEFAULT_PACK = {
   weapons: { carbine: { name: 'Carbine', magSize: 30, reserve: 150, rpm: 720, damage: 26, range: 300, weakMultiplier: 2.2, view: 'carbine' } },
   loadout: ['carbine'],
   player: {},
-  sounds: { threats: { ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 }, air: { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 } } },
+  sounds: { bed: { rain: 'wet', sea: 0, wind: 0.75 }, threats: { ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 }, air: { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 } } },
   hud: {
     elements: ['markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
     words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' },

@@ -76,3 +76,5 @@ The names are those of the engine's own synthesised sound table (`ground_fire`, 
 a new sound yet, only choose among the engine's. The port's sounds of the stand-in (horn, gulls, halyards, relay
 hum, container bang) and its mission-end jingle are not in the engine. Ambience by scene is not built.
 <!-- /sound -->
+
+**Ambient sound bed** (`sounds.bed`): `{ rain: 'wet' | 0..1, sea: 0..1, wind: 0..1 }`. The lifted audio module was written for a rainy container port (rain loop, sea at a fixed spot, always on). Default now: `rain: 'wet'` follows the scene's wetness (0 = dry, silent), `sea: 0` is off, `wind: 0.75` is the old level. A place with water or weather says so in its pack.
