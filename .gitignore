@@ -6,3 +6,5 @@ dist/
 .env
 phone/local/vendor/
 __pycache__/
+__pycache__/
+*.pyc
