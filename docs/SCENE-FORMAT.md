@@ -222,7 +222,7 @@ builder (`docs/plans/SCENE-DETAIL.md` item 2). An older reader ignores every key
 | `h` | | top of the roof above `g`; `hs` is `"measured"` (HRDEM surface model, 90th percentile over a 1 m lattice), `"tag"`, `"levels"` or `"rule"` (`heightSource` 0 to 3) |
 | `rh` | `hRoof` | roof above the eave, always written (0 for flat) |
 | `rs`, `rmt`, `fa`, `use` | `roofShape`, `roofMat`, `facade`, `use` | the enums above, resolved by the builder from tags, else by the style pack's weighted rule seeded with `id` |
-| `rd` | `roofDir` | ridge bearing from grid north, whole degrees 0 to 179 (2° steps in the chunked field); 255 = along the longest side |
+| `rd` | `roofDir` | ridge bearing from grid north, whole degrees 0 to 179 (2° steps in the chunked field); 255 = along the longest side. From the OSM tags `roof:direction` is the way the roof face looks, so the ridge runs perpendicular to it (+90°); `roof:orientation` `along` and `across` give the ridge along the long or the short side |
 | `rp`, `pal` | `roofPalette`, `palette` | index into the scene's `style.roofs[<roofMat>]` and `style.palettes[<facade>]` |
 | `lv` | `levels` | storeys below the eave, always written |
 | `blind` | | edges with no openings: edge `i` runs from ring vertex `i` to `i + 1`, wrapping; a party wall, or a wall within 0.6 m of another building |

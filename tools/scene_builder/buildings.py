@@ -85,8 +85,63 @@ def lattice(ring: list, holes: list, step: float = 1.0) -> list[tuple[float, flo
     return out
 
 
+def inradius(ring: list, holes: list, lat: list) -> float:
+    """The footprint's true inradius: the largest distance from an interior point to the nearest edge. Found on the
+    1 m lattice, then refined on a 0.1 m grid around the best point."""
+    edges = ring_edges(ring) + [e for h in holes for e in ring_edges(h)]
+
+    def d_at(x: float, z: float) -> float | None:
+        if not inside((x, z), ring) or any(inside((x, z), h) for h in holes):
+            return None
+        return min(seg_dist(x, z, a[0], a[1], b[0], b[1]) for a, b in edges)
+
+    if not lat:
+        return 0.0
+    bx, bz, best = max(lat, key=lambda p: p[2])
+    for i in range(-10, 11):
+        for j in range(-10, 11):
+            d = d_at(bx + i * 0.1, bz + j * 0.1)
+            if d is not None and d > best:
+                best = d
+    return best
+
+
+def fit_line(pts: list[tuple[float, float]]) -> tuple[float, float] | None:
+    """Least-squares height = a + b d, after dropping the points far from the median residual of the fit
+    (chimneys, dormers, overhanging trees, the high ends of a ridge), in passes of 2.5, 1.0 and 0.5 m while at
+    least 4 points on 2 distances remain. Returns (a, b)."""
+    def ls(p):
+        n = len(p)
+        sx, sy = sum(q[0] for q in p), sum(q[1] for q in p)
+        sxx, sxy = sum(q[0] * q[0] for q in p), sum(q[0] * q[1] for q in p)
+        den = n * sxx - sx * sx
+        if n < 3 or den < 1e-9:
+            return None
+        b = (n * sxy - sx * sy) / den
+        return (sy - b * sx) / n, b
+
+    f = ls(pts)
+    if f is None:
+        return None
+    keep = pts
+    for limit in (2.5, 1.0, 0.5):    # each pass drops what stands off the median residual by more than `limit`
+        res = [q[1] - (f[0] + f[1] * q[0]) for q in keep]
+        med = pct(res, 0.5)
+        kept = [q for q, r in zip(keep, res) if abs(r - med) <= limit]
+        g = ls(kept) if len(kept) >= 4 and len({round(q[0], 1) for q in kept}) >= 2 else None
+        if g is None:
+            break
+        keep, f = kept, g
+    return f
+
+
 def measure(ctx, ring: list, holes: list, g: float) -> dict | None:
-    """Top, eave and the samples of a roof from the surface model, or None when it does not give a usable roof."""
+    """The roof from the surface model: ridge (top), eave and rise, or None when it does not give a usable roof.
+
+    Samples are the 1 m lattice points at least 1 m inside the footprint (all inside points when fewer than 6).
+    The eave is the value at d = 0 of a robust line fit of height against the distance d to the nearest edge; the
+    ridge is the 95th percentile of the samples, or the fitted line carried to the true inradius when the lattice
+    is too coarse to reach the middle of a narrow roof."""
     pts = lattice(ring, holes)
     core = [p for p in pts if p[2] >= 1.0]
     use = core if len(core) >= 6 else pts
@@ -97,12 +152,29 @@ def measure(ctx, ring: list, holes: list, g: float) -> dict | None:
             samples.append((x, z, s - g, d))
     if len(samples) < 6:
         return None
-    top = pct([s[2] for s in samples], 0.90)
-    if not 3.0 <= top <= 150.0:
+    hs = [s[2] for s in samples]
+    ridge = pct(hs, 0.95)
+    dmax = inradius(ring, holes, pts)
+    band = [(s[3], s[2]) for s in samples if 1.0 <= s[3] <= min(4.0, 0.6 * dmax)]
+    if len({round(q[0], 1) for q in band}) < 2:   # a 1 m lattice on a narrow roof can hit one distance only: reach further in
+        band = [(s[3], s[2]) for s in samples if 1.0 <= s[3] <= min(4.0, 0.95 * dmax)]
+    f = fit_line(band) if len(band) >= 4 else None
+    p20 = pct(hs, 0.20)
+    slope = f[1] if f else 0.0
+    if f:
+        eave = min(f[0], p20 + 0.5)
+        if slope >= 0.25 and sum(1 for s in samples if s[3] >= 0.8 * dmax) < 2:
+            ridge = max(ridge, f[0] + slope * dmax)
+    else:
+        eave = p20
+    eave = max(eave, 2.2)
+    if not 3.0 <= ridge <= 150.0:
         return None
-    band = [s[2] for s in samples if 1.0 <= s[3] <= 2.5]
-    eave = pct(band, 0.25) if len(band) >= 4 else top
-    return {"top": top, "eave": eave, "rise": max(0.0, top - eave), "samples": samples}
+    eave = min(eave, ridge)
+    rise = max(0.0, ridge - eave)
+    if slope < 0.08 and rise < 0.8:
+        rise = 0.0
+    return {"top": ridge, "eave": eave, "rise": rise, "slope": slope, "samples": samples}
 
 
 def pitch_class(rise: float, w: float) -> str:
@@ -303,6 +375,7 @@ def build(ctx) -> dict:
     roads = road_index(ctx.layers.get("roads", []))
     have_surface = getattr(ctx, "surface_model", True)
 
+    pitches = {"flat": 0, "low": 0, "steep": 0}
     stats = {"measured": 0, "roofShape": 0, "facade": 0, "blind": 0, "front": 0}
     buildings, parts = [], []
     for i, ft in enumerate(fts):
@@ -335,6 +408,8 @@ def build(ctx) -> dict:
         h = max(2.0, h)
         rise = m["rise"] if m else None
         pitch = pitch_class(rise, w_half) if m else None
+        if pitch:
+            pitches[pitch] += 1
         if hs == "measured":
             stats["measured"] += 1
 
@@ -434,7 +509,8 @@ def build(ctx) -> dict:
     parts_mod.mark(buildings, parts)
     _rules(ctx, have_surface)
     ctx.stats = {"measured": stats["measured"], "roof_shape_from_style": stats["roofShape"], "facade": stats["facade"],
-                 "with_blind_edges": stats["blind"], "with_front_edges": stats["front"], "records": len(fts)}
+                 "with_blind_edges": stats["blind"], "with_front_edges": stats["front"], "records": len(fts), "pitch_classes": pitches,
+                 "ridge_direction_measured": sum(1 for b in buildings + parts if b["rd"] != 255)}
     return {"buildings": buildings + parts}
 
 
@@ -443,8 +519,9 @@ def _rules(ctx, have_surface: bool) -> None:
     s = ctx.style.storey
     r["building_height"] = (
         "Height `h` is the top of the roof above `g`, the lowest ground at the footprint. In order: OSM height (`hs` tag); the "
-        "measured height (`hs` measured): the 90th percentile of the HRDEM surface model minus `g` over a 1 m lattice inside the "
-        f"footprint, 1 m clear of its edges, kept when it lies between 3 and 150 m; building:levels × {s} m (levels); by kind: "
+        "measured height (`hs` measured): the 95th percentile of the HRDEM surface model minus `g` over a 1 m lattice inside the "
+        "footprint, 1 m clear of its edges (on a narrow roof the fitted roof slope is carried to the footprint's inradius when "
+        f"that is higher), kept when it lies between 3 and 150 m; building:levels × {s} m (levels); by kind: "
         "church/cathedral/chapel 18 m, hotel/civic/school/university/government/public 16 m, garage/shed/hut/roof/kiosk 3 m, "
         "footprint over 1500 m² 15 m, under 40 m² 4 m, otherwise 10.5 m (rule)."
         + ("" if have_surface else " No surface model covered this place, so nothing was measured."))
@@ -457,10 +534,12 @@ def _rules(ctx, have_surface: bool) -> None:
                             "roof:orientation where tagged; else, for a measured gabled, gambrel or skillion roof, the axis of "
                             "the oriented footprint along which the roof stays level, when height and distance from that "
                             "axis correlate below -0.3; otherwise 255 (along the longest side).")
-    r["roof_height"] = ("`rh` is the roof above the eave: roof:height where tagged; else the measured rise (surface top minus the "
-                        "25th percentile of the surface 1 to 2.5 m inside the edges), at least 0.8 m and at most 0.9 h - 2.4 m; "
-                        "mansard 3.2 m when not measured, at most 4.2 m; else half the footprint width × tan of the style's pitch, "
-                        "between 1.2 m and 0.45 h. Flat roofs 0.")
+    r["roof_height"] = ("`rh` is the roof above the eave: roof:height where tagged; else the measured rise: the ridge minus the eave, "
+                        "the eave being a straight line fitted to the surface height against the distance to the nearest wall "
+                        "(samples 1 to 4 m in, outliers dropped) and read at the wall, at least 2.2 m above ground and at most "
+                        "0.5 m above the 20th percentile of the roof; clamped to 0.8 m and 0.9 h - 2.4 m; a roof whose fit rises "
+                        "less than 0.08 m per m and whose rise is under 0.8 m is flat (0). Mansard 3.2 m when not measured, at "
+                        "most 4.2 m; else half the footprint width × tan of the style's pitch, between 1.2 m and 0.45 h.")
     r["levels"] = f"`lv` is building:levels where tagged, else the eave height divided by the style's storey height ({s} m), at least 1."
     r["facade"] = ("`fa` and `rmt`: building:material and roof:material where tagged (a green roof:colour means copper); else the "
                    "style pack's weighted pick. `pal` and `rp` are seeded picks within the style's colour list; the town is "

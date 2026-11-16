@@ -451,14 +451,23 @@ built of, how many storeys, which walls are blind and which face a street.
 **Algorithm**, per building ring (parts too), in `buildings.py`:
 
 1. `g` = lowest `ground()` on the ring vertices (as today).
-2. **Measured height.** Sample `surface_height − g` on a 1 m lattice of points inside the ring and at least 1.0 m
-   from every edge (if fewer than 6 such points, use all points inside). `top` = 90th percentile (trees
-   overhanging a roof and antennae are the top tail). `eave` = 25th percentile of the samples lying between 1.0
-   and 2.5 m from the nearest edge (if fewer than 4, `eave = top`). Accept the measurement when `3 ≤ top ≤ 150`
-   and at least 6 samples: then `h = top`, `hs = "measured"`, `pitchRise = max(0, top − eave)`. Precedence for
-   `h`: tagged `height` (minus nothing; `hs: "tag"`), else measured, else `levels × storey` (`"levels"`), else
-   the rule of today (`"rule"`). A building part with `building:levels` and no tagged height uses the measured
-   value of *its own ring*.
+2. **Measured height** (rewritten 2026-11-16: reading the eave 1 to 2.5 m inside the wall and the ridge off the
+   lattice gave a rise about half the true one). Sample `surface_height − g` on a 1 m lattice of points inside the
+   ring and at least 1.0 m from every edge (if fewer than 6 such points, use all points inside); each sample has
+   its distance `d` to the nearest edge, and `dmax` is the footprint's true inradius, computed from the polygon.
+   (a) **Eave** = the value at `d = 0` of a robust line fit of height against `d` over the samples with
+   `1 ≤ d ≤ min(4, 0.6 dmax)` (if they lie on fewer than two distinct distances, up to `min(4, 0.95 dmax)`; least
+   squares, then passes that drop the samples more than 2.5, 1.0 and 0.5 m off the median residual while at least 4
+   samples on 2 distances remain: chimneys, dormers, overhanging trees, the high ends of a ridge); clamped to at
+   most the 20th percentile of all samples + 0.5 m and at least 2.2 m. With fewer than 4 samples in the band,
+   the eave is that 20th percentile. (b) **Ridge** = the 95th percentile of the samples; where the fit's slope is at
+   least 0.25 m/m and fewer than two samples have `d ≥ 0.8 dmax` (the lattice missed the middle of a narrow roof),
+   the larger of that and the fit carried to `d = dmax`. (c) Accept the measurement when `3 ≤ ridge ≤ 150` and at
+   least 6 samples: then `h = ridge`, `hs = "measured"`, `pitchRise = ridge − eave`, which is 0 when the fit's slope is
+   below 0.08 m/m and the rise below 0.8 m (a flat roof). Precedence for `h`: tagged `height` (minus nothing;
+   `hs: "tag"`), else measured, else `levels × storey` (`"levels"`), else the rule of today (`"rule"`). A building
+   part with `building:levels` and no tagged height uses the measured value of *its own ring*. Known limit: a
+   rooftop structure covering more than 5 % of the roof reads as a ridge.
 3. **Pitch class.** With `W` = half-width of the ring's oriented bounding box (5): `flat` when `pitchRise < 1.0`
    or `pitchRise / W < 0.12`; `steep` when `pitchRise / W ≥ 0.6`; else `low`. Not measured → no pitch class.
 4. **Roof shape `rs`.** Tagged `roof:shape` wins (`sheded`/`skillion` → 5, `gambrel` → 8, `round`/`onion` → 6,
@@ -474,7 +483,8 @@ built of, how many storeys, which walls are blind and which face a street.
    −0.3; write its bearing rounded to a degree in 0–179. Otherwise 255.
 7. **Roof height `rh`.** Tagged `roof:height`, else measured `pitchRise` clamped to `[0.8, 0.9 × h − 2.4]` for a
    pitched shape (0 for flat), else `W × tan(roofPitchDeg[shape])` clamped to `[1.2, 0.45 × h]`; mansard:
-   `min(pitchRise or 3.2, 4.2)`. Then `eaveH = h − rh`.
+   `min(pitchRise or 3.2, 4.2)`. Then `eaveH = h − rh`. (A mansard's lower slope lies mostly inside the 1 m margin, so its
+   measured eave sits a little high.)
 8. **Levels `lv`.** Tagged `building:levels` (minus `roof:levels` when the tag counts them: OSM levels exclude
    roof levels, so use as is), else `max(1, round(eaveH / storeyHeight.default))`. If the tagged levels would
    make a storey outside `[min, max]` of the style, keep the tag and note nothing: the reader stretches storeys.
@@ -504,8 +514,8 @@ updated with section 3.1 of this plan.
 
 **Tests** (synthetic `ctx`, no network):
 
-- A 10 × 8 ring on flat ground with a surface model that is a gable (ridge along x, eave 6 m, ridge 9 m): `h`
-  within 0.3 of 9, `hs == "measured"`, `rh` within 0.5 of 3, pitch `steep` (3 / 4 = 0.75), `rd` = 90, `lv` = 2.
+- A 10 × 8 ring on flat ground with a surface model that is a gable (ridge along x, eave 6 m, ridge 9 m): eave
+  within 0.4 of 6, ridge (`h`) within 0.4 of 9, `hs == "measured"`, `rh` within 0.6 of 3, pitch `steep` (3 / 4 = 0.75), `rd` = 90, `lv` = 2.
 - The same with a flat surface at 7 m: pitch `flat`, `rs == 0`, `rh == 0`, `h` within 0.2 of 7.
 - No surface model: `hs` is `levels` or `rule`, `rd == 255`, no pitch class, and a rule with `"pitch"` in `when` is not chosen.
 - Two 10 × 8 rings sharing an edge: that edge is in `blind` of both and no other edge is.
@@ -514,7 +524,7 @@ updated with section 3.1 of this plan.
 - On the real cache: at least 85 % of buildings `measured`; at most 2 % with `h > 60`; the standard deviation
   of `h` over buildings exceeds 3 m (the town is no longer one height); every `blind`/`front` index < vertex count.
 
-**Budget.** ≤ 110 bytes added per building (≤ 0.12 MB). **Proof.** With item 3 merged: views 1, 5, 6: heights
+**Budget.** ≤ 125 bytes added per building (≤ 0.12 MB): `rd` and `gf` are always written, so the reader needs no defaults for them. **Proof.** With item 3 merged: views 1, 5, 6: heights
 vary along a street; the overview shows the measured skyline. **Done** when the tests pass and the scene's
 `rules` block explains every invented value.
 

@@ -45,6 +45,10 @@ def run(features, surface=None, roads=(), pois=(), st=None):
     return buildings.build(ctx)["buildings"], ctx
 
 
+def mk_ctx(surface):
+    return Ctx(place=None, style=test_style(), osm=[], game=None, geo=None, ground=lambda x, z: 0.0, surface_height=surface, ext={}, play={})
+
+
 def gable(eave, ridge, half=4.0):
     """A roof whose ridge runs along x, centred on z = 0."""
     return lambda x, z: eave + (ridge - eave) * max(0.0, 1 - abs(z) / half)
@@ -61,16 +65,47 @@ class Heights(unittest.TestCase):
         self.assertGreaterEqual(b["rh"], 2.5)
         self.assertEqual(b["lv"], max(1, round((b["h"] - b["rh"]) / 3.0)))
 
-    def test_the_plans_gable_of_6_to_9_m_is_measured_to_within_the_lattice(self):
-        (b,), _ = run([ft(ccw(0, -4, 10, 4))], surface=gable(6, 9))
+    def test_the_plans_gable_of_6_to_9_m(self):
+        ring = ccw(0, -4, 10, 4)
+        m = buildings.measure(mk_ctx(gable(6, 9)), ring, [], 0.0)
+        self.assertLess(abs(m["eave"] - 6), 0.4)
+        self.assertLess(abs(m["top"] - 9), 0.4)
+        (b,), _ = run([ft(ring)], surface=gable(6, 9))
         self.assertEqual(b["hs"], "measured")
-        # a 1 m lattice 1 m inside the edges cannot reach the ridge line: the 90th percentile of the samples is 8.6
-        self.assertLess(abs(b["h"] - 9), 0.5)
+        self.assertLess(abs(b["rh"] - 3), 0.6)
+        self.assertEqual(b["rs"], 1, "steep (rise / half width >= 0.6): the style's steep rule gives a gable")
+        self.assertEqual(b["rd"], 90)
         self.assertEqual(b["lv"], 2)
-        # The plan also expects rh = 3 (+-0.5), pitch steep and rd = 90 here. The algorithm as written cannot give
-        # that: the eave is read 1 to 2.5 m inside the wall, where this roof is already 0.75 to 1.9 m above its
-        # eave, so the measured rise is 1.5 m (pitch "low", rd 255). Reported as an open question, not tuned.
-        self.assertLess(abs(b["rh"] - 1.5), 0.3)
+
+    def test_a_mansard_reads_as_a_steep_slope_with_a_near_flat_top(self):
+        def mansard(x, z):
+            d = min(x, 16 - x, z + 6, 6 - z)
+            return 6 + 1.5 * d if d < 3 else 10.5 + 0.05 * (d - 3)
+        m = buildings.measure(mk_ctx(mansard), ccw(0, -6, 16, 6), [], 0.0)
+        self.assertLess(abs(m["eave"] - 6), 0.8)
+        self.assertLess(abs(m["top"] - 10.5), 0.6)
+        self.assertGreaterEqual(m["rise"], 3.5)
+
+    def test_a_flat_roof_with_a_parapet_and_a_rooftop_box_stays_flat(self):
+        def roof(x, z):
+            h = 7.0
+            if min(x, 16 - x, z + 6, 6 - z) < 0.4:
+                h += 1.5                                   # the parapet
+            if 6 < x < 7.5 and -0.75 < z < 0.75:
+                h += 2.5                                   # a mechanical box
+            return h
+        ring = ccw(0, -6, 16, 6)
+        m = buildings.measure(mk_ctx(roof), ring, [], 0.0)
+        self.assertEqual(m["rise"], 0.0)
+        (b,), _ = run([ft(ring)], surface=roof)
+        self.assertEqual((b["rs"], b["rh"]), (0, 0.0))
+
+    def test_a_chimney_spike_does_not_move_the_ridge(self):
+        g = gable(6, 9)
+        spike = lambda x, z: g(x, z) + (3.0 if (x, z) == (5.5, 0.5) else 0.0)  # noqa: E731
+        ring = ccw(0, -4, 10, 4)
+        a, b = (buildings.measure(mk_ctx(f), ring, [], 0.0) for f in (g, spike))
+        self.assertLess(abs(a["top"] - b["top"]), 0.3)
 
     def test_a_flat_roof(self):
         (b,), _ = run([ft(ccw(0, -4, 10, 4))], surface=lambda x, z: 7.0)
