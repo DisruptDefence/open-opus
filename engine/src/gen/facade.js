@@ -33,7 +33,7 @@ import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.j
 import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor } from './style.js';
 import { signedArea, obb } from './poly.js';
 
-const MARGIN = 0.45, DARK = [0.012, 0.012, 0.013];
+const MARGIN = 0.45;
 export function bays(len, style, seed) {
   const [lo, hi] = style.window.bay, width = lo + (hi - lo) * rng(seed)(), n = Math.max(0, Math.floor((len - 2 * MARGIN) / width));
   return { n, width, margin: MARGIN, start: (len - n * width) / 2 };
@@ -82,11 +82,15 @@ function look(b, style) {
   const r = rng(((b.id | 0) ^ 0x51ed270b) >>> 0), n = (list) => r.int(Math.max(1, (list || []).length));
   const frameK = n(style.frames), doorK = n(style.doors), trimK = n(style.trim), awnK = n(style.awnings), shutK = n(style.doors);
   const w = style.window, trim = paletteColor(style.trim, trimK);
-  return {
+  const out = {
     r, trim, frameC: paletteColor(style.frames, frameK), doorC: paletteColor(style.doors, doorK), awnC: paletteColor(style.awnings, awnK), shutC: paletteColor(style.doors, shutK),
     shutters: r() < (w.shutters || 0), ww: w.width * (0.9 + 0.2 * r()), wsc: 0.9 + 0.2 * r(),
     stringCourse: r() < 0.85, headDepth: 0.03 + 0.04 * r(), recess: 0.2 + 0.1 * r(), inShadow: shade(b.tint, 0.72),
   };
+  // the shopfront colour comes from its own stream, so the draws of `r` (door bay, awning) stay where they were
+  const q = rng(((b.id | 0) ^ 0x2b7e1516) >>> 0);
+  out.shopC = q() < 0.5 ? out.awnC : (q() < 0.5 ? out.frameC : out.trim);
+  return out;
 }
 
 // ---- the far façade: one wall, the windows are in the texture -------------------------------------------------------
@@ -295,7 +299,11 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         if (lk.shutters && !o.blind) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.05, mixTint(lk.frameC, DARK, 0.5));
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
+        const pw = o.u1 - o.u0, nl = Math.max(2, Math.round(pw / 1.1)), yt = o.yh - 0.5;
+        if (pw > 1.7) for (let k = 1; k < nl; k++) { const um = o.u0 + k * pw / nl; rect(T, f, um - 0.035, um + 0.035, o.ys + 0.08, o.yh - 0.08, -o.r + 0.04, lk.shopC); }
+        if (o.yh - o.ys > 1.9) rect(T, f, o.u0 + 0.08, o.u1 - 0.08, yt - 0.03, yt + 0.03, -o.r + 0.04, lk.shopC);
+        if (o.ys - y0 > 0.3) rect(T, f, o.u0, o.u1, y0 + 0.06, o.ys - 0.06, 0.02, lk.shopC);
         slab(T, f, o.u0 - 0.06, o.u1 + 0.06, o.ys - 0.06, o.ys, 0, 0.1, lk.trim, 'ftb');
       } else { // a door, recessed
         const D = soups.get(SOUP.door);
@@ -310,7 +318,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
     }
     for (const rd of roundels) roundel(soups, f, rd, y0, lk, tint);
     if (ground && front && b.groundFloor === 1) { // the fascia over the shopfronts, and sometimes an awning
-      slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.1, lk.awnC, 'fbtlr');
+      slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.06, lk.shopC, 'fbtlr');
       if (lk.r() < gfl.awning) {
         const A = soups.get(SOUP.awning), yb = y0 + sh - gfl.fascia;
         for (const o of ops) if (o.kind === 'shop') {

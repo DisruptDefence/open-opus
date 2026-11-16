@@ -136,3 +136,33 @@ test('the plinth top is the highest ground along the edge plus 0.4 with the defa
   const old = { ...style, plinth: { height: 0.4, depth: 0.04 } }, s2 = createSoups(); facadeNear(s2, building(RING, { facade: 4 }), fall, old, info);
   assert.equal(s2.map.get(SOUP.plinth).col.slice(0, 3).join(), soups.map.get(SOUP.plinth).col.slice(0, 3).join(), 'the default colour');
 });
+
+// ---- seeded choices stay as they were; shopfront mullions ---------------------------------------------------------------
+test('seeded choices do not move: door bay, door colour, trim colour and glass are those recorded before the shopfront change', () => {
+  const rec = { 3: [7.0961, [0.0137, 0.01681, 0.01938], [0.80695, 0.77582, 0.7011], 792], 7: [5.48, [0.02029, 0.06125, 0.02843], [0.80695, 0.77582, 0.7011], 522],
+    11: [3.9265, [0.0137, 0.01681, 0.01938], [0.69387, 0.64448, 0.52712], 414], 42: [7.0603, [0.01764, 0.04231, 0.10224], [0.69387, 0.64448, 0.52712], 792] };
+  const r5 = (a) => a.map((v) => +v.toFixed(5));
+  for (const id of Object.keys(rec)) {
+    const s = near(building(RING, { id: +id, front: new Set([0]), groundFloor: 1 }), style), [dx, dc, tc, wn] = rec[id];
+    assert.ok(Math.abs(s.map.get(SOUP.door).pos[0] - dx) < 1e-4, `door x, building ${id}`);
+    assert.deepEqual(r5(s.map.get(SOUP.door).col.slice(0, 3)), dc); assert.deepEqual(r5(s.map.get(SOUP.trim).col.slice(0, 3)), tc);
+    assert.equal(s.map.get(SOUP.window).pos.length, wn, 'window triangles');
+  }
+});
+test('a shopfront pane wider than 1.7 m gets mullions and a transom: at least 2 bars, at most 12 triangles a bay more than a plain pane', () => {
+  const pane = (pier) => ({ ...fixedBays, groundFloor: { ...fixedBays.groundFloor, shopPier: pier } });
+  const wide = near(wallOnly({ front: new Set([0]), groundFloor: 1 }), pane(0.1)), narrow = near(wallOnly({ front: new Set([0]), groundFloor: 1 }), pane(1.0));
+  // bays are 2.5 m: panes 2.4 m and 1.5 m wide
+  // vertical bars: triangles in the pane plane (z = 0.12) that are 0.07 m wide and over 1 m tall, at least 0.2 m in from a pane edge
+  const inPane = (s) => {
+    let n = 0; const t = s.map.get(SOUP.trim);
+    for (let i = 0; i < t.pos.length; i += 9) {
+      const xs = [0, 3, 6].map((k) => t.pos[i + k]), ys = [0, 3, 6].map((k) => t.pos[i + k + 1]);
+      if ([0, 3, 6].every((k) => Math.abs(t.pos[i + k + 2] - 0.12) < 1e-6) && Math.max(...xs) - Math.min(...xs) < 0.071 && Math.max(...ys) - Math.min(...ys) > 1) n++;
+    } return n;
+  };
+  const w = inPane(wide), nr = inPane(narrow);
+  assert.equal(nr, 0, 'a pane under 1.7 m has no mullion');
+  assert.ok(w >= 4, `a 2.4 m pane is two lights, one bar of 2 triangles; two panes: ${w - nr}`);
+  assert.ok((w - nr) / 2 <= 12, 'at most 12 triangles a bay');
+});
