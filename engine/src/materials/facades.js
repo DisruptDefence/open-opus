@@ -64,11 +64,11 @@ void stuccoWall(vec2 uv, out vec3 col, out float h, out float r, out float ao){
   r = 0.92; ao = 1.0 - crack * 0.5;
   col = mix(col, L(0.30, 0.28, 0.25), crack * 0.7);
   // render fallen away: the wall under it shows (brick), with a raised, lighter edge to the patch
-  float loss = smoothstep(0.64, 0.70, fbm(uv, vec2(3.0), 4, 67.0) * 0.7 + fbm(uv, vec2(10.0), 3, 68.0) * 0.3 + (big - 0.5) * 0.12);
+  float loss = smoothstep(0.80, 0.84, fbm(uv, vec2(3.0), 4, 67.0) * 0.6 + fbm(uv, vec2(14.0), 3, 68.0) * 0.4 + (big - 0.5) * 0.12) * smoothstep(0.52, 0.62, fbm(uv, vec2(5.0), 3, 69.0));
   float rim = smoothstep(0.0, 0.05, loss) * (1.0 - smoothstep(0.05, 0.2, loss));
   if (loss > 0.0) {
     vec3 bc; float bh, br, bao; brickWall(uv, bc, bh, br, bao);
-    col = mix(col, bc * 0.85, loss); h = mix(h, bh - 0.12, loss); r = mix(r, br, loss); ao = mix(ao, bao * 0.8, loss);
+    col = mix(col, mix(bc, col, 0.45) * 0.95, loss); h = mix(h, bh - 0.12, loss); r = mix(r, br, loss); ao = mix(ao, bao * 0.8, loss);
   }
   col = mix(col, col * 1.08, rim * 0.5); h += rim * 0.1;
 }
