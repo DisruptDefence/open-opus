@@ -85,6 +85,10 @@ second, so a run takes about a minute. The exit code is 0 only when the mission 
 
 - `tools/make-test-scene.mjs` writes `scenes/test/`, the generated scene package the tests use. Same code, same bytes.
 - `tools/play.mjs` is the browser run above; `tools/photo.mjs` takes the fixed pictures.
+- `tools/input-check.mjs` drives mouse look (sensitivity, invert, the lock lost, the drag fallback) and the touch
+  style sheet through the real input code in a headless browser. Headless Chromium grants no pointer lock, so the
+  lock itself is faked; a real lock, a real touch screen and a gamepad are for a person.
+- `test/no-place.test.js` fails on words of the stand-in's place, mission or weapon anywhere in `src/`.
 - `tools/lift.cjs` is how the lifted modules were cut out of the stand-in game's bundle (`../AGENTS.md`, rule 8).
   The lifted files have been edited by hand since: never give it `src/` as its output folder; lift into a scratch
   folder and bring single files across.
