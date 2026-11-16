@@ -98,7 +98,7 @@ try {
       const ok = op('.h-health') < 0.05 && !q('.h-health').classList.contains('on') && q('.h-wname').textContent.toLowerCase() === 'carbine' && getComputedStyle(q('.h-wname')).textTransform === 'uppercase'
         && q('.h-pips').children.length === a.magSize && q('.h-pips i.off') === null && q('.h-ammo-n').textContent === String(a.ammo).padStart(2, '0') && q('.h-ammo-r').textContent === String(a.reserve).padStart(3, '0')
         && !q('.h-ammo').classList.contains('low') && !document.querySelector('.oh-compass') && /Big Shoulders/.test(getComputedStyle(q('.h-ammo-n')).fontFamily);
-      return { ok, name: q('.h-wname').textContent, pips: q('.h-pips').children.length, font: document.fonts.check('700 76px "Big Shoulders Display"') };
+      return { ok, weapon: q('.h-wname').textContent, pips: q('.h-pips').children.length, font: document.fonts.check('700 76px "Big Shoulders Display"') };
     });
     await shot('1-idle');
 
