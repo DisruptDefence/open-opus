@@ -153,7 +153,7 @@ attached to this work; nothing in this section has been run.
 
 | | Emulator | USB device |
 |---|---|---|
-| Picture, taps, keys | scrcpy server over adb | The same. `run.sh` passes an empty `--crop`, so the whole screen shows; the default crop is the virtual phone's |
+| Picture, taps, keys | scrcpy server over adb | The same |
 | What ATAK shares (CoT) | ATAK connects to `10.0.2.2:8087` | `adb reverse tcp:8087 tcp:8087`, and ATAK connects to `127.0.0.1:8087`. `run.sh` does both |
 | Position | UDP 4349, redirected into the guest through the emulator console | **Open.** adb forwards TCP only, so the sentences cannot go down the cable. Either the device shares a network with the machine (`--gps <device address>:4349`; the gateway then sends over Wi-Fi), or the gateway sets a mock location through adb (`cmd location providers add-test-provider gps`, then `set-test-provider-location`, Android 12 and later), which is not written. Without either, `run.sh` feeds no position and the device shows where it really is |
 | Map overlay | `adb push` to `/sdcard/atak/grg` | The same; newer Android versions may restrict that folder |
@@ -162,5 +162,9 @@ attached to this work; nothing in this section has been run.
 ## Not done
 
 - ATAK's first-run dialogs are accepted by hand, and the overlay needs an ATAK restart.
-- The emulated phone's picture can show a black band (its camera cut-out) and Android's gesture bar.
+- The picture is the device's whole screen, status bar and gesture bar included; `--crop` leaves parts out.
+- ATAK's heading comes from the device's own compass, not from the game: the grid reference follows the player,
+  the heading shown in ATAK does not.
+- The map overlay has been seen to arrive in ATAK's folder; that ATAK draws it in the right place, rotation
+  included, has not been looked at.
 - One page at a time is the intended use; several pages would all touch the same device.

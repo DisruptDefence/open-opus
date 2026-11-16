@@ -253,10 +253,9 @@ async def main():
     ap.add_argument("--codec", default="h264", choices=["h264", "av1"],
                     help="h264 for Chrome, Edge and Safari; av1 for browsers built without H.264 (plain Chromium)")
     ap.add_argument("--cot-port", type=int, default=8087, help="where ATAK connects as a TAK client (plain TCP)")
-    ap.add_argument("--crop", default="476:1068:32:136",
-                    help="width:height:x:y of the part of the screen to show, in the phone's upright orientation. The "
-                         "default is the area Android gives ATAK on the 540 x 1204 virtual phone when held sideways: "
-                         "everything but the status bar strip and the gesture bar. Empty for the whole screen.")
+    ap.add_argument("--crop", default="",
+                    help="width:height:x:y of the part of the screen to show, in the device's upright orientation, "
+                         "to leave out the status bar or gesture bar. Default: the whole screen.")
     ap.add_argument("--gps", default="127.0.0.1:4349",
                     help="where ATAK's network GPS listens (host:port, UDP); `none` to send no position")
     args = ap.parse_args()
