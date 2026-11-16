@@ -1,0 +1,807 @@
+{
+ "Grey limestone masonry": {
+  "target": "#a69481",
+  "best": [
+   {
+    "set": "granite001a",
+    "kind": "stone_ashlar",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 2.4
+   },
+   {
+    "set": "stone_wall",
+    "kind": "stone_rubble",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 2.5
+   },
+   {
+    "set": "white_sandstone_blocks_02",
+    "kind": "stone_ashlar",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 6.6
+   }
+  ]
+ },
+ "Terracotta brick": {
+  "target": "#ab7556",
+  "best": [
+   {
+    "set": "brick_wall_006",
+    "kind": "brick",
+    "tile_m": [
+     3.0,
+     3.0
+    ],
+    "res": 2048,
+    "deltaE": 1.8
+   },
+   {
+    "set": "large_red_bricks",
+    "kind": "brick",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 2.6
+   },
+   {
+    "set": "bricks086",
+    "kind": "brick",
+    "tile_m": [
+     2.6,
+     1.3
+    ],
+    "res": 1024,
+    "deltaE": 6.3
+   }
+  ]
+ },
+ "White painted masonry": {
+  "target": "#dfdbd8",
+  "best": [
+   {
+    "set": "bricks060",
+    "kind": "brick",
+    "tile_m": [
+     1.05,
+     1.05
+    ],
+    "res": 1024,
+    "deltaE": -6.6
+   },
+   {
+    "set": "plaster002",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": -5.9
+   },
+   {
+    "set": "plaster003",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": -5.6
+   }
+  ]
+ },
+ "Warm beige mortar": {
+  "target": "#c6ad90",
+  "best": [
+   {
+    "set": "plastered_wall_02",
+    "kind": "plaster",
+    "tile_m": [
+     2.23,
+     2.23
+    ],
+    "res": 1024,
+    "deltaE": 10.5
+   },
+   {
+    "set": "plastered_wall",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 12.0
+   },
+   {
+    "set": "beige_wall_001",
+    "kind": "plaster",
+    "tile_m": [
+     3.0,
+     3.0
+    ],
+    "res": 1024,
+    "deltaE": 13.9
+   }
+  ]
+ },
+ "Cream painted trim": {
+  "target": "#e6d2b2",
+  "best": [
+   {
+    "set": "wood061",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 7.8
+   },
+   {
+    "set": "plastered_wall_02",
+    "kind": "plaster",
+    "tile_m": [
+     2.23,
+     2.23
+    ],
+    "res": 1024,
+    "deltaE": 8.2
+   },
+   {
+    "set": "plaster001",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 8.3
+   }
+  ]
+ },
+ "Weathered stone sill": {
+  "target": "#938374",
+  "best": [
+   {
+    "set": "castle_wall_varriation",
+    "kind": "stone_ashlar",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 4.0
+   },
+   {
+    "set": "bricks018",
+    "kind": "stone_rubble",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 4.5
+   },
+   {
+    "set": "bricks068",
+    "kind": "stone_ashlar",
+    "tile_m": [
+     1.5,
+     1.5
+    ],
+    "res": 1024,
+    "deltaE": 4.6
+   }
+  ]
+ },
+ "Dusty blue painted wood": {
+  "target": "#507286",
+  "best": [
+   {
+    "set": "paintedwood008a",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 3.5
+   },
+   {
+    "set": "blue_painted_planks",
+    "kind": "wood",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 4.1
+   },
+   {
+    "set": "paintedwood008b",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 7.4
+   }
+  ]
+ },
+ "Burgundy painted wood": {
+  "target": "#6d2b39",
+  "best": [
+   {
+    "set": "weathered_brown_planks",
+    "kind": "wood",
+    "tile_m": [
+     1.8,
+     1.8
+    ],
+    "res": 1024,
+    "deltaE": 18.9
+   },
+   {
+    "set": "wooden_panels",
+    "kind": "wood",
+    "tile_m": [
+     2.1,
+     2.1
+    ],
+    "res": 1024,
+    "deltaE": 19.8
+   },
+   {
+    "set": "peeling_painted_wall",
+    "kind": "plaster",
+    "tile_m": [
+     1.8,
+     1.8
+    ],
+    "res": 1024,
+    "deltaE": 20.6
+   }
+  ]
+ },
+ "Red painted wood": {
+  "target": "#c73236",
+  "best": [
+   {
+    "set": "paintedwood003",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 9.3
+   },
+   {
+    "set": "paintedwood006a",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 24.9
+   },
+   {
+    "set": "paintedwood006b",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 37.3
+   }
+  ]
+ },
+ "Sage green painted wood": {
+  "target": "#708871",
+  "best": [
+   {
+    "set": "paintedwood009b",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": -4.0
+   },
+   {
+    "set": "paintedplaster011",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 3.1
+   },
+   {
+    "set": "paintedplaster012",
+    "kind": "plaster",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 3.1
+   }
+  ]
+ },
+ "Dark stained wood": {
+  "target": "#563b2b",
+  "best": [
+   {
+    "set": "planks015",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 5.8
+   },
+   {
+    "set": "planks013",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 5.9
+   },
+   {
+    "set": "wood060",
+    "kind": "wood",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 6.8
+   }
+  ]
+ },
+ "Black wrought iron": {
+  "target": "#776e66",
+  "best": [
+   {
+    "set": "metal019",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 2.7
+   },
+   {
+    "set": "metal005",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 6.8
+   },
+   {
+    "set": "metal024",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 6.9
+   }
+  ]
+ },
+ "Aged dark metal": {
+  "target": "#584e47",
+  "best": [
+   {
+    "set": "metal_plate_02",
+    "kind": "metal",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 3.4
+   },
+   {
+    "set": "metal036",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 5.4
+   },
+   {
+    "set": "metal022",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 6.8
+   }
+  ]
+ },
+ "Galvanized metal": {
+  "target": "#959fa8",
+  "best": [
+   {
+    "set": "corrugated_iron",
+    "kind": "roof_metal",
+    "tile_m": [
+     1.12,
+     1.12
+    ],
+    "res": 1024,
+    "deltaE": 10.2
+   },
+   {
+    "set": "metal024",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 15.3
+   },
+   {
+    "set": "metal005",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 15.6
+   }
+  ]
+ },
+ "Charcoal roof metal": {
+  "target": "#626d80",
+  "best": [
+   {
+    "set": "metal021",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 9.2
+   },
+   {
+    "set": "metal038",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 12.5
+   },
+   {
+    "set": "metal030",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 12.8
+   }
+  ]
+ },
+ "Black planter finish": {
+  "target": "#313330",
+  "best": [
+   {
+    "set": "metal046b",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 6.1
+   },
+   {
+    "set": "metal027",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 7.5
+   },
+   {
+    "set": "metal028",
+    "kind": "metal",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 8.9
+   }
+  ]
+ },
+ "Grey asphalt": {
+  "target": "#6c6a6a",
+  "best": [
+   {
+    "set": "asphalt022",
+    "kind": "asphalt",
+    "tile_m": [
+     1.85,
+     1.85
+    ],
+    "res": 1024,
+    "deltaE": 3.9
+   },
+   {
+    "set": "aerial_asphalt_01",
+    "kind": "asphalt",
+    "tile_m": [
+     2.0,
+     2.0
+    ],
+    "res": 1024,
+    "deltaE": 4.3
+   },
+   {
+    "set": "asphalt021",
+    "kind": "asphalt",
+    "tile_m": [
+     1.85,
+     1.85
+    ],
+    "res": 1024,
+    "deltaE": 4.9
+   }
+  ]
+ },
+ "Concrete sidewalk slabs": {
+  "target": "#b2a69b",
+  "best": [
+   {
+    "set": "pavingstones108",
+    "kind": "paving",
+    "tile_m": [
+     2.4,
+     2.4
+    ],
+    "res": 1024,
+    "deltaE": 5.0
+   },
+   {
+    "set": "pavingstones128",
+    "kind": "paving",
+    "tile_m": [
+     3.5,
+     3.5
+    ],
+    "res": 1024,
+    "deltaE": 5.4
+   },
+   {
+    "set": "pavingstones125a",
+    "kind": "paving",
+    "tile_m": [
+     3.5,
+     3.5
+    ],
+    "res": 1024,
+    "deltaE": 5.5
+   }
+  ]
+ },
+ "Granite curb": {
+  "target": "#8b7f74",
+  "best": [
+   {
+    "set": "pavement_01",
+    "kind": "paving",
+    "tile_m": [
+     1.5,
+     1.5
+    ],
+    "res": 1024,
+    "deltaE": 1.7
+   },
+   {
+    "set": "concrete_pavement_02",
+    "kind": "paving",
+    "tile_m": [
+     1.8,
+     1.8
+    ],
+    "res": 1024,
+    "deltaE": 1.9
+   },
+   {
+    "set": "floor_pattern_02",
+    "kind": "cobble",
+    "tile_m": [
+     1.2,
+     1.2
+    ],
+    "res": 1024,
+    "deltaE": 4.2
+   }
+  ]
+ },
+ "Worn white road paint": {
+  "target": "#a7a2a0",
+  "best": [
+   {
+    "set": "asphalt_06",
+    "kind": "asphalt",
+    "tile_m": [
+     3.0,
+     3.0
+    ],
+    "res": 1024,
+    "deltaE": 10.3
+   },
+   {
+    "set": "asphalt_04",
+    "kind": "asphalt",
+    "tile_m": [
+     4.04,
+     4.04
+    ],
+    "res": 1024,
+    "deltaE": 12.6
+   },
+   {
+    "set": "asphalt_floor",
+    "kind": "asphalt",
+    "tile_m": [
+     2.35,
+     2.35
+    ],
+    "res": 1024,
+    "deltaE": 16.0
+   }
+  ]
+ },
+ "Cracked pavement": {
+  "target": "#948c88",
+  "best": [
+   {
+    "set": "concrete_wall_001",
+    "kind": "concrete",
+    "tile_m": [
+     1.5,
+     1.5
+    ],
+    "res": 1024,
+    "deltaE": -5.6
+   },
+   {
+    "set": "asphalt_04",
+    "kind": "asphalt",
+    "tile_m": [
+     4.04,
+     4.04
+    ],
+    "res": 1024,
+    "deltaE": -3.4
+   },
+   {
+    "set": "concrete_wall_009",
+    "kind": "concrete",
+    "tile_m": [
+     1.805,
+     1.805
+    ],
+    "res": 1024,
+    "deltaE": -1.2
+   }
+  ]
+ },
+ "Evergreen foliage": {
+  "target": "#445919",
+  "best": [
+   {
+    "set": "moss003",
+    "kind": "moss",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 3.8
+   },
+   {
+    "set": "moss004",
+    "kind": "moss",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 5.9
+   },
+   {
+    "set": "grass001",
+    "kind": "grass",
+    "tile_m": [
+     1.4,
+     1.4
+    ],
+    "res": 1024,
+    "deltaE": 6.6
+   }
+  ]
+ },
+ "Trailing green leaves": {
+  "target": "#67702e",
+  "best": [
+   {
+    "set": "grass004",
+    "kind": "grass",
+    "tile_m": [
+     1.4,
+     1.4
+    ],
+    "res": 1024,
+    "deltaE": 4.6
+   },
+   {
+    "set": "moss002",
+    "kind": "moss",
+    "tile_m": [
+     1.0,
+     1.0
+    ],
+    "res": 1024,
+    "deltaE": 10.5
+   },
+   {
+    "set": "ground003",
+    "kind": "ground",
+    "tile_m": [
+     1.5,
+     1.5
+    ],
+    "res": 1024,
+    "deltaE": 12.5
+   }
+  ]
+ }
+}
