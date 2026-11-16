@@ -67,8 +67,13 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
    it lacks, extend the API (additively, with a contract test) instead of reaching past it.
 2. **Imports go down, never up** (table in `docs/ARCHITECTURE.md`). Pure modules (`geo`, `terrain`, `physics`,
    `nav`, `scene`) import neither three.js nor the DOM and are tested under Node.
-3. **Data, not code.** A place is a scene package, a weapon or threat is a content pack, a mission is a
-   scenario. Nothing about one place, one nation or one mission is written into engine code.
+3. **Data, not code: the engine is built once and reused.** A place is a scene package, a weapon or threat is a
+   content pack, a mission is a scenario. Nothing about one place, one nation or one mission is written into
+   engine or builder code. A new place anywhere is a small place-config file given to the same builder; what
+   varies by region (roof shapes, materials, storey heights, street furniture, tree species, road surfaces) is
+   a style pack with a country-wide default and regional overrides; props come from one reusable kit. Use
+   country-wide open sources first and city-specific data only as optional enrichers behind the same interface.
+   The test of any scene or gameplay change: a second, different place builds and plays with no code change.
 4. **Real coordinates.** Game metres are UTM metres from the scene's anchor. Never use a flat
    metres-per-degree approximation. Conversions are tested against the scene's check points.
 5. **Open data only, with its licence.** Every source used by a scene is listed in its `attribution.json` with
