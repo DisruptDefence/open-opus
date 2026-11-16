@@ -16,6 +16,12 @@ engine: it reaches the game through the world API (`docs/WORLD-API.md`) and noth
 There is no imitation of ATAK in this repository and there will not be one: the phone shows a real ATAK or the
 placeholder.
 
+**The case.** The phone is drawn as a generic rugged handset in a dark-earth protective case, in CSS only (`phone.css`, plus twelve
+decorative `aria-hidden` elements that `host.js` adds): chamfered bumper, corner guards with screws, a rubber gasket, side keys, a cable
+port with its cable, a lanyard loop and a mount hinge. Everything scales with `--w`; the glass keeps its size and place. Pictures with no
+game: `flock /tmp/opus-heavy.lock env PLAYWRIGHT=… node phone/tools/case-shot.mjs <outDir> [prefix] [cssFile]` (it also prints the glass's
+bounding box and compares it with a `before` run).
+
 ## Try it (nothing to set up)
 
 ```sh
