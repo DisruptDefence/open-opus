@@ -29,6 +29,7 @@ void surf(vec2 uv){
   vec3 glass = mix(L(0.030, 0.040, 0.055), L(0.16, 0.21, 0.27), sky * 0.7 + refl * 0.5);
   float curtain = smoothstep(0.62, 0.7, fbm(q, vec2(2.0, 1.0), 3, 104.0)) * (shop ? 0.0 : 0.6) * step(q.y, 0.55);
   glass = mix(glass, L(0.30, 0.26, 0.20), curtain * 0.5);
+  if (shop) glass = mix(L(0.16, 0.11, 0.06), L(0.20, 0.26, 0.32), smoothstep(0.1, 0.8, q.y) * 0.8 + refl * 0.3);   // a lit shop behind the pane
   vec3 paint = L(0.88, 0.87, 0.84) * (0.9 + 0.2 * fine);
   vec3 col = mix(glass, paint, solid);
   float inner = smoothstep(0.0, 0.12, frameD) * (1.0 - isFrame);
