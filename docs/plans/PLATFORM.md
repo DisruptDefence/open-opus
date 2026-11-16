@@ -96,6 +96,16 @@ what ATAK shares"). No page code changes: pages ignore fields they do not know.
 6. **`--record-cot DIR`**: each accepted event's raw XML is also written to `DIR/<seq>-<type>.xml` (the type with
    anything but letters, digits and `-` replaced by `_`). For building test fixtures.
 
+7. **`--scrcpy-server PATH`**: where the scrcpy server file is (default as today, `vendor/` beside the gateway),
+   so that a copy of this file kept elsewhere needs nothing beside it.
+8. **A connection with no `Origin` header is accepted.** A browser always sends one, so the origin rule still
+   stops other sites' pages; a program on this machine (a host's own relay) sends none. In `websockets` terms:
+   `origins=[None, LOCAL_ORIGIN, *args.allow_origin]`.
+9. **The gateway exits with status 1 when the device's picture ends** (the device stopped, restarted, or adb was
+   lost), printing `[gateway] the picture ended: stopping`. A gateway that stayed up would answer on its port
+   and look like a working phone; whoever started it starts it again when the device is back. `run.sh` already
+   loops. Keep the pump task (`self.pump`) and wait on it with the GPS feeder, `return_when=FIRST_COMPLETED`.
+
 **Tests** (`python3 -m unittest phone/local/test_gateway.py`), each a new case:
 
 - A marker event with `<detail><contact callsign="R 1"/><remarks>two sentries</remarks></detail>` parses to the
@@ -105,6 +115,8 @@ what ATAK shares"). No page code changes: pages ignore fields they do not know.
 - An event containing `<!DOCTYPE` and one containing `<!entity` are dropped; the next event in the same buffer
   is still parsed.
 - `EventRing(3)`: after adding five messages `after(0)` returns numbers 3, 4, 5; `after(4)` returns 5; `after(9)` returns none.
+- `python3 phone/local/gateway.py --help` lists `--scrcpy-server` and `--record-cot` (run it as a subprocess).
+- The origin list built from `--allow-origin https://example.org` holds `None`, the local pattern and that origin.
 - The recorded file name for sequence 7 and type `a-h-G` is `7-a-h-G.xml`; for type `b/../x` it is `7-b____x.xml`.
 
 **Proof.** With a device running (`phone/local/run.sh`, under `flock /tmp/opus-emulator.lock`): drop a marker
