@@ -47,10 +47,10 @@ test('the mesher: base has what never changes, far and near are two pictures of 
       for (const cell of chunk.cells) for (const g of GROUPS) for (const [key, s] of cellSoups(cell, g, env).map) total[g].set(key, (total[g].get(key) || 0) + s.pos.length / 9);
     }
     assert.ok(total.base.get('roof_zinc|tv') > 0, 'roofs are in base, tinted when the scene gives a colour'); assert.ok(total.base.get('stone|t') > 0, 'solid walls are in base');
-    assert.equal(total.base.get('galv|t'), undefined, 'a wall drawn as a rail is not in base'); assert.ok(total.near.get('galv|t') > 0, 'it is in near');
+    assert.equal(total.base.get('galv|t'), undefined, 'a wall drawn as a rail is not in base'); assert.equal(total.near.get('galv|t'), undefined); assert.ok(total.near.get('metal|tv') > 10, 'the rail is posts and rails in iron, in near');
     assert.ok(total.far.get('facade_stone|v') > 0 && total.far.get('leaves|t') > 0, 'flat façades and simple trees are in far');
     for (const key of ['facade_stone|v', 'facade_stucco|v', 'leaves|t', 'wood|t']) assert.equal(total.near.get(key), total.far.get(key), `the placeholders draw the same ${key} near and far`);
-    assert.equal(built, 1, 'the one prop whose kind the kit has was built; the others were skipped'); assert.equal(total.near.get('metal|tv'), 10);
+    assert.equal(built, 1, 'the one prop whose kind the kit has was built; the others were skipped'); 
     assert.equal(total.far.get('metal|tv'), undefined);
     // the part that floats is walled from its min height, not from the ground
     const part = [...chunks.values()].flatMap((c) => c.chunk.buildings).find((b) => b.id === 77005), cellOf = [...chunks.values()].flatMap((c) => c.chunk.cells.map((cell) => [cell, c.env])).find(([cell]) => cell.buildings.includes(part));

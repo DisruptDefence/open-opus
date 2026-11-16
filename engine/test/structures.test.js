@@ -12,7 +12,6 @@ import { fixture, installAll, vertices, building, walk, oldQuebec } from './help
 import { createGrid, createTerrain } from '../src/terrain/heightfield.js';
 import { createPhysics } from '../src/physics/physics.js';
 import { vaultProfile } from '../src/gen/passage.js';
-import { WALL_SOUP } from '../src/gen/style.js';
 
 const style = resolveStyle();
 const piece = (o = {}) => ({ pts: [0, 0, 20, 0, 20, 12], cls: 3, kind: 'wall', height: 2, parapet: null, thickness: 0.5, material: 1, crenels: false, rail: null, name: '', s0: 0, len: 32, ...o });
@@ -142,7 +141,7 @@ test('the vault\'s highest point is at h and every vault vertex is within w / 2 
     assert.ok(Math.abs(Math.max(...vs.map((v) => v[1])) - (b.yBase + h)) < 1e-9, 'the crown is at h');
     assert.ok(vs.every((v) => Math.abs(v[2] - 5) <= w / 2 + 1e-9 && v[1] >= 30 - 0.3));
     assert.ok(Math.abs(vaultProfile(w, h).spring + vaultProfile(w, h).rise - h) < 1e-12);
-    for (const k of soups.map.keys()) assert.equal(k, WALL_SOUP[b.facade]);
+    for (const k of soups.map.keys()) assert.equal(k, STRUCTURE_SOUP[b.facade]);
   }
 });
 test('every passage of the published scene can be walked through, along its axis', async () => {

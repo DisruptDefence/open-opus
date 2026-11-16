@@ -33,6 +33,7 @@ import { STRUCTURE_SOUP, SOUP } from './style.js';
 
 const RUN = 6;            // m: the longest run one solid covers, so tops follow the ground
 const MERLON = { length: 1.1, height: 0.7, thick: 0.5, period: 2.2 };
+const IRON = [0.035, 0.037, 0.04];   // linear: dark wrought iron
 const POST = { every: 2, size: 0.06, rails: [0.45, 0.92] };   // rails at these fractions of the height
 
 /**
@@ -106,13 +107,13 @@ function merlonsOf(runs, wall) {
 export function merlons(wall, groundAt) { return wall.crenels && !wall.rail ? merlonsOf(runsOf(wall, groundAt), wall) : []; }
 
 /** A square bar from A to B (3D points), `w` across: the sides only, wound outwards. */
-function bar(s, A, B, w) {
+function bar(s, A, B, w, tint) {
   const dx = B[0] - A[0], dy = B[1] - A[1], dz = B[2] - A[2], l = Math.hypot(dx, dz) || 1, nx = -dz / l * w / 2, nz = dx / l * w / 2;
   const at = (P, sx, sy) => [P[0] + nx * sx, P[1] + sy * w / 2, P[2] + nz * sx];
   const c = (P) => [at(P, -1, -1), at(P, 1, -1), at(P, 1, 1), at(P, -1, 1)];
   const a = c(A), b = c(B);
-  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(s, a[i], b[i], b[j], a[j]); }
-  quad(s, a[3], a[2], a[1], a[0]); quad(s, b[0], b[1], b[2], b[3]);
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(s, a[i], b[i], b[j], a[j], tint); }
+  quad(s, a[3], a[2], a[1], a[0], tint); quad(s, b[0], b[1], b[2], b[3], tint);
 }
 
 /** Posts every 2 m by s0 + distance, and two rails between them that follow the ground. */
@@ -127,11 +128,11 @@ function rail(s, wall, groundAt) {
     const first = Math.ceil((g - 1e-9) / POST.every) * POST.every, stops = [0];
     for (let q = first; q < g + l - 1e-6; q += POST.every) if (q - g > 1e-6) stops.push(q - g);
     stops.push(l);
-    const post = (d) => { const [x, z] = at(d); box(s, x, z, ux, uz, w / 2, w / 2, groundAt(x, z) - 0.05, groundAt(x, z) + H, null, true); };
+    const post = (d) => { const [x, z] = at(d); box(s, x, z, ux, uz, w / 2, w / 2, groundAt(x, z) - 0.05, groundAt(x, z) + H, IRON, true); };
     for (const d of stops) if (d > 1e-6 && d < l - 1e-6 || d === 0 || d === l) post(d);
     for (let i = 0; i + 1 < stops.length; i++) {
       const [x0, z0] = at(stops[i]), [x1, z1] = at(stops[i + 1]), y0 = groundAt(x0, z0), y1 = groundAt(x1, z1);
-      for (const f of POST.rails) bar(s, [x0, y0 + H * f, z0], [x1, y1 + H * f, z1], w * 0.8);
+      for (const f of POST.rails) bar(s, [x0, y0 + H * f, z0], [x1, y1 + H * f, z1], w * 0.8, IRON);
     }
     g += l;
   }

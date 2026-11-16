@@ -24,14 +24,15 @@
 //   passageArch   draws the inside of ONE passage `p` of `b`: the two side walls up to the springing, the vault, and
 //            at both mouths the wall between the vault's curve and the clear height. The façade generators draw
 //            nothing inside the way.
-//   Soups    WALL_SOUP[b.facade] with b.tint (style.js). Triplanar: no uv.
+//   Soups    STRUCTURE_SOUP[b.facade] (style.js), untinted: the same material as the walls, so the arch adds no draw call to
+//            the chunk's base. Triplanar: no uv.
 //   Winding  counter-clockwise seen from inside the way (the faces look into the passage).
 //   Group    `base` (an arch is seen from far away).
 //   Budget   <= 200 triangles a passage. Walls and gates together <= 40 000 triangles a scene.
 //   Must not leave a piece narrower than a wall is thick: if the cut leaves less than 0.3 m on a side, return [b].
 
 import { quad, tri } from './soup.js';
-import { WALL_SOUP } from './style.js';
+import { STRUCTURE_SOUP } from './style.js';
 
 const MIN_SIDE = 0.3;   // m: a cut that leaves less than this beside the way leaves the building whole
 const ARC = 8;          // segments in the half vault
@@ -115,7 +116,7 @@ export function vaultProfile(w, h) {
 /** Draws the inside of ONE passage (see the header). Quads are oriented towards a point inside the way or outside the mouth. */
 export function passageArch(soups, b, p, groundAt, style) { // eslint-disable-line no-unused-vars
   const L = Math.hypot(p.x2 - p.x1, p.z2 - p.z1); if (L < 1e-6) return;
-  const ux = (p.x2 - p.x1) / L, uz = (p.z2 - p.z1) / L, vx = -uz, vz = ux, ox = p.x1, oz = p.z1, tint = b.tint, soup = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[0]);
+  const ux = (p.x2 - p.x1) / L, uz = (p.z2 - p.z1) / L, vx = -uz, vz = ux, ox = p.x1, oz = p.z1, tint = b.tint, soup = soups.get(STRUCTURE_SOUP[b.facade] || STRUCTURE_SOUP[1]);
   const { spring, rise, half } = vaultProfile(p.w, p.h), y0 = b.yBase, inset = 0.03;
   const pt = (s, lat, y) => [ox + ux * s + vx * lat, y, oz + uz * s + vz * lat];
   const ext = (lat) => extentAt(b.ring, ox, oz, ux, uz, lat) || extentAt(b.ring, ox, oz, ux, uz, 0) || [0, L];
