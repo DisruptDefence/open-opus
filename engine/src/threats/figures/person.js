@@ -68,23 +68,23 @@ export function buildPerson(look, far = 0) {
   for (const x of [-0.115, 0.115]) add('gear', 'spine', P(Bx(0.065, 0.035, 0.27, 0.012), x, 0.42, 0), gear);
   for (const x of [-0.085, 0, 0.085]) add('gear', 'spine', P(Bx(0.075, 0.11, 0.045, 0.014), x, 0.14, -0.155), gear2);
   if (!far) add('gear', 'spine', P(Bx(0.1, 0.07, 0.04, 0.012), -0.08, 0.3, -0.15), gear2); // radio pouch
-  add('skin', 'spine', P(ot(0.052, 0.058, 0.12, seg(10)), 0, 0.47, 0.005), skin);
+  add('skin', 'spine', P(ot(0.06, 0.066, 0.1, seg(10)), 0, 0.47, 0.01), skin);
   if (look.pack) {
     add('gear', 'spine', P(Bx(0.28, 0.34, 0.15, 0.045), 0, 0.24, 0.2), gear2);
     if (!far) add('gear', 'spine', P(ot(0.004, 0.006, 0.45, 5), 0.1, 0.55, 0.22, 0, 0, -0.08), poly); // radio antenna
   }
   // head: skull, nose, ears; helmet or cap
-  add('skin', 'head', P(ball(1, seg(12), seg(9), 0.086, 0.106, 0.098), 0, 0.12, 0), skin);
+  add('skin', 'head', P(ball(1, seg(12), seg(9), 0.095, 0.115, 0.106), 0, 0.12, 0), skin);
   if (!far) {
-    add('skin', 'head', P(Bx(0.024, 0.042, 0.03, 0.01), 0, 0.105, -0.094, -0.15), shade(skin, 0.95));
-    for (const x of [-0.084, 0.084]) add('skin', 'head', P(ball(0.022, 6, 5, 0.5, 1, 0.8), x, 0.115, 0.005), shade(skin, 0.9));
+    add('skin', 'head', P(Bx(0.026, 0.044, 0.032, 0.01), 0, 0.105, -0.103, -0.15), shade(skin, 0.95));
+    for (const x of [-0.093, 0.093]) add('skin', 'head', P(ball(0.022, 6, 5, 0.5, 1, 0.8), x, 0.115, 0.005), shade(skin, 0.9));
   }
   if (look.headgear === 'helmet') {
-    add('gear', 'head', P(dome(1, seg(14), seg(6), 0.56, 0.122, 0.112, 0.135), 0, 0.135, 0.008), gear);
+    add('gear', 'head', P(dome(1, seg(14), seg(6), 0.56, 0.13, 0.12, 0.142), 0, 0.14, 0.008), gear);
     add('gear', 'head', P(Bx(0.05, 0.035, 0.025, 0.008), 0, 0.2, -0.128), gear2); // the mount at the front
     if (!far) for (const x of [-0.118, 0.118]) add('gear', 'head', P(Bx(0.012, 0.03, 0.11, 0.004), x, 0.15, 0), gear2); // rails
   } else if (look.headgear === 'cap') {
-    add('cloth', 'head', P(dome(1, seg(14), seg(6), 0.5, 0.098, 0.075, 0.106), 0, 0.165, 0.004), cloth2);
+    add('cloth', 'head', P(dome(1, seg(14), seg(6), 0.5, 0.104, 0.08, 0.112), 0, 0.165, 0.004), cloth2);
     add('cloth', 'head', P(Bx(0.15, 0.012, 0.085, 0.004), 0, 0.17, -0.125, 0.18), cloth2);
   } else add('skin', 'head', P(dome(1, seg(12), seg(6), 0.5, 0.09, 0.07, 0.1), 0, 0.15, 0.006), shade(skin, 0.45)); // hair
   // arms
@@ -101,7 +101,7 @@ export function buildPerson(look, far = 0) {
     const out = s === 'L' ? -1 : 1;
     add('cloth', 'thigh' + s, limb([[0.1, 0], [0.098, 0.08], [0.082, 0.25], [0.066, 0.43]], seg(10), 1, 1.08), cloth);
     if (!far) add('cloth', 'thigh' + s, P(Bx(0.035, 0.14, 0.11, 0.014), out * 0.078, -0.23, 0.005), cloth2); // cargo pocket
-    add('cloth', 'shin' + s, ball(0.057, seg(10), seg(8)), cloth);
+    add('cloth', 'shin' + s, ball(0.052, seg(10), seg(8)), cloth);
     add('gear', 'shin' + s, P(Bx(0.085, 0.1, 0.035, 0.014), 0, -0.035, -0.058), gear); // knee pad
     add('cloth', 'shin' + s, limb([[0.062, 0], [0.064, 0.1], [0.05, 0.3], [0.046, 0.36]], seg(9), 1, 1.05), cloth);
     add('gear', 'shin' + s, P(ot(0.055, 0.058, 0.13, seg(10)), 0, -0.35, 0.0), boot);
