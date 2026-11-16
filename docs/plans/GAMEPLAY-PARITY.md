@@ -545,6 +545,11 @@ a squad of twelve is twelve skeletons of 19 bones.
 and 40 m, Old Quebec viewpoint 1), `gallery` (every kind; a person in each pose), `street` (viewpoints 1 and 10 with
 people and machines), `look` (close-ups in the test scene, `SCENE=test`).
 
+**Measured in the pictures** (Old Quebec viewpoints, `q=high`, 1280×720, the whole frame): the box figures drew 581
+calls in the distance set, the new figures 572 (one skinned mesh per material instead of a mesh per box); street view
+1 with five threats 653 calls before, 609 after; triangles of the frame +1 to +5 %. Both missions (`play.mjs test`,
+`old-quebec`) still play to the end.
+
 **What only a person can judge, and is asked of the maintainer:** whether the people read as people and the look is
 the one wanted (colours, kit, proportions) or a CC0 model is wanted soon after; the gait and the fall in motion; the
 voices (`node engine/tools/voices-wav.mjs outDir` and listen); the zone numbers (a head round kills) and the
