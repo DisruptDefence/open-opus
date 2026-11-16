@@ -118,7 +118,7 @@ commit, to `engine/src/world/engine.js`, `engine/src/world/open.js`, `engine/ind
   player: {},                    // overrides of PLAYER_TUNING by key (walk, sprint, ...); empty = the engine's
   sounds: { threats: { ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 },
                        air:    { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 } } },   // keyed by archetype id, else by class
-  hud: { elements: ['compass', 'markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
+  hud: { elements: ['markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
          words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point' } },
   marks: { objective: { color: '#ffb020' }, extraction: { color: '#30ff90' } },
 }
@@ -286,7 +286,7 @@ monospace system font, white and one amber accent (`#ffb020`), no logo, no produ
 
 | Element | Behaviour, with numbers |
 |---|---|
-| `compass` | A tape, 4 px per degree, a tick every 5°, a number every 15°, letters every 45°; the centre shows the grid heading as three digits. Heading = `G.georef.headingGrid(player.yaw)` |
+| `compass` (REMOVED 2026-11-16: the player navigates with ATAK; not drawn, no code) | A tape, 4 px per degree, a tick every 5°, a number every 15°, letters every 45°; the centre shows the grid heading as three digits. Heading = `G.georef.headingGrid(player.yaw)` |
 | `markers` | For every director mark that is not `used`: a tag on the tape at its bearing (clamped to the tape's ends) and a tag in the world at the mark + 1.9 m (extraction + 1.2 m), projected with the camera; off screen or behind, it sticks to the edge of an inner box of 90 % × 82 %; each shows the label's first two letters and the distance in whole metres. World tags hide while aiming (`player.ads ≥ 0.5`) |
 | `objective` | The text of the `objective` command, typed at 46 characters a second; `done/total` as pips when `total > 0` |
 | `health` | The number (rounded up) and 10 segments; class `crit` at 3 segments or fewer; shown brighter while below maximum |

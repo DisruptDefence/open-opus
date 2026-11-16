@@ -23,7 +23,7 @@ const world = openWorld({ source, content: myPack });   // an object, or a promi
 | `loadout` | weapon ids the player carries, in order |
 | `player` | overrides of the player's tuning by key (`walk`, `sprint`, …); empty means the engine's |
 | `sounds.threats` | per archetype id, else per class (`ground` \| `air`): `fire`, `step`, `die`, `loop`, `voice` |
-| `hud` | `elements` (which are on) and `words` (the texts). `words` also holds `key` (the interact key's name in the prompt, default `E`) and `compass` (eight letters, north clockwise, space separated, default `N NE E SE S SW W NW`). `createHud` (`engine/src/hud/hud.js`) draws an element only when it is named in `elements` |
+| `hud` | `elements` (which are on) and `words` (the texts). `words` also holds `key` (the interact key's name in the prompt, default `E`). `createHud` (`engine/src/hud/hud.js`) draws an element only when it is named in `elements` |
 | `marks` | per mark kind (`objective`, `extraction`): `color` |
 
 This item only moves the data; which of these the engine reads is added item by item (weapons, sound, HUD).
