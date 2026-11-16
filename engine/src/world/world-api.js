@@ -33,6 +33,7 @@ export function createWorldApi(engine, emit) {
   G.events.on('director:interact', (e) => emit('interact', { id: e.id, kind: e.kind, action: e.action, time: round(e.time), progress: round(e.progress, 1000) }));
   G.events.on('director:say', (e) => emit('say', { text: e.text, channel: e.channel }));
   G.events.on('weapon:fire', () => emit('shot', { ammo: G.weapon.ammo }));
+  G.events.on('engine:error', (e) => emit('error', { module: e.module, message: e.message }));
   G.events.on('scene:chunk', (e) => emit('chunk', { ce: e.ce, cn: e.cn, live: e.live }));
 
   // ---- holding ---------------------------------------------------------------------------------------------------
