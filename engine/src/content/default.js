@@ -16,7 +16,10 @@
 // `type` is the broad class the rest of the engine knows (ground | air); `id` is the archetype.
 //
 //   body     radius, height, health, turn (rad/s), speed by name (a state names the one it moves at), figure
-//            (person | quadruped | quadcopter: which of the engine's plain figures is drawn)
+//            (person | quadruped | quadcopter | plain: which of the engine's figures is drawn, threats/figures),
+//            look (a person's: colours of `cloth`, `gear`, `skin`, `boot` as lists of '#rrggbb', `headgear` a list of
+//            helmet | cap | none, `pack` the chance of a pack on the back, `variants` how many looks one archetype
+//            has (4); a threat's id picks its look)
 //   senses   sight, fov (degrees), hearing, eye (height), closeRange, notice (seconds in view before it reacts;
 //            less than half of that once it is already looking for the target)
 //   weapon   kind hitscan | bolt (a visible projectile of `speed` m/s that can be side-stepped, aimed with `lead`),
@@ -25,6 +28,11 @@
 //            moving (how much the target's speed spoils the aim)
 //   melee    range (starts the rush), windup, speed, time, reach, damage, cooldown, recover
 //   death    explode { radius, damage }: an air threat blows up where it falls
+//   zones    damage multiplier of a round by the part of the figure it hits (a person: head, torso, arm, leg; a
+//            machine: weak, body); a part not named counts 1, and `weak` 2.2 when there is no `zones`
+//   reactions what a hit does to it (a person): aimSpoil (seconds: a burst being announced or fired stops and none
+//            starts), limpSeconds and limpSpeed (after a leg hit, that share of its speed), stagger { damage, seconds }
+//            (a round of that damage or more stops it where it stands). The flinch is the figure's
 //
 // How many threats may shoot at once, and how fast aim improves, is `threatTuning` below: the numbers are the
 // stand-in game's, so a fight has its rhythm.
@@ -34,9 +42,34 @@ const THREATS = {
   // changes after a burst or two, falls back to cover when hurt.
   sentry: {
     id: 'sentry', type: 'ground', label: 'Sentry',
-    body: { figure: 'person', radius: 0.38, height: 1.8, health: 90, turn: 6, speed: { patrol: 1.4, investigate: 2.8, cover: 4.4, engage: 4.5 } },
+    body: { figure: 'person', radius: 0.38, height: 1.8, health: 90, turn: 6, speed: { patrol: 1.4, investigate: 2.8, cover: 4.4, engage: 4.5 },
+      look: { cloth: ['#4d5338', '#575a45', '#45503a'], gear: ['#34362e', '#3c3b31'], skin: ['#c49a7c', '#a07a5e', '#6e4c38', '#d8b096'], boot: ['#2a2622'], headgear: ['helmet'], pack: 0.2 } },
     senses: { sight: 55, fov: 140, hearing: 45, eye: 1.62, closeRange: 3.5, notice: 0.55 },
     weapon: { kind: 'hitscan', damage: 5, burst: 4, interval: 0.11, cooldown: [1.8, 3], aimTime: 0.5, range: 80, spreadFar: 0.12, spreadNear: 0.045, moving: 0.3 },
+    zones: { head: 4, torso: 1, arm: 0.55, leg: 0.7 },
+    reactions: { aimSpoil: 0.4, limpSeconds: 6, limpSpeed: 0.55, stagger: { damage: 30, seconds: 0.35 } },
+    tactics: { rangeMin: 8, rangeMax: 18 },
+    alertRadius: 60,
+    behaviour: {
+      start: 'patrol',
+      states: {
+        patrol: { do: 'followRoute', speed: 'patrol', on: [{ if: 'seesTarget', to: 'engage', alert: true }, { if: 'damaged', to: 'engage', alert: true }, { if: 'heardNoise', to: 'investigate' }] },
+        investigate: { do: 'gotoLastKnown', speed: 'investigate', on: [{ if: 'seesTarget', to: 'engage', alert: true }, { if: 'arrived', after: 4, to: 'patrol' }, { if: 'timeInState', value: 25, to: 'patrol' }] },
+        engage: { do: 'skirmish', speed: 'engage', on: [{ if: 'healthBelow', value: 0.4, once: true, to: 'takeCover' }, { if: 'lostTargetFor', value: 4, to: 'investigate' }] },
+        takeCover: { do: 'gotoCover', speed: 'cover', on: [{ if: 'noCover', to: 'engage' }, { if: 'arrived', after: 2.5, to: 'engage' }, { if: 'timeInState', value: 9, to: 'engage' }] },
+      },
+    },
+  },
+  // A foot patrol: the sentry's numbers and table, in lighter kit (caps as often as helmets, packs), walking its route
+  // a little slower and noticing a little later; it is meant to be given a route.
+  patrol: {
+    id: 'patrol', type: 'ground', label: 'Patrol',
+    body: { figure: 'person', radius: 0.38, height: 1.8, health: 90, turn: 6, speed: { patrol: 1.3, investigate: 2.8, cover: 4.4, engage: 4.5 },
+      look: { cloth: ['#6b6650', '#4d5338', '#5d5f52', '#625a46'], gear: ['#3c3b31', '#4a4636', '#34362e'], skin: ['#c49a7c', '#a07a5e', '#6e4c38', '#d8b096'], boot: ['#2a2622', '#3b3127'], headgear: ['cap', 'helmet', 'cap', 'none'], pack: 0.6 } },
+    senses: { sight: 50, fov: 130, hearing: 40, eye: 1.62, closeRange: 3.5, notice: 0.7 },
+    weapon: { kind: 'hitscan', damage: 5, burst: 4, interval: 0.11, cooldown: [1.8, 3], aimTime: 0.5, range: 80, spreadFar: 0.12, spreadNear: 0.045, moving: 0.3 },
+    zones: { head: 4, torso: 1, arm: 0.55, leg: 0.7 },
+    reactions: { aimSpoil: 0.4, limpSeconds: 6, limpSpeed: 0.55, stagger: { damage: 30, seconds: 0.35 } },
     tactics: { rangeMin: 8, rangeMax: 18 },
     alertRadius: 60,
     behaviour: {
@@ -97,7 +130,12 @@ export const DEFAULT_PACK = {
   weapons: { carbine: { name: 'Carbine', magSize: 30, reserve: 150, rpm: 720, damage: 26, range: 300, weakMultiplier: 2.2, view: 'carbine' } },
   loadout: ['carbine'],
   player: {},
-  sounds: { bed: { rain: 'wet', sea: 0, wind: 0.75 }, threats: { ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 }, air: { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 } } },
+  // `pain`, `death`, `callout`: the synthesised barks of people (audio/voice.js); a person has no servo and no crash
+  sounds: { bed: { rain: 'wet', sea: 0, wind: 0.75 }, threats: {
+    ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 }, air: { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 },
+    sentry: { fire: 'ground_fire', step: 'step_concrete', voice: 1, pain: 'voice_pain', death: 'voice_death', callout: 'voice_contact' },
+    patrol: { fire: 'ground_fire', step: 'step_concrete', voice: 1, pain: 'voice_pain', death: 'voice_death', callout: 'voice_contact' },
+  } },
   hud: {
     elements: ['markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
     words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' },

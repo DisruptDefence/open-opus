@@ -17,9 +17,10 @@
 //   melee      an archetype with `melee` rushes a target that comes too close
 //   death      a ground threat drops, sparks and smokes; an air threat spins down and may explode
 //   intensity  the music follows the fight (audio.setIntensity): calm, alerted, in contact
-import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Vector3 } from '../../vendor/three.module.js';
+import { CylinderGeometry, Group, Mesh, MeshBasicMaterial, Vector3 } from '../../vendor/three.module.js';
 import { DEFAULT_PACK } from '../content/default.js';
 import { canSee, canHear, createBrain, validateBehaviour } from './brain.js';
+import { createFigure, createSearchlight, FAR_METRES } from './figures/index.js';
 
 const GRAVITY = 21;
 /** The rhythm of a fight. The values are the stand-in game's tuning constants. */
@@ -44,47 +45,16 @@ export function segmentDistanceSq(p1, q1, p2, q2) {
 }
 const tmpA = new Vector3(), tmpB = new Vector3(), tmpC = new Vector3();
 
-function part(geo, mat, x, y, z, parent) { const m = new Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; }
-
-/** Our own figures, built from primitives: a person, a four-legged machine and a quadcopter. None is taken from the stand-in game. */
-function buildModel(def) {
-  const g = new Group(), figure = def.body.figure || (def.type === 'air' ? 'quadcopter' : 'person');
-  const lens = new MeshBasicMaterial({ color: 0xffffff }); lens.color.setRGB(...LENS_CALM);
-  if (figure === 'quadruped') {
-    const shell = new MeshStandardMaterial({ color: 0x8d9296, roughness: 0.6, metalness: 0.2 }), dark = new MeshStandardMaterial({ color: 0x24272b, roughness: 0.6, metalness: 0.4 });
-    const h = def.body.height, legs = [];
-    part(new BoxGeometry(0.42, 0.26, 0.95), shell, 0, h - 0.33, 0, g);
-    part(new BoxGeometry(0.3, 0.2, 0.3), dark, 0, h - 0.12, -0.5, g); // head
-    part(new BoxGeometry(0.2, 0.06, 0.02), lens, 0, h - 0.1, -0.66, g).castShadow = false;
-    part(new BoxGeometry(0.07, 0.07, 0.5), dark, 0, h - 0.02, -0.3, g); // gun
-    for (const [sx, sz] of [[-1, -1], [1, 1], [1, -1], [-1, 1]]) { const hip = new Group(); hip.position.set(sx * 0.25, h - 0.4, sz * 0.36); g.add(hip); part(new BoxGeometry(0.09, h - 0.4, 0.11), dark, 0, -(h - 0.4) / 2, 0, hip); legs.push(hip); }
-    g.userData = { legs, lens, muzzle: new Vector3(0, h - 0.02, -0.6) };
-  } else if (figure === 'person') {
-    const cloth = new MeshStandardMaterial({ color: 0x4a5138, roughness: 0.9 }), kit = new MeshStandardMaterial({ color: 0x2b2d2a, roughness: 0.7 }), skin = new MeshStandardMaterial({ color: 0x8a6a52, roughness: 0.8 });
-    const legL = part(new BoxGeometry(0.17, 0.86, 0.2), cloth, -0.11, 0.43, 0, g), legR = part(new BoxGeometry(0.17, 0.86, 0.2), cloth, 0.11, 0.43, 0, g);
-    part(new BoxGeometry(0.46, 0.6, 0.26), cloth, 0, 1.16, 0, g);
-    part(new BoxGeometry(0.5, 0.34, 0.3), kit, 0, 1.2, 0.01, g); // vest
-    part(new BoxGeometry(0.2, 0.22, 0.22), skin, 0, 1.6, 0, g);
-    part(new SphereGeometry(0.15, 10, 8), kit, 0, 1.69, 0, g).scale.set(1, 0.75, 1.1); // helmet
-    const arms = new Group(); arms.position.set(0, 1.32, 0); g.add(arms);
-    part(new BoxGeometry(0.12, 0.12, 0.5), cloth, -0.2, 0, -0.2, arms); part(new BoxGeometry(0.12, 0.12, 0.5), cloth, 0.2, 0, -0.2, arms);
-    part(new BoxGeometry(0.06, 0.1, 0.8), kit, 0.08, 0.02, -0.5, arms); // rifle
-    part(new BoxGeometry(0.03, 0.03, 0.03), lens, 0.08, 0.1, -0.88, arms).castShadow = false; // the weapon light: it flares before a burst
-    g.userData = { legL, legR, arms, lens, muzzle: new Vector3(0.08, 1.34, -0.95) };
-  } else {
-    const shell = new MeshStandardMaterial({ color: 0x23262b, roughness: 0.55, metalness: 0.3 }), led = new MeshStandardMaterial({ color: 0x220000, emissive: 0xff2010, emissiveIntensity: 6 });
-    part(new BoxGeometry(0.34, 0.12, 0.46), shell, 0, 0, 0, g);
-    part(new SphereGeometry(0.09, 10, 8), shell, 0, -0.1, -0.16, g); // camera ball
-    part(new SphereGeometry(0.04, 8, 6), lens, 0, -0.11, -0.23, g).castShadow = false;
-    part(new BoxGeometry(0.05, 0.03, 0.05), led, 0, 0.02, 0.24, g);
-    const rotors = [];
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const arm = part(new BoxGeometry(0.5, 0.03, 0.05), shell, sx * 0.24, 0.02, sz * 0.24, g); arm.rotation.y = sx * sz * 0.78;
-      const r = part(new CylinderGeometry(0.2, 0.2, 0.012, 14), new MeshStandardMaterial({ color: 0x14161a, roughness: 0.4, transparent: true, opacity: 0.55 }), sx * 0.42, 0.06, sz * 0.42, g); r.castShadow = false; rotors.push(r);
-    }
-    g.userData = { rotors, lens, muzzle: new Vector3(0, -0.12, -0.28) };
-  }
-  return g;
+/** Distance along a ray (unit `dir`) to a capsule a-b of radius r, or null. Pure. */
+export function rayCapsule(o, dir, a, b, r, max = Infinity) {
+  const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, wx = o.x - a.x, wy = o.y - a.y, wz = o.z - a.z;
+  const uu = ux * ux + uy * uy + uz * uz, ud = ux * dir.x + uy * dir.y + uz * dir.z, uw = ux * wx + uy * wy + uz * wz, dw = dir.x * wx + dir.y * wy + dir.z * wz;
+  // the point of the segment nearest the ray's line, then the sphere there
+  const den = uu - ud * ud, s = uu < 1e-12 ? 0 : Math.min(1, Math.max(0, den > 1e-9 ? (uw - ud * dw) / den : 0));
+  const cx = a.x + ux * s - o.x, cy = a.y + uy * s - o.y, cz = a.z + uz * s - o.z, tc = cx * dir.x + cy * dir.y + cz * dir.z;
+  const d2 = cx * cx + cy * cy + cz * cz - tc * tc; if (d2 > r * r) return null;
+  const t = tc - Math.sqrt(r * r - d2);
+  return t < 0 || t > max ? null : t;
 }
 
 export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = TUNING } = {}) {
@@ -98,6 +68,29 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   G.events.on('player:land', (e) => noise(e && e.pos, 10));
   G.events.on('explosion', (e) => noise(e && e.pos, 150));
   const fx = (name, ...args) => { try { if (G.fx && G.fx[name]) G.fx[name](...args); } catch { /* effects are optional */ } };
+
+  // ---- what a hit does to a person (archetype `reactions`) ---------------------------------------------------------
+  // The aim is spoiled for `aimSpoil` seconds (a burst being announced or fired stops, no new one starts); a leg hit
+  // makes it limp at `limpSpeed` of its speed for `limpSeconds`; a round of `stagger.damage` or more stops it where it
+  // stands for `stagger.seconds`. The flinch itself is the figure's. Damage by zone is the archetype's `zones`
+  // (combat.js asks `zoneMultiplier`).
+  function react(t, amount, part, side) {
+    const re = t.def.reactions; if (!re) return;
+    t.spoil = Math.max(t.spoil, re.aimSpoil || 0);
+    if (t.spoil > 0 && t.atk !== 'idle') { releaseToken(t); t.atk = 'idle'; t.shots = 0; t.cooldown = Math.max(t.cooldown, t.spoil); }
+    if (part === 'leg' && re.limpSeconds) { t.limpFor = re.limpSeconds; t.limpSide = side ?? 0; }
+    if (re.stagger && amount >= re.stagger.damage) t.stagger = Math.max(t.stagger, re.stagger.seconds);
+  }
+  /** Which leg (0 left, 1 right) a hit point is nearer. */
+  function legSide(t, point) {
+    if (!point || !t.figure.zones) return 0;
+    let best = 0, bd = Infinity; for (const z of t.figure.zones()) if (z.part === 'leg') { const d = Math.hypot(point.x - (z.a.x + z.b.x) / 2, point.z - (z.a.z + z.b.z) / 2); if (d < bd) { bd = d; best = z.side; } }
+    return best;
+  }
+  /** How much of its speed a threat has: all of it, or less while it limps, none while it staggers. */
+  const mobility = (t) => (t.stagger > 0 ? 0 : t.limpFor > 0 ? t.def.reactions.limpSpeed ?? 0.6 : 1);
+  /** Damage multiplier of a round in `part` (combat.js): the archetype's zones, else the weak point's 2.2. */
+  const zoneMultiplier = (def, part) => (def.zones && Number.isFinite(def.zones[part]) ? def.zones[part] : part === 'weak' ? 2.2 : 1);
 
   // ---- who may shoot ---------------------------------------------------------------------------------------------
   // A fight is readable because few threats shoot at a time and each burst is announced.
@@ -116,8 +109,8 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   function spawn(kind, pos, opts = {}) {
     const def = defOf(kind);
     if (!def) return null;
-    const model = buildModel(def), t = {
-      id: opts.id || `${def.id}-${nextId++}`, type: def.type, archetype: def.id, def, model,
+    const id = opts.id || `${def.id}-${nextId++}`, figure = createFigure(G, def, id), model = figure.root, t = {
+      id, type: def.type, archetype: def.id, def, model, figure,
       pos: new Vector3(pos.x, pos.y, pos.z), vel: new Vector3(), yaw: opts.yaw || 0, alive: true, health: def.body.health,
       brain: createBrain(def), get mode() { return t.brain.state; },
       route: (opts.route || []).map((p) => new Vector3(p[0] ?? p.x, 0, p[1] ?? p.z)), routeAt: 0,
@@ -126,29 +119,31 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       senseIn: rng() * 0.2, atk: 'idle', atkT: 0, shots: 0, bursts: 0, lead: 0.5, hasToken: false, cooldown: 0.6 + rng(), flare: 0, lens: [...LENS_CALM],
       es: null, esT: 0, moveT: 0, lungeIn: 0.3, firePos: new Vector3(), firePlayer: new Vector3(),
       reportIn: 0, orbit: rng() * 6.28, orbitDir: rng() < 0.5 ? 1 : -1, orbitR: between(def.orbitRadius ?? 25, rng), orbitAlt: between(def.orbitAltitude ?? def.body.altitude ?? 15, rng), flipIn: 3 + rng() * 4, phase: rng() * 6.28,
-      stride: 0, deadFor: 0, spin: 0, smokeIn: 0, landed: false,
+      stride: 0, deadFor: 0, spin: 0, smokeIn: 0, landed: false, spoil: 0, limpFor: 0, limpSide: 0, stagger: 0,
       damage(amount, point, dir, bodyPart) {
         if (!t.alive) return false;
         t.health -= amount; t.hurt = true;
         if (!t.lastKnown && G.player) t.lastKnown = G.player.pos.clone();
         if (dir && t.type === 'air') t.vel.addScaledVector(dir, Math.min(3, amount * 0.09));
+        const side = bodyPart === 'leg' ? legSide(t, point) : undefined;
         G.events.emit('enemy:hit', { enemy: t, amount, point, part: bodyPart });
-        if (t.health > 0) return false;
-        t.alive = false; t.deadFor = 0; calm(t); t.model.userData.lens.color.setRGB(0.3, 0.05, 0.02);
+        t.figure.hit(dir, amount, bodyPart, side);
+        if (t.health > 0) { react(t, amount, bodyPart, side); return false; }
+        t.alive = false; t.deadFor = 0; calm(t); t.lens = [0.3, 0.05, 0.02]; t.flare = 0; t.figure.lens.color.setRGB(0.3, 0.05, 0.02); t.figure.die(dir);
         if (t.type === 'air') { t.spin = (rng() < 0.5 ? -1 : 1) * (5 + rng() * 3); t.vel.y += 1.5; if (dir) t.vel.addScaledVector(dir, 2.5); } else t.vel.set(0, 0, 0);
-        fx('sparks', point || t.pos, UP, 14); fx('debris', point || t.pos, { count: 3 }); fx('smoke', t.pos, { size: 0.5, life: 1 });
+        if (t.figure.machine) { fx('sparks', point || t.pos, UP, 14); fx('debris', point || t.pos, { count: 3 }); fx('smoke', t.pos, { size: 0.5, life: 1 }); }
         G.events.emit('enemy:killed', { enemy: t, type: t.type, pos: t.pos });
         return true;
       },
     };
     if (def.type === 'air') t.pos.y = Math.max(t.pos.y, G.physics.groundHeight(t.pos.x, t.pos.z) + (def.body.altitude || 20));
     if (opts.alerted && G.player) { t.lastKnown = G.player.pos.clone(); t.heard = true; } // starts out looking for the player
-    root.add(model); list.push(t); place(t);
+    root.add(model); list.push(t); place(t); figure.update(0, viewOf(t));
     G.events.emit('enemy:spawn', { enemy: t });
     return t;
   }
   function place(t) { t.model.position.copy(t.pos); t.model.rotation.y = t.yaw; }
-  function remove(t) { releaseToken(t); t.model.removeFromParent(); t.model.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); const i = list.indexOf(t); if (i >= 0) list.splice(i, 1); G.events.emit('enemy:despawn', { enemy: t }); }
+  function remove(t) { releaseToken(t); t.model.removeFromParent(); t.figure.dispose(); const i = list.indexOf(t); if (i >= 0) list.splice(i, 1); G.events.emit('enemy:despawn', { enemy: t }); }
   const aliveCount = () => list.reduce((n, t) => n + (t.alive ? 1 : 0), 0);
 
   /** Tell threats within `radius` of `from` where something is. `from` defaults to the place itself. */
@@ -180,12 +175,12 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   function turnTo(t, x, z, dt) {
     const want = Math.atan2(-(x - t.pos.x), -(z - t.pos.z)); let d = want - t.yaw;
     while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
-    const max = t.def.body.turn * dt; t.yaw += Math.max(-max, Math.min(max, d));
+    const max = t.def.body.turn * dt * (t.stagger > 0 ? 0.3 : 1); t.yaw += Math.max(-max, Math.min(max, d));
     return Math.abs(d);
   }
   /** Walk towards a goal along the nav grid. Sets t.arrived. */
   function walkTo(t, goal, speed, dt) {
-    const nav = G.nav;
+    const nav = G.nav; speed *= mobility(t);
     t.repath -= dt;
     if (!t.path || !t.pathFor || t.pathFor.distanceToSquared(goal) > 4 || t.repath <= 0) {
       t.pathFor = (t.pathFor || new Vector3()).copy(goal); t.repath = 2 + rng();
@@ -252,15 +247,16 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       b.mesh.position.copy(b.pos); b.mesh.lookAt(tmpA.copy(b.pos).add(b.dir)); b.mesh.scale.set(1, 1, Math.max(0.2, b.len));
     }
   }
-  const muzzleOf = (t, out) => out.copy(t.model.userData.muzzle).applyAxisAngle(UP, t.yaw).add(t.pos);
+  const muzzleOf = (t, out, aim) => t.figure.muzzle(out, aim);
   function shoot(t) {
-    const w = t.def.weapon, p = G.player, from = muzzleOf(t, new Vector3()), aim = tmpB.set(p.pos.x, p.pos.y + (p.crouching ? 0.75 : 1.05), p.pos.z);
+    const w = t.def.weapon, p = G.player, aim = tmpB.set(p.pos.x, p.pos.y + (p.crouching ? 0.75 : 1.05), p.pos.z), from = muzzleOf(t, new Vector3(), aim);
     if (w.kind === 'bolt') { const fly = (from.distanceTo(aim) / (w.speed || 70)) * t.lead, v = p.vel || tmpC.set(0, 0, 0); aim.x += v.x * fly; aim.z += v.z * fly; }
     const dir = aim.clone().sub(from).normalize();
     const sp = (w.spreadFar + (w.spreadNear - w.spreadFar) * t.exposure) * (1 + playerSpeed * (w.moving ?? 0.3)) * (t.type === 'air' && t.health < t.def.body.health * 0.5 ? 1.5 : 1);
     dir.x += (rng() - 0.5) * 2 * sp; dir.y += (rng() - 0.5) * 2 * sp; dir.z += (rng() - 0.5) * 2 * sp; dir.normalize();
     G.events.emit('enemy:fire', { enemy: t, type: t.type, pos: from, dir });
-    fx('muzzleFlash', from, dir, { scale: w.kind === 'bolt' ? 0.55 : 0.9 });
+    fx('muzzleFlash', from, dir, { scale: w.kind === 'bolt' ? 0.55 : 0.9 }); t.figure.fired();
+    if (w.kind !== 'bolt') try { G.render && G.render.lightPool && G.render.lightPool.flash(from, 0xffb060, 22, 7, 0.05); } catch { /* optional */ }
     if (w.kind === 'bolt') return fireBolt(from, dir, w);
     const wall = G.physics.raycast(from, dir, w.range), hit = G.combat.enemyShot(from, dir, { damage: w.damage, range: w.range });
     fx('tracer', from, from.clone().addScaledVector(dir, hit ? from.distanceTo(aim) : wall ? wall.dist : w.range * 0.6), { color: 0xffc070, speed: 260, width: 0.035 });
@@ -269,6 +265,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
   function fire(t, dt, { facing = true } = {}) {
     const w = t.def.weapon, p = G.player; if (!w) return false;
     t.cooldown -= dt;
+    if (t.spoil > 0) return false; // its aim was spoiled by a hit: no burst now
     if (t.atk === 'idle') {
       if (t.los && facing && t.cooldown <= 0 && p.alive && muzzleOf(t, tmpA).distanceTo(p.pos) <= w.range && requestToken(t)) {
         t.atk = 'tele'; t.atkT = w.aimTime;
@@ -359,7 +356,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       } else if (t.es === 'lunge') {
         turnTo(t, p.pos.x, p.pos.z, dt * 2);
         step(t, -Math.sin(t.yaw) * m.speed, -Math.cos(t.yaw) * m.speed, dt); t.esT -= dt;
-        if (d < m.reach && p.alive) { p.damage(m.damage, t.pos); G.events.emit('enemy:melee', { enemy: t, pos: t.pos }); t.esT = 0; }
+        if (d < m.reach && p.alive) { p.damage(m.damage, t.pos); G.events.emit('enemy:melee', { enemy: t, pos: t.pos }); t.esT = 0; if (t.figure.meleeHit) t.figure.meleeHit(); }
         if (t.esT <= 0) { t.es = 'recover'; t.esT = m.recover; t.lungeIn = m.cooldown; }
       } else if (t.es === 'recover') {
         step(t, 0, 0, dt);
@@ -390,6 +387,47 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     },
   };
 
+  // ---- what the figure is shown ------------------------------------------------------------------------------------
+  /** The view of a threat its figure poses from (figures/index.js). */
+  function viewOf(t) {
+    const v = t.view || (t.view = { pos: t.pos, target: null }), engaged = t.alive && fighting(t), p = G.player;
+    v.yaw = t.yaw; v.vx = t.vel.x; v.vy = t.type === 'air' ? t.vel.y : 0; v.vz = t.vel.z; v.alive = t.alive; v.health = t.health / t.def.body.health;
+    v.engaged = engaged; v.aim = t.atk; v.melee = t.es === 'wind' || t.es === 'lunge' || t.es === 'recover' ? t.es : null;
+    v.alert = t.alive && t.brain.state !== t.def.behaviour.start; v.crouch = t.alive && t.brain.action === 'gotoCover' && t.arrived ? 1 : 0;
+    v.limp = t.limpFor > 0 ? Math.min(1, t.limpFor / 2) : 0; v.limpSide = t.limpSide;
+    v.target = engaged && t.los && p ? p.pos : v.alert ? t.lastKnown : null;
+    return v;
+  }
+  const searchlight = createSearchlight(G);
+  /** Once a frame: the far tier by distance to the camera, and the quadcopters' searchlight. */
+  function drawFigures(dt) {
+    const cam = G.camera && G.camera.position, far2 = FAR_METRES * FAR_METRES;
+    for (const t of list) if (cam) t.figure.setFar(t.pos.distanceToSquared(cam) > far2);
+    searchlight.update(dt, list.map((t) => t.figure));
+  }
+  /**
+   * Pose a threat's figure without its brain, for pictures and tests: `anim` idle | walk | run | aim | fire | hit |
+   * crouch | dead, played for `t` seconds (`speed` for walk and run, `zone` for hit). The threat ends where it stands.
+   */
+  function pose(t, { anim = 'idle', t: seconds = 1, speed, zone = 'torso' } = {}) {
+    const step = 1 / 60, v = viewOf(t), fwd = new Vector3(-Math.sin(t.yaw), 0, -Math.cos(t.yaw)), aimAt = t.pos.clone().addScaledVector(fwd, 12);
+    aimAt.y += 0.4; const sp = anim === 'walk' || anim === 'run' ? speed ?? (anim === 'run' ? 4.5 : 1.4) : 0, end = t.pos.clone();
+    t.pos.addScaledVector(fwd, -sp * seconds);
+    let n = Math.round(seconds / step);
+    if (anim === 'dead') { t.alive = false; t.figure.die(fwd.clone().negate()); }
+    for (let i = 0; i < n; i++) {
+      if (sp) { t.pos.addScaledVector(fwd, sp * step); t.pos.y = G.physics.groundHeight(t.pos.x, t.pos.z, t.pos.y + 1); }
+      Object.assign(v, viewOf(t), { vx: fwd.x * sp, vz: fwd.z * sp });
+      if (anim === 'aim' || anim === 'fire' || anim === 'hit') Object.assign(v, { engaged: true, alert: true, target: aimAt, aim: anim === 'aim' ? 'tele' : 'burst' });
+      if (anim === 'crouch') v.crouch = 1;
+      if (anim === 'fire' && i % 7 === 0) t.figure.fired();
+      if (anim === 'hit' && i === n - 9) t.figure.hit(fwd.clone().negate(), 26, zone);
+      place(t); t.figure.update(step, v);
+    }
+    if (!sp) t.pos.copy(end);
+    place(t); drawFigures(0);
+  }
+
   function die(t, dt) {
     t.deadFor += dt;
     if (t.type === 'air') {
@@ -405,12 +443,10 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
           if (ex) { fx('explosion', t.pos, 1.2); G.combat.explode(t.pos, ex.radius, ex.damage, 'enemy'); t.model.position.copy(t.pos); return remove(t); }
         }
       }
-      t.model.position.copy(t.pos);
+      t.model.position.copy(t.pos); t.figure.update(dt, viewOf(t));
     } else {
-      const f = Math.min(1, t.deadFor * 3);
-      if (t.def.body.figure === 'quadruped') { t.model.position.set(t.pos.x, t.pos.y - f * (t.def.body.height - 0.45), t.pos.z); t.model.rotation.z = f * 0.35; }
-      else { t.model.position.copy(t.pos); t.model.rotation.x = -f * 1.5; }
-      if (t.deadFor < 6.5 && (t.smokeIn -= dt) <= 0) { t.smokeIn = t.deadFor < 2 ? 0.09 : 0.2; fx('smoke', tmpA.set(t.pos.x, t.pos.y + 0.42, t.pos.z), { size: 0.5, life: 1.8, color: 0x17181b, rise: 1.1 }); if (t.deadFor < 4 && rng() < 0.5) fx('sparks', tmpA, UP, 3); }
+      place(t); t.figure.update(dt, viewOf(t)); // the figure falls or crashes by itself
+      if (t.figure.machine && t.deadFor < 6.5 && (t.smokeIn -= dt) <= 0) { t.smokeIn = t.deadFor < 2 ? 0.09 : 0.2; fx('smoke', tmpA.set(t.pos.x, t.pos.y + 0.42, t.pos.z), { size: 0.5, life: 1.8, color: 0x17181b, rise: 1.1 }); if (t.deadFor < 4 && rng() < 0.5) fx('sparks', tmpA, UP, 3); }
     }
     const wrecks = list.filter((x) => !x.alive);
     if (t.deadFor > tuning.wreckSeconds || (wrecks.length > tuning.maxWrecks && wrecks[0] === t)) remove(t);
@@ -426,6 +462,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     for (let i = list.length - 1; i >= 0; i--) {
       const t = list[i];
       if (!t.alive) { die(t, dt); continue; }
+      t.spoil -= dt; t.limpFor -= dt; t.stagger -= dt;
       sense(t, dt);
       const rule = t.brain.step({ seesTarget: t.sees, heardNoise: t.heard, damaged: t.hurt, arrived: t.arrived, noCover: t.noCover, health: t.health / t.def.body.health, lostFor: t.lostFor }, dt);
       if (rule) {
@@ -437,15 +474,12 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       (ACTIONS[t.brain.action] || ACTIONS.hold)(t, dt);
       place(t);
       hot = Math.max(hot, fighting(t) ? 1 : t.brain.state !== t.def.behaviour.start || (p && Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z) < tuning.nearMetres) ? 0.6 : 0.15);
-      const u = t.model.userData, want = fighting(t) ? LENS_HOT : LENS_CALM, k = 1 + t.flare * 3.2;
+      const want = fighting(t) ? LENS_HOT : LENS_CALM, k = 1 + t.flare * 3.2;
       for (let c = 0; c < 3; c++) t.lens[c] += (want[c] - t.lens[c]) * (1 - Math.exp(-8 * dt));
-      u.lens.color.setRGB(t.lens[0] * k, t.lens[1] * k, t.lens[2] * k); t.flare = Math.max(0, t.flare - dt * 1.5);
-      if (u.rotors) for (const r of u.rotors) r.rotation.y += dt * 60;
-      const sw = Math.sin(t.stride * Math.PI) * Math.min(1, Math.hypot(t.vel.x, t.vel.z) / 2) * 0.6;
-      if (u.legL) { u.legL.rotation.x = sw; u.legR.rotation.x = -sw; }
-      if (u.legs) u.legs.forEach((l, n) => { l.rotation.x = n < 2 ? sw : -sw; });
-      if (t.type === 'air') { t.model.rotation.z = 0; t.model.rotation.x = -Math.min(0.35, Math.hypot(t.vel.x, t.vel.z) * 0.03); }
+      t.figure.lens.color.setRGB(t.lens[0] * k, t.lens[1] * k, t.lens[2] * k); t.flare = Math.max(0, t.flare - dt * 1.5);
+      t.figure.update(dt, viewOf(t));
     }
+    drawFigures(dt);
     updateBolts(dt);
     noises = [];
     // the music follows the fight; it calms down a few seconds after the last contact
@@ -464,6 +498,12 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
         const d2 = oc.lengthSq() - tc * tc, r = b.radius; if (d2 > r * r) continue;
         const d = tc - Math.sqrt(r * r - d2); if (!best || d < best.dist) best = { enemy: t, dist: d, part: 'body' };
       } else {
+        if (t.figure.zones) { // a figure with hit volumes: a first test against a wide upright segment, then its parts
+          tmpA.copy(origin).addScaledVector(dir, max); tmpB.set(t.pos.x, t.pos.y, t.pos.z); tmpC.set(t.pos.x, t.pos.y + b.height + 0.2, t.pos.z);
+          if (segmentDistanceSq(origin, tmpA, tmpB, tmpC) > 1.2 * 1.2) continue;
+          for (const z of t.figure.zones()) { const dz = rayCapsule(origin, dir, z.a, z.b, z.r, max); if (dz !== null && (!best || dz < best.dist)) best = { enemy: t, dist: dz, part: z.part }; }
+          continue;
+        }
         // an upright cylinder
         const ox = origin.x - t.pos.x, oz = origin.z - t.pos.z, a = dir.x * dir.x + dir.z * dir.z; if (a < 1e-9) continue;
         const bq = 2 * (ox * dir.x + oz * dir.z), c = ox * ox + oz * oz - b.radius * b.radius, disc = bq * bq - 4 * a * c; if (disc < 0) continue;
@@ -482,7 +522,9 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
     get intensity() { return intensity; },
     bolts: () => bolts.filter((b) => b.on).map((b) => ({ x: b.pos.x, y: b.pos.y, z: b.pos.z })),
     knows: (kind) => !!defOf(kind),
+    zoneMultiplier: (t, part) => zoneMultiplier(t.def, part),
     despawn(id) { const t = list.find((x) => x.id === id); if (t) remove(t); return !!t; },
+    pose, place,
     clear() { for (const t of [...list]) remove(t); for (const b of bolts) { b.on = false; b.mesh.visible = false; } tokens.held = 0; },
   };
 }

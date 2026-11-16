@@ -55,14 +55,59 @@ for (const kind of Object.keys(ARCHETYPES)) test(`the player's shots kill a ${ki
   assert.ok(f.log.some((e) => e.n === 'entity' && e.change === 'despawn' && e.id === 'x'));
 });
 
-test('a round in the top of a ground threat counts 2.2 times; being shot at turns it on the player', async () => {
-  const f = await fight([{ id: 's', kind: 'sentry', x: 20, z: 6, heading: 0 }]);
+test('a round counts by the zone it hits: a head round kills a sentry, a leg round counts 0.7; being shot at turns it on the player', async () => {
+  const Z = ARCHETYPES.sentry.zones;
+  const f = await fight([{ id: 's', kind: 'sentry', x: 20, z: 6, heading: 0 }, { id: 't', kind: 'sentry', x: 24, z: 6, heading: 0 }]);
   f.run(0.2);
   const hit = f.shootAt('s', 'weak');
-  assert.equal(hit.part, 'weak');
-  assert.ok(Math.abs(f.G.threats.list[0].health - (90 - RIFLE * 2.2)) < 1e-6);
+  assert.equal(hit.part, 'head', 'the top of a person is its head');
+  assert.equal(hit.killed, Z.head * RIFLE >= ARCHETYPES.sentry.body.health, 'a head round kills when the zone says so');
+  const t = f.G.threats.list.find((x) => x.id === 't'), knee = t.figure.joints().knL;
+  const leg = f.G.combat.playerShot(f.G.player.pos.clone().setY(f.G.player.pos.y + 1.6), knee.clone().sub(f.G.player.pos.clone().setY(f.G.player.pos.y + 1.6)).normalize(), { damage: RIFLE });
+  assert.equal(leg.part, 'leg');
+  assert.ok(Math.abs(t.health - (90 - RIFLE * Z.leg)) < 1e-6, `health ${t.health}`);
   f.run(0.3);
-  assert.ok(f.log.some((e) => e.n === 'entity' && e.change === 'state' && e.from === 'patrol' && e.state === 'engage'));
+  assert.ok(f.log.some((e) => e.n === 'entity' && e.change === 'state' && e.id === 't' && e.from === 'patrol' && e.state === 'engage'));
+});
+
+test('a crawler still has its weak point, its head: 2.2 times', async () => {
+  const f = await fight([{ id: 'c', kind: 'crawler', x: 20, z: 6, heading: 90 }]);
+  f.run(0.2);
+  const t = f.G.threats.list[0], head = t.figure.headPos.clone(), from = head.clone().add(new f.G.THREE.Vector3(6, 0, 0)); // level, from in front of it
+  const hit = f.G.combat.playerShot(from, head.sub(from).normalize(), { damage: RIFLE });
+  assert.equal(hit.part, 'weak');
+  assert.ok(Math.abs(t.health - (ARCHETYPES.crawler.body.health - RIFLE * 2.2)) < 1e-6);
+});
+
+test('a person hit while it aims stops: the burst is cancelled and it does not shoot for the 0.4 s after', async () => {
+  const f = await fight([{ id: 's', kind: 'sentry', x: 20, z: 6, heading: 180 }]); // 12 m away, facing the player
+  const fires = [], warns = []; f.G.events.on('enemy:fire', () => fires.push(f.G.time.t)); f.G.events.on('enemy:telegraph', () => warns.push(f.G.time.t));
+  for (let i = 0; i < 600 && !warns.length; i++) f.run(STEP);
+  assert.ok(warns.length, 'it warned');
+  f.run(0.2); // in the middle of the warning (0.5 s)
+  const t = f.G.threats.list[0], at = f.G.time.t; assert.equal(t.atk, 'tele');
+  const eye = f.G.player.pos.clone().setY(f.G.player.pos.y + 1.6), chest = t.figure.joints().chest;
+  assert.equal(f.G.combat.playerShot(eye, chest.sub(eye).normalize(), { damage: RIFLE }).part, 'torso');
+  assert.equal(t.atk, 'idle', 'the burst is off');
+  f.run(ARCHETYPES.sentry.reactions.aimSpoil - 0.02);
+  assert.equal(fires.filter((x) => x > at).length, 0, 'no round in the spoiled 0.4 s');
+  assert.equal(warns.filter((x) => x > at).length, 0, 'no new warning either');
+  for (let i = 0; i < 600 && !fires.some((x) => x > at); i++) f.run(STEP);
+  assert.ok(fires.some((x) => x > at + ARCHETYPES.sentry.reactions.aimSpoil), 'then it fights on');
+});
+
+test('a person hit in the leg limps: it moves at the limp share of its speed until the limp wears off', async () => {
+  const f = await fight([{ id: 's', kind: 'sentry', x: 20, z: -14, heading: 180, alerted: true }]); // 32 m away: it runs in to fight
+  const t = () => f.G.threats.list[0], speed = () => Math.hypot(t().vel.x, t().vel.z);
+  let before = 0; for (let i = 0; i < 90; i++) { f.run(STEP); before = Math.max(before, speed()); }
+  const R = ARCHETYPES.sentry.reactions, run = ARCHETYPES.sentry.body.speed.engage;
+  assert.ok(before > run * 0.8, `it ran (${before.toFixed(2)} m/s)`);
+  const eye = f.G.player.pos.clone().setY(f.G.player.pos.y + 1.6), knee = t().figure.joints().knR;
+  assert.equal(f.G.combat.playerShot(eye, knee.sub(eye).normalize(), { damage: RIFLE }).part, 'leg');
+  let limping = 0; for (let i = 0; i < 120; i++) { f.run(STEP); limping = Math.max(limping, speed()); }
+  assert.ok(limping <= run * R.limpSpeed + 1e-6, `limping at ${limping.toFixed(2)} m/s, at most ${(run * R.limpSpeed).toFixed(2)}`);
+  f.run(R.limpSeconds); let after = 0; for (let i = 0; i < 240; i++) { f.run(STEP); after = Math.max(after, speed()); }
+  assert.ok(after > run * R.limpSpeed + 0.2 || t().brain.action !== 'skirmish', `the limp wore off (${after.toFixed(2)} m/s)`);
 });
 
 test('a threat notices after its notice time, warns for its aim time, then shoots; the player is told from where', async () => {

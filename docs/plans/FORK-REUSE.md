@@ -235,7 +235,7 @@ plan `reliefPlan` returns), `engine/src/scene/install.js`, `engine/test/relief.t
 **Tests.** Every drawn stoop vertex lies within 0.02 m of its solids (as `structures.test.js` does for walls); a walker
 climbs a three-tread stoop to the door sill; the nav grid finds a path to every door that had one before.
 
-### FR-6. A human threat figure (Fable; after J)
+### FR-6. A human threat figure (Fable; after J) — built 2026-11-16 (`GAMEPLAY-PARITY.md` J)
 
 **Goal.** The `person` figure is a rigged, animated soldier of the engine's own making.
 **Owns.** `engine/src/threats/figures/person.js` (new; geometry, rig, animation), the call site in
@@ -247,7 +247,7 @@ no lettering, no national insignia (rule 3).
 **Done** when the figure is in both missions, pictures at 5, 15 and 40 m are looked at, budgets measured, and a person
 has seen it move.
 
-### FR-7. Hit reactions for human archetypes (Fable; after FR-6)
+### FR-7. Hit reactions for human archetypes (Fable; after FR-6) — built 2026-11-16 (`GAMEPLAY-PARITY.md` J)
 
 **Goal.** A person hit reacts: flinch toward the wound, burst cancelled, aim disrupted 0.4 s, a limp after a leg hit, a
 stagger on a heavy hit; damage by zone (head, torso, limbs) from the pack.
@@ -255,7 +255,7 @@ stagger on a heavy hit; damage by zone (head, torso, limbs) from the pack.
 (`reactions` and `zones` blocks), `docs/CONTENT-PACK.md`, tests (zone multipliers, the 0.4 s window, limp speed).
 **Not in it** without a maintainer decision (E4): blood, dents, severing.
 
-### FR-8. Synthesised voices (Sonnet; after FR-6)
+### FR-8. Synthesised voices (Sonnet; after FR-6) — the hook and three barks built 2026-11-16; waits for a person to listen
 
 **Goal.** Threats that are people make pain, death and call-out sounds, synthesised, per-actor pitch, one voice at a time
 per actor, no immediate repeat.
@@ -267,7 +267,7 @@ the shape: open vowels for cries, closed for grunts), durations and gains as num
 
 ## E. Decisions for the maintainer
 
-1. **Human figures (J, people):** procedural now (option 1, recommended), with a later model format for CC0 figures
+1. **Decided 2026-11-16: procedural now, CC0 later; the ghoul mesh and voices rejected; no gore.** Was: **Human figures (J, people):** procedural now (option 1, recommended), with a later model format for CC0 figures
    (option 3); or go straight to option 3, which needs `GLTFLoader` in `engine/vendor/` (rule 9) and an animation contract.
 2. **The ghoul mesh and voices:** record them as rejected in `DECISIONS.md` (recommended): no licence, a private source
    project named after *Soldier of Fortune*, voice files recorded in 1999 by a third party.
