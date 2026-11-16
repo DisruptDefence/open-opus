@@ -156,13 +156,13 @@ void surf(vec2 uv){
     float leaf = step(0.55, lf.z) * smoothstep(0.34, 0.12, lf.x) * smoothstep(0.7, 0.2, v);
     vec3 soil = mix(L(0.14, 0.12, 0.10), L(0.27, 0.22, 0.15), fine);
     vec3 lc = mix(L(0.32, 0.20, 0.07), L(0.20, 0.22, 0.07), lf.w);
-    a = edge * (0.45 + 0.5 * smoothstep(0.3, 0.75, big)) * (0.6 + 0.9 * gr);
+    a = edge * (0.22 + 0.35 * smoothstep(0.3, 0.75, big)) * (0.6 + 0.9 * gr);
     col = mix(soil, lc, leaf); a = max(a, leaf * 0.85);
     a *= smoothstep(0.0, 0.1, 1.0 - v) * smoothstep(0.0, 0.04, v);
     r = 0.95;
   } else if (band < 1.5) {
     float prof = smoothstep(0.1, 0.4, v) * smoothstep(0.9, 0.6, v);
-    a = prof * (0.22 + 0.3 * smoothstep(0.25, 0.75, gr)) * (0.6 + 0.8 * fine);
+    a = prof * (0.1 + 0.2 * smoothstep(0.3, 0.75, gr)) * (0.6 + 0.8 * fine);
     col = L(0.05, 0.048, 0.045); r = 0.5;
   } else if (band < 2.5) {
     float e = min(min(u, 1.0 - u) * 0.5, min(v, 1.0 - v)) - 0.04;

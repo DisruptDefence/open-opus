@@ -341,6 +341,11 @@ function wearRoad(soups, road, P, cum, strips, tile, style) {
     const l = r.range(2.4, 5.2), w = Math.min(r.range(1.1, 2.4), hw * 1.2), off = r.range(-(hw - w / 2 - 0.5), hw - w / 2 - 0.5);
     if (sAbs - l / 2 > 1.5 && sAbs + l / 2 < len - 1.5) wearSpot(wsoup, P, cum, s, off, l, w, 2, tile, lift + 0.002);
   });
+  if (W('patches') > 0 && road.surface === 1) slot(31, 4, (r, s, sAbs) => { // a tar strip across the road, where a trench was cut and closed
+    if (r() > 0.45 * W('patches')) return;
+    const w = Math.min(road.width - 0.8, hw * 2 * 0.92), l = r.range(0.3, 0.55);
+    if (sAbs > 3 && sAbs < len - 3) wearSpot(wsoup, P, cum, s, 0, l, w, 2, tile, lift + 0.0025);
+  });
   if (W('oil') > 0) slot(14, 2, (r, s, sAbs) => {
     if (r() > 0.45 * W('oil')) return;
     const d = r.range(0.6, 1.5), off = (r() < 0.5 ? -1 : 1) * Math.min(hw * 0.5, hw - 0.9) * r.range(0.6, 1.1) + r.range(-0.2, 0.2);
