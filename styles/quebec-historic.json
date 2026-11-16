@@ -61,7 +61,7 @@
                   "upper": { "sash66": 4, "sash22": 2, "casement": 2, "arch_round": 0.3, "french": 0.2, "blind": 0.2 },
                   "top": { "attic": 3, "sash22": 2, "roundel": 0.6 } } },
     "groundFloor": { "doorWidth": 1.05, "doorHeight": 2.25, "shopPier": 0.45, "shopSill": 0.5, "fascia": 0.55, "awning": 0.4 },
-    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.6, "depth": 0.05 },
+    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a8a092" },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
     "looks": {

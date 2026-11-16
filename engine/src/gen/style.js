@@ -40,7 +40,7 @@ export const GROUND_SOUP = ['paving|tn', 'asphalt|tn', 'concrete|tn', 'cobble|tn
  * them, and every soup that casts is drawn once more for each shadow pass.
  */
 export const SOUP = {
-  plinth: 'stone|t',        // the plain stone below a façade where the ground falls away
+  plinth: 'stone|tv',       // the low foot of a façade where the ground falls away: triplanar stone, tinted per building (style.plinth.color)
   trim: 'stucco|tvn',       // sills, lintels, cornices, string courses, fascias, frames: painted render, tinted with a trim colour
   window: 'window|v',       // glass and frame, uv 0..1 a casement, 1..2 a shop pane; tinted with the frame colour
   door: 'door|v',           // uv 0..1 one door; tinted with the door colour
@@ -111,7 +111,7 @@ export const DEFAULT_STYLE = {
     states: { clear: 5, curtain: 2, blind: 1.2, lit: 0.5, dark: 1.5, bright: 1.5 },
   },
   groundFloor: { doorWidth: 1.0, doorHeight: 2.1, shopPier: 0.4, shopSill: 0.5, fascia: 0.5, awning: 0.2 },
-  cornice: { depth: 0.2, height: 0.25 }, plinth: { height: 0.4, depth: 0.04 },
+  cornice: { depth: 0.2, height: 0.25 }, plinth: { height: 0.4, depth: 0.04, color: '#a39d92' },
   dormers: { mansard: 1.0, gabled: 0.25, width: 1.1, height: 1.4 },
   chimneys: { perBuilding: [0, 1], width: 0.8, depth: 0.6, above: 1.0 },
   sidewalk: { width: 1.6, surface: 'concrete' },

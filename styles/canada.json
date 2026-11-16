@@ -73,7 +73,7 @@
       "states": {"clear": 5, "curtain": 2, "blind": 1.2, "lit": 0.5, "dark": 1.5, "bright": 1.5}
     },
     "groundFloor": { "doorWidth": 1.0, "doorHeight": 2.1, "shopPier": 0.4, "shopSill": 0.5, "fascia": 0.5, "awning": 0.35 },
-    "cornice": { "depth": 0.15, "height": 0.2 }, "plinth": { "height": 0.4, "depth": 0.04 },
+    "cornice": { "depth": 0.15, "height": 0.2 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a39d92" },
     "dormers": { "mansard": 1.0, "gabled": 0.2, "width": 1.0, "height": 1.4 },
     "chimneys": { "perBuilding": [0, 1], "width": 0.8, "depth": 0.6, "above": 1.0 },
     "kerb": 0.15, "season": "summer"

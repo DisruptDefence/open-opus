@@ -30,10 +30,10 @@
 //   Budget    near: <= 180 000 triangles and <= 30 ms for the densest cell of a town; far: 6 triangles an edge.
 //   Must not  read the DOM or three.js, keep state between calls, or draw the roof (roof.js does).
 import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.js';
-import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor } from './style.js';
+import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor } from './style.js';
 import { signedArea, obb } from './poly.js';
 
-const MARGIN = 0.45, DARK = [0.012, 0.012, 0.013];
+const MARGIN = 0.45;
 export function bays(len, style, seed) {
   const [lo, hi] = style.window.bay, width = lo + (hi - lo) * rng(seed)(), n = Math.max(0, Math.floor((len - 2 * MARGIN) / width));
   return { n, width, margin: MARGIN, start: (len - n * width) / 2 };
@@ -62,13 +62,18 @@ function profile(e, groundAt) {
   for (let s = 0; s <= k; s++) { const u = (e.len * s) / k, p = e.f.at(u, 0, 0); us.push(u); gs.push(groundAt(p[0], p[2])); }
   return { us, gs, max: Math.max(...gs), min: Math.min(...gs) };
 }
+/** The tint of a building's plinth: the style's colour, mixed with the wall's own tint for a stone house. */
+function plinthTint(b, style) {
+  const pc = parseColor((style.plinth && style.plinth.color) || '#a39d92') || parseColor('#a39d92');
+  return b.facade === 1 || b.facade === 2 ? shade(mixTint(b.tint, pc, 0.5), 0.9) : pc;
+}
 /** The stone foot of a wall: from the ground (a little below it) up to the plinth height, along the ground's profile. */
-function plinth(s, e, pr, base, style) {
+function plinth(s, e, pr, base, style, tint) {
   const h = style.plinth.height, d = style.plinth.depth, top = base + h;
   for (let k = 0; k + 1 < pr.us.length; k++) {
     const u0 = pr.us[k], u1 = pr.us[k + 1], b0 = Math.min(pr.gs[k], base) - 0.3, b1 = Math.min(pr.gs[k + 1], base) - 0.3;
-    quad(s, e.f.at(u0, b0, d), e.f.at(u1, b1, d), e.f.at(u1, top, d), e.f.at(u0, top, d));
-    quad(s, e.f.at(u0, top, d), e.f.at(u1, top, d), e.f.at(u1, top, 0), e.f.at(u0, top, 0)); // the weathering above it
+    quad(s, e.f.at(u0, b0, d), e.f.at(u1, b1, d), e.f.at(u1, top, d), e.f.at(u0, top, d), tint);
+    quad(s, e.f.at(u0, top, d), e.f.at(u1, top, d), e.f.at(u1, top, 0), e.f.at(u0, top, 0), tint); // the weathering above it
   }
 }
 
@@ -77,11 +82,15 @@ function look(b, style) {
   const r = rng(((b.id | 0) ^ 0x51ed270b) >>> 0), n = (list) => r.int(Math.max(1, (list || []).length));
   const frameK = n(style.frames), doorK = n(style.doors), trimK = n(style.trim), awnK = n(style.awnings), shutK = n(style.doors);
   const w = style.window, trim = paletteColor(style.trim, trimK);
-  return {
+  const out = {
     r, trim, frameC: paletteColor(style.frames, frameK), doorC: paletteColor(style.doors, doorK), awnC: paletteColor(style.awnings, awnK), shutC: paletteColor(style.doors, shutK),
     shutters: r() < (w.shutters || 0), ww: w.width * (0.9 + 0.2 * r()), wsc: 0.9 + 0.2 * r(),
     stringCourse: r() < 0.85, headDepth: 0.03 + 0.04 * r(), recess: 0.2 + 0.1 * r(), inShadow: shade(b.tint, 0.72),
   };
+  // the shopfront colour comes from its own stream, so the draws of `r` (door bay, awning) stay where they were
+  const q = rng(((b.id | 0) ^ 0x2b7e1516) >>> 0);
+  out.shopC = q() < 0.5 ? out.awnC : (q() < 0.5 ? out.frameC : out.trim);
+  return out;
 }
 
 // ---- the far façade: one wall, the windows are in the texture -------------------------------------------------------
@@ -101,10 +110,10 @@ function eachEdge(b, fn) {
 }
 
 export function facadeFar(soups, b, groundAt, style, roofInfo) {
-  const parapet = (roofInfo && roofInfo.parapet) || 0, wall = soups.get(FACADE_FAR_SOUP[b.facade] || FACADE_FAR_SOUP[0]), pl = soups.get(SOUP.plinth);
+  const parapet = (roofInfo && roofInfo.parapet) || 0, wall = soups.get(FACADE_FAR_SOUP[b.facade] || FACADE_FAR_SOUP[0]), pl = soups.get(SOUP.plinth), pt = plinthTint(b, style);
   eachEdge(b, (e, hole) => {
     const pr = profile(e, groundAt), L = wallLimits(b, groundAt, pr, parapet); if (!L.ok) return;
-    if (!L.floats) plinth(pl, e, pr, L.base, style);
+    if (!L.floats) plinth(pl, e, pr, L.base, style, pt);
     const st = storeysOf(b, L.base, L.eave), v1 = st.n * (L.top - L.base) / (L.eave - L.base), bl = !hole && b.blind && b.blind.has(e.i), by = bays(e.len, style, b.id);
     const q = (u0, u1, t0, t1) => quad(wall, e.f.at(u0, L.base, 0), e.f.at(u1, L.base, 0), e.f.at(u1, L.top, 0), e.f.at(u0, L.top, 0), b.tint, [t0, 0, t1, v1]);
     if (bl || by.n === 0 || st.h < 2.3) { q(0, e.len, 0.04, 0.04 + Math.min(0.26, e.len / 3)); return; }
@@ -221,7 +230,7 @@ function border(T, f, o, d, w, tint) {
 function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
   const parapet = (roofInfo && roofInfo.parapet) || 0, pr = profile(e, groundAt), L = wallLimits(b, groundAt, pr, parapet); if (!L.ok) return;
   const W = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[0]), T = soups.get(SOUP.trim), G = soups.get(SOUP.window), wd = style.window, gfl = style.groundFloor, f = e.f, len = e.len;
-  if (!L.floats) plinth(soups.get(SOUP.plinth), e, pr, L.base, style);
+  if (!L.floats) plinth(soups.get(SOUP.plinth), e, pr, L.base, style, plinthTint(b, style));
   const blind = !e.hole && b.blind && b.blind.has(e.i), front = !e.hole && b.front && b.front.has(e.i), by = bays(len, style, b.id), st = storeysOf(b, L.base, L.eave);
   const tint = b.tint, inner = lk.inShadow, stone = b.facade >= 1 && b.facade <= 3;
   const cornice = style.cornice, ext0 = e.convLeft ? cornice.depth : 0, ext1 = e.convRight ? cornice.depth : 0;
@@ -290,7 +299,11 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         if (lk.shutters && !o.blind) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.05, mixTint(lk.frameC, DARK, 0.5));
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
+        const pw = o.u1 - o.u0, nl = Math.max(2, Math.round(pw / 1.1)), yt = o.yh - 0.5;
+        if (pw > 1.7) for (let k = 1; k < nl; k++) { const um = o.u0 + k * pw / nl; rect(T, f, um - 0.035, um + 0.035, o.ys + 0.08, o.yh - 0.08, -o.r + 0.04, lk.shopC); }
+        if (o.yh - o.ys > 1.9) rect(T, f, o.u0 + 0.08, o.u1 - 0.08, yt - 0.03, yt + 0.03, -o.r + 0.04, lk.shopC);
+        if (o.ys - y0 > 0.3) rect(T, f, o.u0, o.u1, y0 + 0.06, o.ys - 0.06, 0.02, lk.shopC);
         slab(T, f, o.u0 - 0.06, o.u1 + 0.06, o.ys - 0.06, o.ys, 0, 0.1, lk.trim, 'ftb');
       } else { // a door, recessed
         const D = soups.get(SOUP.door);
@@ -305,7 +318,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
     }
     for (const rd of roundels) roundel(soups, f, rd, y0, lk, tint);
     if (ground && front && b.groundFloor === 1) { // the fascia over the shopfronts, and sometimes an awning
-      slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.1, lk.awnC, 'fbtlr');
+      slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.06, lk.shopC, 'fbtlr');
       if (lk.r() < gfl.awning) {
         const A = soups.get(SOUP.awning), yb = y0 + sh - gfl.fascia;
         for (const o of ops) if (o.kind === 'shop') {
