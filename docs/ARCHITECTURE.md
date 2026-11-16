@@ -20,7 +20,10 @@
 In this repository today: the engine, the world API, a development host page with an in-page stand-in for a
 session host, one scene and its builder, and the phone (`phone/`): a host on the world API, a placeholder screen,
 a viewer for a real ATAK, and the local gateway that streams one. Not here yet: a mission client and a session
-host that speak the protocol.
+host that speak the protocol, and a reader of the scenario format (`plans/PLATFORM.md`).
+
+The contracts, their versions and how they may change: `CONTRACTS.md`. Decisions and why: `DECISIONS.md`.
+Work in hand, cut into items: `plans/` (`GAMEPLAY-PARITY.md`, `SCENE-DETAIL.md`, `PLATFORM.md`, `ENGINE-SCALE.md`).
 
 ## Three rules
 
@@ -29,7 +32,8 @@ host that speak the protocol.
 2. **One protocol.** The mission client knows a session protocol (`SESSION-PROTOCOL.md`), not a server. Any
    host that speaks it can run a mission: a small reference host, a hardened one elsewhere.
 3. **Data in, engine unchanged.** A new place is a scene package (`SCENE-FORMAT.md`). A new weapon or threat is
-   a content pack. A new mission is a scenario. None of them is a code change.
+   a content pack (`opus-content/1`). A new mission is a scenario (`SCENARIO-FORMAT.md`). None of them is a code
+   change.
 
 ## What runs where
 
@@ -37,6 +41,21 @@ Anything a player feels within a frame runs in the browser: rendering, audio, mo
 threat reactions. Anything that decides an outcome belongs to the session host: what spawns and when, mission
 state, objectives, scoring, the clock. The client never holds a trigger or a future event; the host sends
 commands when they happen, and the engine applies them through `apply()`.
+
+### What a host can and cannot know
+
+The client is a web page on the player's machine: a host can bound what it reports, never prove it.
+
+| What | A host can rely on it? | Why |
+|---|---|---|
+| What the trainee did in the TAK client | **Yes**, when the host takes Cursor-on-Target from the phone side | It never passes through the page |
+| Where the scenario's own things are, the clock, the objectives | **Yes** | The host placed them and keeps them |
+| Where the player is | **Within bounds** | Play area and speed are checked; inside them it is the page's word. A changed page can walk through a wall at walking speed |
+| Shots, hits, kills, damage, death | **No** | The simulation runs in the page. A host does not rest a result on them, or says so (`debrief.unverified`) |
+| That a person, and not a script, touched the phone | **No** | Touches are relayed as they come |
+
+So a result is worth what its TAK-side checks are worth. Design a scenario so that what matters is done in the
+TAK client, and treat position as the context of a report, not as the proof of one.
 
 ## Layout and toolchain
 
@@ -114,11 +133,23 @@ shares in ATAK reaches the gateway as Cursor-on-Target (ATAK's TAK server is the
 host as the `phone` event. In the in-page stand-in the browser relays that report; a hardened session host takes
 it from the phone side itself (`SESSION-PROTOCOL.md` 4, rule 5).
 
+## Scale: what is proven where
+
+| Claim | Proven by | Not proven |
+|---|---|---|
+| The simulation (movement, collision, threats, commands, the world API) | `node --test` under Node, no screen | — |
+| A mission plays end to end in a browser | `engine/tools/play.mjs`, software WebGL, lowest quality, no sound | On a real GPU; at `medium` and above; with sound |
+| Pictures of a scene | `engine/tools/photo.mjs`, software WebGL | Frame time on a real GPU: every figure in the plans is software rendering. `plans/ENGINE-SCALE.md` item K5 measures real machines |
+| Feel, sound, pointer lock, touch, a gamepad | Nothing automated | A person must judge them |
+| A scene larger than one file (2 MB) | The chunked reader, on the generated test scene | The builder does not write chunks; no real place is chunked (`plans/ENGINE-SCALE.md` K1 to K4) |
+
 ## Open points
 
-- **The scenario format** is not specified, and no reference host exists. Whether the checks have one open
-  implementation is a maintainer decision.
+- **The scenario format** is decided (`SCENARIO-FORMAT.md`, draft) and not built; no reference host exists
+  (`plans/PLATFORM.md` PL-3, PL-4).
 - **Lifted modules.** `render`, `materials`, `fx`, `audio`, `input`, `player`, `combat`, `weapons` and
-  `shared/lifted.js` were cut from a stand-in game (`AGENTS.md` rule 8) and are to be rewritten.
-- **The georeference block is written three ways** (`SCENE-FORMAT.md`, "Status").
+  `shared/lifted.js` were cut from a stand-in game (`AGENTS.md` rule 8) and are to be rewritten, each against
+  tests that pin its behaviour first (`plans/ENGINE-SCALE.md` K7, K8).
+- **The scene format is partly implemented**: what each writer and reader does is the table in
+  `SCENE-FORMAT.md`, "Status" (the georeference block is no longer among the differences).
 - **Licence** of this repository: not chosen.
