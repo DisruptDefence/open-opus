@@ -350,7 +350,7 @@ function chimneys(soups, b, style, info, lk) {
   const cm = style.chimneys, pts = (info && info.ridge) || [];
   if (!pts.length || !cm.perBuilding) return;
   const n = Math.min(pts.length, cm.perBuilding[0] + lk.r.int(cm.perBuilding[1] - cm.perBuilding[0] + 1)); if (n < 1) return;
-  const o = obb(b.ring), brick = b.facade === 3 || !(b.facade >= 1 && b.facade <= 2), S = soups.get(brick ? 'brick|tv' : WALL_SOUP[b.facade]), T = soups.get(SOUP.trim), eave = b.yBase + b.hEave;
+  const o = obb(b.ring), brick = b.facade === 3 || !(b.facade >= 1 && b.facade <= 2), S = soups.get(brick ? 'wall_brick|tv' : WALL_SOUP[b.facade]), T = soups.get(SOUP.trim), eave = b.yBase + b.hEave;
   const chosen = n >= pts.length ? pts : n === 1 ? [pts[lk.r.int(pts.length)]] : [pts[0], pts[pts.length - 1]].slice(0, n), tint = brick ? shade([0.42, 0.2, 0.15], 1) : b.tint;
   for (const p of chosen) {
     const top = p.y + cm.above;

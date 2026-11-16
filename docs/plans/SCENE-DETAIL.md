@@ -180,6 +180,16 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
 }
 ```
 
+**`client.bayWindows`** (added with wall variation, `gen/wallvar.js`, `materials/facades.js`): the windows the far façade
+draws in its material, as data. `types` names each type with its `shape` (`rect`, `segmental`, `round`, `circle`,
+`blind` for a bricked-up opening, `shop`), size (`w`, `h`, `sill`), pane `grid` `[columns, rows]`, a meeting `rail`,
+`muntin` width, `surround`, `lintel`, `sillProj`, a `hood` (`gable`, `arc`, `cornice`) and the chance of `shutters`.
+`classes` gives the weights of the types for the `ground`, `first` and `upper` storeys (a class the table lacks borrows
+the one before); `states` the weights of what is behind the glass (`clear`, `curtain`, `blind`, `lit`, `dark`,
+`bright`); `odd` the chance that a bay differs from the rest of its storey. `shutterColors` and `glass` are colour
+lists; sash and dressing colours are `frames` and `trim`. A regional pack names only what it changes (lists replace,
+objects merge). Up to 16 types. A new place adds or changes window types by editing this table; no engine code.
+
 `when` keys, all optional, all must hold: `building` (the OSM value, after the worship/hotel substitution the
 builder already does), `use`, `areaMin`, `areaMax` (m²), `levelsMin`, `levelsMax`, `attached` (shares a wall,
 3.1 `blind` not empty), `pitch` (`flat` | `low` | `steep`, measured, 6.2; absent when not measured, and then a

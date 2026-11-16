@@ -25,14 +25,14 @@ export const SEASONS = ['summer', 'autumn', 'winter', 'spring'];
 // library's fallback and one warning: a generator may be written before its material.
 
 /** The textured wall a near façade is cut out of, by façade class (4.2): triplanar, tinted. Also gable walls. */
-export const WALL_SOUP = ['stucco|tv', 'stone|tv', 'rubble|tv', 'brick|tv', 'stucco|tv', 'wood|tv', 'concrete|tv', 'concrete|tv', 'galv|tv', 'stucco|tv', 'concrete|tv'];
+export const WALL_SOUP = ['wall_stucco|tv', 'wall_stone|tv', 'wall_rubble|tv', 'wall_brick|tv', 'wall_stucco|tv', 'wood|tv', 'concrete|tv', 'concrete|tv', 'galv|tv', 'wall_stucco|tv', 'concrete|tv'];
 /** The flat far façade, windows painted in the texture, by façade class: uv counts bays and storeys, tinted. */
 export const FACADE_FAR_SOUP = ['facade_stucco|v', 'facade_stone|v', 'facade_rubble|v', 'facade_brick|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v', 'facade_stucco|v'];
 /** Roof coverings by roof material (4.2). With a colour (`b.roofColor`) the tinted form `…|tv` of ROOF_TINT_SOUP is used. */
 export const ROOF_SOUP = ['roof_membrane|t', 'roof_zinc|t', 'roof_copper|t', 'roof_zinc|t', 'roof_zinc|t', 'roof_zinc|t', 'roof_membrane|t', 'concrete|t', 'roof_zinc|t', 'roof_zinc|t'];
 export const ROOF_TINT_SOUP = ['roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv', 'roof_zinc|tv'];
 /** Free-standing walls by their material (the façade enum, 4.4): triplanar, not tinted. */
-export const STRUCTURE_SOUP = ['stone|t', 'stone|t', 'rubble|t', 'brick|t', 'stucco|t', 'wood|t', 'concrete|t', 'concrete|t', 'galv|t', 'stucco|t', 'concrete|t'];
+export const STRUCTURE_SOUP = ['wall_stone|t', 'wall_stone|t', 'wall_rubble|t', 'wall_brick|t', 'wall_stucco|t', 'wood|t', 'concrete|t', 'concrete|t', 'galv|t', 'wall_stucco|t', 'concrete|t'];
 /** Ground laid over the terrain (ribbons, sidewalks), by surface class (4.1): triplanar, casts no shadow. */
 export const GROUND_SOUP = ['paving|tn', 'asphalt|tn', 'concrete|tn', 'cobble|tn', 'paving|tn', 'gravel|tn', 'dirt|tn', 'grass|tn', 'sand|tn', 'rock|tn', 'concrete|tn', 'dirt|tn', 'wood|tn', 'metal|tn', 'sand|tn', 'grass|tn'];
 /**
@@ -80,6 +80,35 @@ export const DEFAULT_STYLE = {
       ground: { sash22: 3, casement: 2, arched: 1, blind: 0.2 }, upper: { sash66: 3, sash22: 2, casement: 2, french: 0.3, arch_round: 0.4, blind: 0.25 },
       top: { attic: 3, sash11: 1, sash22: 1, roundel: 0.5 },
     } },
+  // the windows painted into the far façade (materials/facades.js): the types, their weights by storey, and the lit/curtain/blind
+  // states, all data; the shader draws whatever this table says (see gen/wallvar.js for the fields). `shutterColors` and
+  // `glass` are colour lists; the sash and dressing colours are `frames` and `trim` above.
+  bayWindows: {
+    odd: 0.12,
+    shutterColors: ['#2f5a45', '#7d1b1a', '#1f2326', '#3e5a7c', '#e8e4da'],
+    glass: ['#1d2a33', '#24343a', '#2b2f3a', '#1b2b2a'],
+    types: {
+      sash6: { shape: 'rect', w: 1.05, h: 1.75, sill: 0.85, grid: [3, 4], rail: true, surround: 0.1, lintel: true, shutters: 0.15 },
+      sash2: { shape: 'rect', w: 1.0, h: 1.7, sill: 0.9, grid: [2, 2], rail: true, surround: 0.1, lintel: true, shutters: 0.15 },
+      sash1: { shape: 'rect', w: 0.95, h: 1.6, sill: 0.95, grid: [1, 2], rail: true, surround: 0.09, lintel: true, shutters: 0.1 },
+      casement: { shape: 'rect', w: 1.1, h: 1.4, sill: 0.95, grid: [2, 3], muntin: 0.045, surround: 0.08, shutters: 0.2 },
+      segmental: { shape: 'segmental', w: 1.05, h: 1.85, sill: 0.8, grid: [3, 4], rail: true, surround: 0.12, shutters: 0.1 },
+      arched: { shape: 'round', w: 1.0, h: 2.1, sill: 0.7, grid: [3, 5], rail: true, surround: 0.13, shutters: 0.05 },
+      oeil: { shape: 'circle', w: 0.7, sill: 1.5, grid: [2, 2], muntin: 0.03, surround: 0.1, sillProj: false },
+      french: { shape: 'rect', w: 1.1, h: 2.3, sill: 0.08, grid: [2, 5], muntin: 0.03, surround: 0.12, lintel: true, hood: 'cornice', shutters: 0.4 },
+      hooded: { shape: 'rect', w: 1.05, h: 1.75, sill: 0.85, grid: [3, 4], rail: true, surround: 0.1, hood: 'gable', shutters: 0.1 },
+      dormer: { shape: 'rect', w: 0.75, h: 1.1, sill: 0.9, grid: [2, 3], surround: 0.08, hood: 'gable' },
+      attic: { shape: 'rect', w: 0.7, h: 0.8, sill: 1.2, grid: [2, 2], surround: 0.07 },
+      shop: { shape: 'shop', w: 2.3, h: 2.3, sill: 0.35, grid: [2, 1], muntin: 0.06, surround: 0.14, hood: 'cornice' },
+      blind: { shape: 'blind', w: 1.0, h: 1.75, sill: 0.85, surround: 0.1, lintel: true },
+    },
+    classes: {
+      ground: { shop: 3, sash6: 2, sash2: 2, segmental: 1.2, arched: 0.8, casement: 0.5, blind: 0.5 },
+      first: { sash6: 4, sash2: 2, french: 1, segmental: 1.5, arched: 1, sash1: 1, hooded: 1.2 },
+      upper: { sash6: 3, sash2: 3, sash1: 1.5, casement: 1, dormer: 1, attic: 1, oeil: 0.4, blind: 0.4, segmental: 1 },
+    },
+    states: { clear: 5, curtain: 2, blind: 1.2, lit: 0.5, dark: 1.5, bright: 1.5 },
+  },
   groundFloor: { doorWidth: 1.0, doorHeight: 2.1, shopPier: 0.4, shopSill: 0.5, fascia: 0.5, awning: 0.2 },
   cornice: { depth: 0.2, height: 0.25 }, plinth: { height: 0.4, depth: 0.04 },
   dormers: { mansard: 1.0, gabled: 0.25, width: 1.1, height: 1.4 },

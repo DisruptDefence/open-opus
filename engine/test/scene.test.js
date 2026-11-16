@@ -137,8 +137,8 @@ test('a scene with the keys of formatMinor 1 decodes to what it says', async () 
   const by = (id) => all.buildings.find((b) => b.id === id), shop = by(2890417532), hall = by(77001);
   assert.deepEqual([shop.roofShape, shop.hRoof, shop.levels, shop.roofDir, shop.roofMat, shop.facade, shop.use, shop.groundFloor, shop.heightSource], [3, 4.1, 3, 255, 1, 1, 2, 1, 'measured']);
   assert.ok(Math.abs(shop.hEave - 10.1) < 1e-9); assert.deepEqual([...shop.blind], [1, 3]); assert.deepEqual([...shop.front], [0]);
-  assert.ok(near(shop.tint, linear('#8f8a80')), 'palette 2 of the style\'s stone_ashlar'); assert.ok(near(shop.roofColor, linear('#9aa0a3')), 'roof palette 0 of metal_seam');
-  assert.equal(hall.roofDir, 90); assert.ok(near(hall.roofColor, linear('#67B083')), 'a tagged colour wins over the roof palette'); assert.ok(near(hall.tint, linear('#9a5a40')));
+  assert.ok(near(shop.tint, linear('#8f8a80'), 0.1), 'palette 2 of the style\'s stone_ashlar, its tone jittered by the building (gen/wallvar.js)'); assert.ok(near(shop.roofColor, linear('#9aa0a3')), 'roof palette 0 of metal_seam');
+  assert.equal(hall.roofDir, 90); assert.ok(near(hall.roofColor, linear('#67B083')), 'a tagged colour wins over the roof palette'); assert.ok(near(hall.tint, linear('#9a5a40'), 0.1));
   assert.equal(by(77003), undefined, 'an outline with `parts: 1` is in no chunk: its parts draw it'); assert.ok(by(77004).part);
   assert.equal(by(77005).yMin, by(77005).yBase + 12, 'a part with a min height starts there'); assert.equal(by(77004).yMin, by(77004).yBase);
   assert.deepEqual(by(77006).passages, [{ x1: -60, z1: 23.5, x2: -60, z2: 36.5, w: 4, h: 5 }]);

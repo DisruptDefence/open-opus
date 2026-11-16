@@ -44,3 +44,24 @@ cut back to rare, small, pale patches. Tests: 141 pass, 0 fail. Frame cost is un
 Still not done: ground by world position (items 5-7), identical windows on every bay of a material (needs several bay
 variants picked by seed in `gen/style.js`), near façades (placeholder until item 5 of SCENE-DETAIL), roofs and the far
 ring (view 2 still shows plain grey hulls and flat grass).
+
+## Wall variation (2026-11-16): no wall pattern repeats
+
+The PO's complaint: the same stone grid and brick bay repeat across a street and across every building of a material. A baked
+tile repeats by nature, so the structure of a wall is no longer baked (`materials/facades.js`, `gen/wallvar.js`).
+
+- **Baked**: one small tile of grain, pits and hairline cracks per kind of wall (render, masonry); the shader samples it twice at
+  two scales, so its period is no period.
+- **Live, per pixel**: courses of stone, rubble and brick (block length, three course heights in a rhythm, bond, joint width and
+  colour, block tones), weathering (tone drift, stains, rain streaks, damp at the foot, salt, patches of repair), and on the far
+  façade the string course and the windows, all from a hash of the building, the bay and the storey. The building's id is its wall
+  tint, which the mesher already writes into every vertex; `jitterTint` gives each building its own tone and hue within its
+  palette entry (`scene/source.js`). One material per kind of wall, one draw call, no new vertex data.
+- **Windows are data**: the style pack's `client.bayWindows` (types, weights per storey class, states, colour lists) is compiled
+  by `gen/wallvar.js` into uniforms (`setBayStyle`, called by the level loader). 13 types by default; a place edits the table.
+- The near wall (triplanar) and trims share the live masonry: `WALL_SOUP`, `STRUCTURE_SOUP` name `wall_*`.
+
+Frame cost at `q=high` on the software renderer, 640 x 360, min of 7 frames, A/B interleaved on a loaded machine: view 1
+1309 to 1412 ms and 1241 to 1338 ms (+8%); view 5 893 to 1004 ms, 845 to 986 ms and 832 to 936 ms (+11 to +17%, before the
+window early-out; +12% after). Not measurable on a GPU here.
+

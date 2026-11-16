@@ -56,7 +56,7 @@ const quads = (soups, key) => (soups.map.get(key) ? soups.map.get(key).pos.lengt
 test('a 10 m wall of 3 storeys: 9 window quads, and the wall plus the windows fill 10 x 9 m', () => {
   const soups = near(wallOnly()), glass = soups.map.get('window|vn');
   assert.equal(quads(soups, 'window|vn'), 9);
-  const wall = area(soups.map.get('stone|tv'), inPlane), win = area(glass);
+  const wall = area(soups.map.get('wall_stone|tv'), inPlane), win = area(glass);
   assert.ok(Math.abs(wall + win - 90) < 0.9, `wall ${wall} + windows ${win}`);
   const d = vertices(soups).filter(([, , z]) => z < 1).map(([, , z]) => -z); // outward distance from the wall z = 0 (the other walls are blind)
   assert.ok(Math.max(...d) <= style.cornice.depth + 0.15 && Math.min(...d) >= -(style.window.reveal + 0.01) - 1e-9, `reveal and cornice stay within their depths: ${Math.min(...d)} .. ${Math.max(...d)}`);
@@ -70,10 +70,10 @@ test('the front edge: a door on the ground storey, or shop panes with fascia and
 });
 test('a blind edge and a 2 m edge are one quad of wall, with no window', () => {
   const all = building(RING, { blind: new Set([0, 1, 2, 3]) }), soups = near(all); assert.equal(quads(soups, 'window|vn'), 0);
-  assert.equal(soups.map.get('stone|tv').pos.length / 9, 8, 'two triangles an edge');
+  assert.equal(soups.map.get('wall_stone|tv').pos.length / 9, 8, 'two triangles an edge');
   const thin = near(building([0, 0, 2, 0, 2, 8, 0, 8], { blind: new Set([1, 2, 3]) })); assert.equal(quads(thin, 'window|vn'), 0);
-  assert.equal(area(thin.map.get('stone|tv'), inPlane) > 0 && thin.map.get('stone|tv').pos.length / 9 >= 8, true);
-  let n = 0; const s = thin.map.get('stone|tv'); for (let i = 0; i < s.pos.length; i += 9) if (inPlane(s.pos.slice(i, i + 9))) n++; assert.equal(n, 2);
+  assert.equal(area(thin.map.get('wall_stone|tv'), inPlane) > 0 && thin.map.get('wall_stone|tv').pos.length / 9 >= 8, true);
+  let n = 0; const s = thin.map.get('wall_stone|tv'); for (let i = 0; i < s.pos.length; i += 9) if (inPlane(s.pos.slice(i, i + 9))) n++; assert.equal(n, 2);
 });
 test('far and near agree: the painted windows lie where the modelled ones are cut', () => {
   const far = createSoups(); facadeFar(far, wallOnly(), flat, fixedBays, info);
@@ -95,7 +95,7 @@ test('dormers and chimneys are drawn once, with piece 0', () => {
   const on = (piece) => { const soups = createSoups(); facadeNear(soups, building(RING, { piece, roofShape: 3, blind: new Set([0, 1, 2, 3]) }), flat, { ...style, chimneys: { ...style.chimneys, perBuilding: [2, 2] } }, roofInfo); return soups; };
   const p0 = on(0), p1 = on(1);
   assert.ok(quads(p0, 'window|vn') >= 2, 'a dormer window'); assert.equal(quads(p1, 'window|vn'), 0, 'a second piece draws none');
-  assert.ok(p0.map.get('brick|tv') || p0.map.get('stone|tv'), 'chimney stacks'); assert.ok(p0.triangles() > p1.triangles());
+  assert.ok(p0.map.get('wall_brick|tv') || p0.map.get('wall_stone|tv'), 'chimney stacks'); assert.ok(p0.triangles() > p1.triangles());
 });
 
 test('window types come from the style: arched heads, bricked-up windows, round windows, and a different mix per building and storey', () => {

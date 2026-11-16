@@ -46,6 +46,9 @@
                "slate": ["#53575c", "#464a50"], "shingle": ["#55504a"], "membrane": ["#3a3b3c"] },
     "trim": ["#e8e4da", "#d9d2c0", "#8f8a80"], "frames": ["#f0ede4", "#f0ede4", "#f0ede4", "#2f5a45", "#7d1b1a", "#3e7c7a", "#e8b923", "#1f2326"],
     "doors": ["#7a1620", "#254a38", "#243a5a", "#1f2326", "#6b4a2e", "#e0b020"], "awnings": ["#7a2f27", "#27462f", "#e8e4da", "#243a5a"],
+    "bayWindows": { "odd": 0.15,
+      "types": { "sash6": { "shutters": 0.4 }, "sash2": { "shutters": 0.35 }, "sash1": { "shutters": 0.3 }, "hooded": { "shutters": 0.35 }, "french": { "shutters": 0.6 } },
+      "classes": { "ground": { "shop": 2, "arched": 1.4, "segmental": 1.6 }, "upper": { "dormer": 1.6, "oeil": 0.6 } } },
     "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.2,
                 "panes": [2, 4],
                 "types": {
