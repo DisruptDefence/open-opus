@@ -18,10 +18,10 @@ export function createWorldApi(engine, emit) {
 
   // ---- events out: engine events are translated to plain data ----------------------------------------------------
   const threatOf = (t) => ({ id: t.id, kind: 'threat', type: t.type, archetype: t.archetype, x: round(t.pos.x), y: round(t.pos.y), z: round(t.pos.z), alive: t.alive, state: t.mode });
-  const markOf = (k) => ({ id: k.id, kind: k.kind, type: k.type, label: k.label, x: k.x, y: round(k.y), z: k.z, radius: k.radius, alive: true, state: k.reached ? 'reached' : 'open' });
+  const markOf = (k) => ({ id: k.id, kind: k.kind, type: k.type, label: k.label, x: k.x, y: round(k.y), z: k.z, radius: k.radius, alive: true, state: k.used ? 'used' : k.reached ? 'reached' : 'open', ...(k.use ? { use: { prompt: k.use.prompt, progress: round(k.progress, 1000) } } : {}) });
   G.events.on('game:state', (e) => emit('state', { state: e.state, from: e.from }));
   G.events.on('player:dead', () => emit('player:dead', {}));
-  G.events.on('player:hit', (e) => emit('player:hit', { amount: e.amount, health: round(G.player.health) }));
+  G.events.on('player:hit', (e) => emit('player:hit', { amount: e.amount, health: round(G.player.health), ...(e.fromPos && Number.isFinite(e.fromPos.x) ? { from: { x: round(e.fromPos.x), y: round(e.fromPos.y), z: round(e.fromPos.z) } } : {}) }));
   G.events.on('enemy:spawn', (e) => emit('entity', { change: 'spawn', ...threatOf(e.enemy) }));
   G.events.on('enemy:state', (e) => emit('entity', { change: 'state', from: e.from, ...threatOf(e.enemy) }));
   G.events.on('enemy:killed', (e) => emit('entity', { change: 'killed', ...threatOf(e.enemy) }));
@@ -30,7 +30,8 @@ export function createWorldApi(engine, emit) {
   G.events.on('director:mark', (e) => emit('entity', { change: 'spawn', ...markOf(e.mark) }));
   G.events.on('director:unmark', (e) => emit('entity', { change: 'despawn', ...markOf(e.mark) }));
   G.events.on('director:reached', (e) => emit('interact', { id: e.id, kind: e.kind, action: 'reached', time: round(e.time) }));
-  G.events.on('director:say', (e) => emit('say', { text: e.text }));
+  G.events.on('director:interact', (e) => emit('interact', { id: e.id, kind: e.kind, action: e.action, time: round(e.time), progress: round(e.progress, 1000) }));
+  G.events.on('director:say', (e) => emit('say', { text: e.text, channel: e.channel }));
   G.events.on('weapon:fire', () => emit('shot', { ammo: G.weapon.ammo }));
   G.events.on('scene:chunk', (e) => emit('chunk', { ce: e.ce, cn: e.cn, live: e.live }));
 
@@ -93,14 +94,16 @@ export function createWorldApi(engine, emit) {
   }
 
   const man = G.level.manifest;
+  let volume = 0.9; // the audio module's own default
   return {
     version: 1,
     state: () => G.game.state,
     start(opts = {}) {
       const at = opts.at ? { x: +opts.at.x, z: +opts.at.z, y: opts.at.y, yaw: yawOf(opts.at.heading) } : null;
       if (at && !(Number.isFinite(at.x) && Number.isFinite(at.z))) throw new Error('start: `at` needs x and z in game metres');
+      if (opts.fadeIn !== undefined && !(Number.isFinite(opts.fadeIn) && opts.fadeIn >= 0)) throw new Error('start: `fadeIn` is a number of seconds, 0 or more');
       try { G.audio.resume(); } catch { /* no audio */ }
-      G.input.requestLock(); G.game.start({ at });
+      G.input.requestLock(); G.game.start({ at, fadeIn: opts.fadeIn });
     },
     pause: () => G.game.pause(), resume: () => G.game.resume(),
 
@@ -112,7 +115,25 @@ export function createWorldApi(engine, emit) {
       const p = G.player, entities = [];
       for (const k of marks.values()) entities.push(markOf(k));
       for (const t of G.threats.list) entities.push(threatOf(t));
-      return { time: G.time.t, self: { x: p.pos.x, y: p.pos.y, z: p.pos.z, heading: G.georef.headingGrid(p.yaw), headingTrue: G.georef.headingTrue(p.yaw), speed: p.speed || 0, health: p.health }, entities };
+      const wp = G.weapon, st = G.combat.stats || {};
+      return {
+        time: G.time.t,
+        self: { x: p.pos.x, y: p.pos.y, z: p.pos.z, heading: G.georef.headingGrid(p.yaw), headingTrue: G.georef.headingTrue(p.yaw), speed: p.speed || 0, health: p.health,
+          weapon: { id: String(wp.id ?? 'carbine'), name: String(wp.name ?? ''), ammo: wp.ammo ?? 0, magSize: wp.magSize ?? 0, reserve: wp.reserve ?? 0, state: String(wp.state ?? 'idle') } },
+        stats: { shots: st.shots || 0, hits: st.hits || 0, kills: st.kills || 0 },
+        entities,
+      };
+    },
+    /** What the player's settings are; a patch sets what it names, clamped. Unknown keys are ignored. */
+    settings(patch) {
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+      if (patch && typeof patch === 'object') {
+        if (Number.isFinite(patch.sensitivity)) G.input.sensitivity = clamp(patch.sensitivity, 0.2, 3);
+        if (typeof patch.invertY === 'boolean') G.input.invertY = patch.invertY;
+        if (Number.isFinite(patch.volume)) { volume = clamp(patch.volume, 0, 1); try { G.audio.setVolume(volume); } catch { /* silent */ } }
+        if (Number.isFinite(patch.fov)) G.player.setFov(clamp(patch.fov, 60, 100));
+      }
+      return { sensitivity: G.input.sensitivity ?? 1, invertY: !!G.input.invertY, volume, fov: G.player.baseFov };
     },
 
     geo: {

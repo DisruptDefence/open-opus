@@ -9,9 +9,9 @@ export const STEP = 1 / 60;
 
 export function openHeadlessWorld(source, params = {}, { content } = {}) {
   let loop = null;
-  const keys = { move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, ads: false, sprint: false, crouch: false, locked: false, gameplay: false, mode: 'lock' };
+  const keys = { move: { x: 0, y: 0 }, look: { dx: 0, dy: 0 }, fire: false, ads: false, sprint: false, crouch: false, locked: false, gameplay: false, mode: 'lock', held: new Set() };
   const input = () => Object.assign(keys, {
-    down: () => false, pressed: () => false, update: nothing, endFrame: nothing, setPrompt: nothing,
+    down: (name) => keys.held.has(name), pressed: () => false, update: nothing, endFrame: nothing, setPrompt: nothing,
     requestLock() { keys.locked = true; }, exitLock() { keys.locked = false; }, setGameplay(on) { keys.gameplay = !!on; },
   });
   const material = new MeshBasicMaterial();
@@ -20,7 +20,7 @@ export function openHeadlessWorld(source, params = {}, { content } = {}) {
     return { renderer: { domElement: null, setAnimationLoop(fn) { loop = fn; } }, scene: new Scene(), camera, viewCamera: camera, post: {}, setAtmosphere: nothing, onLevelReady: nothing, frame: nothing };
   };
   const hudCalls = [];
-  const hud = () => ({ show: (on) => hudCalls.push(['show', on]), message: (t) => hudCalls.push(['message', t]), setObjective: nothing, setPrompt: nothing, warn: nothing, hitmarker: nothing, update: nothing });
+  const hud = () => ({ show: (on) => hudCalls.push(['show', on]), message: (t, s) => hudCalls.push(['message', t, s]), setObjective: (t) => hudCalls.push(['objective', t]), setProgress: (d, n) => hudCalls.push(['progress', d, n]), radio: (t, s, who) => hudCalls.push(['radio', t, s, who]), setPrompt: nothing, warn: (t, s) => hudCalls.push(['warn', t, s]), hitmarker: nothing, update: nothing });
   const world = openWorld({ source, content, params: { dt: STEP, noaudio: 1, q: 'low', ...params }, modules: {
     render, input, hud,
     mats: () => ({ uniforms: { wet: { value: 0 } }, get: () => material, update: nothing }),

@@ -142,6 +142,7 @@ export function createThreats(G, { archetypes = DEFAULT_PACK.threats, tuning = T
       },
     };
     if (def.type === 'air') t.pos.y = Math.max(t.pos.y, G.physics.groundHeight(t.pos.x, t.pos.z) + (def.body.altitude || 20));
+    if (opts.alerted && G.player) { t.lastKnown = G.player.pos.clone(); t.heard = true; } // starts out looking for the player
     root.add(model); list.push(t); place(t);
     G.events.emit('enemy:spawn', { enemy: t });
     return t;

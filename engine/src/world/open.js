@@ -35,7 +35,7 @@ export function openWorld({ source, params = {}, modules = {}, content, onProgre
     setHoldMode: call('setHoldMode'),
     held: () => (api ? api.held() : null),
     release: () => { if (api) api.release(); },
-    snapshot: call('snapshot'),
+    snapshot: call('snapshot'), settings: call('settings'),
     geo: { toGeo: geo('toGeo'), toGame: geo('toGame'), toMGRS: geo('toMGRS'), toUTM: geo('toUTM'), headingTrue: geo('headingTrue'), get convergenceDeg() { return need('geo.convergenceDeg').geo.convergenceDeg; } },
     scene: call('scene'),
     overhead: call('overhead'),

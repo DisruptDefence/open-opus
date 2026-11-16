@@ -69,7 +69,7 @@ larger than 64 KiB. Positions are game metres (`x` east, `z` south, `y` up; `SCE
 | `hello` | `protocol: "opus-session/1"`, `world: 1`, `scenes: ["opus-scene/1"]`, `phone: "tak" \| "fallback" \| "none"`, `resume?: true` | First message on every connection. What the client speaks and which phone screen it has: a real TAK client, a fallback screen, or none. `resume`: section 5 |
 | `start` | — | The trainee pressed Deploy, or deploys again after dying or finishing |
 | `pos` | `x`, `y`, `z`, `heading`, `speed` | The player, five times a second while the world's state is `playing`. From `world.snapshot().self` |
-| `event` | `kind`, `data` | Something the world reported through `world.on(...)`: `state` (died, paused), `entity` (a threat was killed), `interact` (a mark was reached). `data` is the event's payload |
+| `event` | `kind`, `data` | Something the world reported through `world.on(...)`: `state` (died, paused), `entity` (a threat was killed), `interact` (a mark was reached, or one used with a key began, was cancelled or finished). `data` is the event's payload |
 | `phone` | `action`, `data` | Something the trainee did on a **fallback** phone screen (opened a tool, dropped a marker). `data` holds plain values only. A real TAK client is not reported this way (section 4) |
 | `refused` | `seq` | The command with this number could not be applied (`apply()` threw) |
 
