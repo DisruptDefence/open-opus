@@ -1024,6 +1024,12 @@ material; `autumn` vertex tint per tree from a seeded pick of green, yellow, ora
 `winter` no lobes on broadleaf trees, 6 bare branches (thin boxes) instead; `spring` lighter green and 20 %
 smaller lobes. Soups `"wood|t"`, `"leaves|tv"`.
 
+**Built so far (branch `landmarks`):** `props.py` writes mapped nodes and ruled terrace furniture for `bench_slat`, `lamp_lantern`, `bollard_iron`, `cannon`,
+`flagpole`, `plinth`, `monument_tall` (a place rule's `prop`), `pavilion` (a round `amenity=shelter`; variant = radius in half metres) and `planter`; the
+kit has those nine, each within the 250-triangle contract. `glass_lamp` is not in the material library yet (item 5): the lantern's panes use the library's fallback. Rails:
+`balustrade_iron` joins `rail_iron` in `gen/structures.js`. Terrace decks: `gen/terrace.js`, layer `terraces` (SCENE-FORMAT 4.4a). Not built: hydrant, bin,
+fountain, post_box, sign_stop, bike_rack, trees by species.
+
 **Tests** (`engine/test/props.test.js`, builder tests):
 
 - Every kind in the kit builds at yaw 0 and 90°: triangle count within its bound; every vertex within the
