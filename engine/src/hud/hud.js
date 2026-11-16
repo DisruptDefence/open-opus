@@ -7,35 +7,25 @@ import { Vector3 } from '../../vendor/three.module.js';
 import { createNullHud } from './hooks.js';
 import { HUD_CSS } from './style.js';
 import {
-  TAPE_PX_PER_DEG, TAPE_FROM, TAPE_TO, tapeOffset, headingOf, markerBearing, markerDistance, edgeClamp, crosshairGap, damageArcAngle,
-  ammoCue, healthSegments, CRIT_SEGMENTS, typedChars, hitmarkerLook, addArc, arcAlpha, pushFeed, FEED_SECONDS, COMPASS, compassLetter,
+  markerDistance, edgeClamp, crosshairGap, damageArcAngle, ammoCue, isLowAmmo, magPips, isHurt, healthSegments, CRIT_SEGMENTS,
+  typedChars, hitmarkerLook, addArc, arcAlpha, pushFeed, FEED_SECONDS,
 } from './model.js';
 
-const DEFAULT_WORDS = { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' };
+const DEFAULT_WORDS = { objective: 'Objective', health: 'Vitals', lowAmmo: 'Low ammo', reload: 'R — Reload', reloadTouch: 'Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' };
 const OBJECTIVE_CPS = 46, RADIO_CPS = 58, CIRCUMFERENCE = 2 * Math.PI * 19;
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 
 export function createHud(G) {
   const hud = createNullHud(), pack = (G.content && G.content.hud) || {};
   const on = new Set(pack.elements || []), words = { ...DEFAULT_WORDS, ...(pack.words || {}) }, markColors = (G.content && G.content.marks) || {};
-  const letters = typeof words.compass === 'string' && words.compass.split(' ').length === 8 ? words.compass.split(' ') : COMPASS;
   if (!document.getElementById('opus-hud-style')) { const s = h('style'); s.id = 'opus-hud-style'; s.textContent = HUD_CSS; document.head.appendChild(s); }
   const root = h('div', 'oh'); root.hidden = true;
+  const touch = !!(G.input && G.input.touch) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
+  root.classList.toggle('is-touch', touch);
   (document.getElementById('ui') || document.body).appendChild(root);
   const part = {}; // name -> its nodes, only for the elements the pack turns on
 
   // ---- build ----------------------------------------------------------------------------------------------------
-  if (on.has('compass')) {
-    const box = h('div', 'oh-compass'), hdg = h('div', 'hdg', '000'), win = h('div', 'win'), strip = h('div', 'strip'), tags = h('div', 'tags');
-    strip.style.width = (TAPE_TO - TAPE_FROM) * TAPE_PX_PER_DEG + 'px';
-    for (let d = TAPE_FROM; d <= TAPE_TO; d += 5) {
-      const deg = ((d % 360) + 360) % 360, x = (d - TAPE_FROM) * TAPE_PX_PER_DEG, m = d % 15 === 0;
-      const tk = h('i', 'tk' + (m ? ' m' : '')); tk.style.left = x + 'px'; strip.appendChild(tk);
-      if (m) { const letter = compassLetter(deg, letters), n = h('span', 'tn' + (letter ? ' l' : ''), letter || String(deg)); n.style.left = x + 'px'; strip.appendChild(n); }
-    }
-    win.append(strip, h('div', 'caret'), tags); box.append(hdg, win); root.appendChild(box);
-    Object.assign(part, { compass: { hdg, win, strip, tags, tagFor: new Map(), width: 0 } });
-  }
   if (on.has('markers')) { part.worldTags = h('div'); root.appendChild(part.worldTags); part.worldMap = new Map(); }
   if (on.has('objective')) {
     const box = h('div', 'oh-obj pan'), k = h('div', 'k'), t = h('div', 't'), pips = h('div', 'pips');
@@ -52,14 +42,15 @@ export function createHud(G) {
     part.prompt = { box, text, fg: svg.querySelector('.fg'), label: '', ring: -1 };
   }
   if (on.has('radio')) { part.radio = h('div', 'oh-radio pan'); part.radio.hidden = true; root.appendChild(part.radio); part.radioQ = []; part.radioNow = null; }
-  if (on.has('health')) {
-    const box = h('div', 'oh-health'), k = h('div', 'k'), row = h('div'), n = h('span', 'n'), segs = h('div', 'segs');
-    k.textContent = words.health; for (let i = 0; i < 10; i++) segs.appendChild(h('i')); row.append(n); box.append(k, row, segs);
-    root.appendChild(box); part.health = { box, n, segs: [...segs.children], seg: -1, num: -1 };
+  if (on.has('health')) { // the reference HUD's markup: only drawn while hurt (class `on`), `crit` at 3 segments or fewer
+    const box = h('div', 'h-health', `<div class="h-k"></div><div class="h-hp-row"><b class="h-hp-n">100</b><div class="h-hp-bar">${'<i></i>'.repeat(10)}</div></div>`);
+    box.firstChild.textContent = words.health; root.appendChild(box);
+    part.health = { box, n: box.querySelector('.h-hp-n'), segs: [...box.querySelectorAll('.h-hp-bar i')], seg: -1, num: -1, hurt: null };
   }
-  if (on.has('ammo')) {
-    const box = h('div', 'oh-ammo'), name = h('div', 'k'), row = h('div'), n = h('span', 'n'), r = h('span', 'r'), pips = h('div', 'pips'), cue = h('div', 'cue');
-    row.append(n, r); box.append(name, row, pips, cue); root.appendChild(box); part.ammo = { box, name, n, r, pips, cue, key: '', pipKey: '' };
+  if (on.has('ammo')) { // the reference HUD's markup: cue, count / reserve, one pip per round of the magazine, the weapon's name
+    const box = h('div', 'h-ammo', '<div class="h-cue"></div><div class="h-ammo-row"><b class="h-ammo-n">30</b><span class="h-ammo-r">120</span></div><div class="h-pips"></div><div class="h-wname"></div>');
+    root.appendChild(box);
+    part.ammo = { box, cue: box.querySelector('.h-cue'), n: box.querySelector('.h-ammo-n'), r: box.querySelector('.h-ammo-r'), pips: box.querySelector('.h-pips'), name: box.querySelector('.h-wname'), pipEls: [], key: '' };
   }
   if (on.has('crosshair')) {
     const x = h('div', 'oh-x'); const bars = ['h', 'h', 'v', 'v'].map((c) => h('i', c)); const dot = h('i', 'd'); x.append(...bars, dot); root.appendChild(x); part.cross = { x, bars, gap: -1 };
@@ -114,29 +105,15 @@ export function createHud(G) {
       if (root.hidden) return;
       const p = G.player, w = G.weapon || {}, cam = G.camera, W = root.clientWidth || 1, H = root.clientHeight || 1;
       now += dt;
-      // compass tape and the marks' tags on it
-      const heading = headingOf(p.yaw);
-      if (part.compass) {
-        const c = part.compass; if (!c.width) c.width = c.win.clientWidth;
-        c.hdg.textContent = String(Math.round(G.georef.headingGrid(p.yaw)) % 360).padStart(3, '0');
-        c.strip.style.transform = `translateX(${tapeOffset(heading, c.width)}px)`;
-      }
-      // marks: a tag on the tape and one in the world
-      if (part.compass || part.worldTags) {
+      // marks: a tag in the world (the player navigates with ATAK: there is no compass)
+      if (part.worldTags) {
         if (cam) cam.updateMatrixWorld();
         const marks = G.director ? G.director.marks : new Map(), present = new Set();
         const ads = p.ads >= 0.5;
         for (const [id, m] of marks) {
           if (m.used) continue;
           const text = (m.label || m.kind).slice(0, 2).toUpperCase(), dist = markerDistance({ x: p.pos.x, y: p.pos.y, z: p.pos.z }, m), color = (markColors[m.kind] && markColors[m.kind].color) || '#ffb020';
-          if (part.compass) {
-            const c = part.compass; let t = c.tagFor.get(id);
-            if (!t) { t = h('span', 'tag ' + m.kind); c.tags.appendChild(t); c.tagFor.set(id, t); }
-            const label = `${text} ${dist}`; if (t.textContent !== label) t.textContent = label; if (t.style.background !== color) t.style.background = color;
-            const half = t.offsetWidth / 2 + 3, px = Math.max(half, Math.min(c.width - half, c.width / 2 + markerBearing(p, m) * TAPE_PX_PER_DEG));
-            t.style.left = px + 'px';
-          }
-          if (part.worldTags && cam) {
+          if (cam) {
             let t = part.worldMap.get(id);
             if (!t) { t = h('div', 'oh-tag', '<i></i><b></b><span></span>'); part.worldTags.appendChild(t); part.worldMap.set(id, t); }
             t.style.setProperty('--c', color);
@@ -151,9 +128,7 @@ export function createHud(G) {
           }
           present.add(id);
         }
-        for (const map of [part.compass && part.compass.tagFor, part.worldMap]) {
-          if (map) for (const [id, node] of map) if (!present.has(id)) { node.remove(); map.delete(id); }
-        }
+        for (const [id, node] of part.worldMap) if (!present.has(id)) { node.remove(); part.worldMap.delete(id); }
       }
       // objective, typed
       if (part.obj && part.obj.full) {
@@ -162,25 +137,28 @@ export function createHud(G) {
         const key = o.total > 0 ? o.done + '/' + o.total : '';
         if (key !== o.pipKey) { o.pipKey = key; o.pips.innerHTML = ''; for (let i = 0; i < o.total; i++) o.pips.appendChild(h('i', i < o.done ? 'on' : '')); }
       }
-      // health
+      // health: shown only while hurt; ten segments, any health left lights one; critical at 3 or fewer
       if (part.health) {
-        const hh = part.health, max = p.maxHealth || 100, seg = healthSegments(p.health, max), num = Math.ceil(Math.max(0, p.health));
-        if (seg !== hh.seg) { hh.seg = seg; hh.segs.forEach((s, i) => s.classList.toggle('on', i < seg)); hh.box.classList.toggle('crit', seg > 0 && seg <= CRIT_SEGMENTS); }
-        if (num !== hh.num) { hh.num = num; hh.n.textContent = String(num); }
-        hh.box.classList.toggle('full', p.health >= max); hh.box.classList.toggle('hurt', p.health < max);
+        const hh = part.health, max = p.maxHealth || 100, num = Math.max(0, Math.ceil(p.health)), hurt = isHurt(p.health, max);
+        if (num !== hh.num) {
+          hh.num = num; hh.n.textContent = String(num);
+          const seg = healthSegments(p.health, max);
+          if (seg !== hh.seg) { hh.seg = seg; hh.segs.forEach((s, i) => s.className = i < seg ? '' : 'off'); hh.box.classList.toggle('crit', seg <= CRIT_SEGMENTS); }
+        }
+        if (hurt !== hh.hurt) { hh.hurt = hurt; hh.box.classList.toggle('on', hurt); }
       }
-      // ammunition
+      // ammunition: count, reserve, one pip a round, low at 27 % of the magazine, the cue
       if (part.ammo) {
-        const a = part.ammo, ammo = w.ammo, mag = w.magSize, reserve = w.reserve, cue = ammoCue(ammo, mag, reserve, w.state);
-        const key = [ammo, reserve, w.name, mag, cue].join('|');
+        const a = part.ammo, ammo = Math.max(0, w.ammo | 0), reserve = Math.max(0, w.reserve | 0), mag = magPips(w.magSize), cue = ammoCue(ammo, mag, reserve, w.state);
+        const key = [ammo, reserve, w.name, mag, cue, touch].join('|');
         if (key !== a.key) {
           a.key = key;
-          a.name.textContent = w.name || ''; a.n.textContent = Number.isFinite(ammo) ? String(ammo).padStart(2, '0') : '--'; a.r.textContent = Number.isFinite(reserve) ? '/ ' + String(reserve).padStart(3, '0') : '';
-          a.cue.textContent = cue ? words[cue] || '' : ''; a.cue.className = 'cue' + (cue === 'empty' ? ' empty' : '');
-          a.box.classList.toggle('low', cue === 'lowAmmo' || cue === 'reload' || cue === 'empty');
-          const n = Number.isFinite(mag) ? Math.min(60, mag) : 0;
-          if (a.pips.children.length !== n) { a.pips.innerHTML = ''; for (let i = 0; i < n; i++) a.pips.appendChild(h('i')); }
-          [...a.pips.children].forEach((pip, i) => pip.classList.toggle('on', i < ammo));
+          if (a.pipEls.length !== mag) { a.pips.innerHTML = '<i></i>'.repeat(mag); a.pipEls = [...a.pips.children]; }
+          a.pipEls.forEach((pip, i) => { pip.className = i < ammo ? '' : 'off'; });
+          a.n.textContent = String(ammo).padStart(2, '0'); a.r.textContent = String(reserve).padStart(3, '0'); a.name.textContent = w.name || '';
+          const word = cue === 'reload' && touch ? words.reloadTouch : words[cue];
+          a.cue.textContent = cue ? word || '' : ''; a.cue.className = 'h-cue' + (cue ? ' on' : '') + (cue === 'reload' || cue === 'empty' ? ' urgent' : '');
+          a.box.classList.toggle('low', isLowAmmo(ammo, mag));
         }
       }
       // crosshair

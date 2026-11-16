@@ -2,9 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createNullHud } from '../src/hud/hooks.js';
+import * as model from '../src/hud/model.js';
 import {
-  tapeOffset, markerBearing, edgeClamp, crosshairGap, damageArcAngle, ammoCue, healthSegments, typedChars, hitmarkerLook,
-  addArc, arcAlpha, pushFeed, compassLetter, headingOf, markerDistance,
+  edgeClamp, crosshairGap, damageArcAngle, ammoCue, isLowAmmo, magPips, isHurt, healthSegments, CRIT_SEGMENTS, typedChars, hitmarkerLook,
+  addArc, arcAlpha, pushFeed, markerDistance,
 } from '../src/hud/model.js';
 
 const at = (x, z, yaw = 0) => ({ pos: { x, z }, yaw });
@@ -17,15 +18,23 @@ test('the crosshair gap is the weapon spread in pixels at this field of view', (
   assert.ok(crosshairGap(0.0125, 52, 540, false) > 8.5, 'a narrower view makes the same spread wider on screen');
 });
 
-test('the ammunition cue: reloading, reload, empty, low, or nothing', () => {
-  assert.equal(ammoCue(8, 30, 150, 'idle'), 'lowAmmo');
-  assert.equal(ammoCue(9, 30, 150, 'idle'), '');
+test('the ammunition cue (the reference rule): reloading, reload, empty, low, or nothing', () => {
+  assert.equal(ammoCue(9, 30, 150, 'idle'), 'lowAmmo', 'low is 27 percent rounded up: 9 of 30');
+  assert.equal(ammoCue(10, 30, 150, 'idle'), '');
   assert.equal(ammoCue(0, 30, 150, 'idle'), 'reload');
   assert.equal(ammoCue(0, 30, 0, 'idle'), 'empty');
   assert.equal(ammoCue(5, 30, 150, 'reloading'), 'reloading');
   assert.equal(ammoCue(0, 30, 150, 'reloading'), 'reloading');
   assert.equal(ammoCue(undefined, undefined, undefined, 'idle'), '', 'a weapon without numbers says nothing');
-  assert.equal(ammoCue(2, 10, 0, 'idle'), 'lowAmmo', '27 percent of a small magazine');
+  assert.equal(ammoCue(3, 10, 0, 'idle'), 'lowAmmo', '27 percent of a small magazine, rounded up');
+  assert.equal(ammoCue(4, 10, 0, 'idle'), '');
+});
+
+test('low ammunition, the magazine pips and the hurt state', () => {
+  assert.ok(isLowAmmo(9, 30)); assert.ok(!isLowAmmo(10, 30)); assert.ok(isLowAmmo(0, 30)); assert.ok(!isLowAmmo(NaN, 30));
+  assert.equal(magPips(30), 30); assert.equal(magPips(200), 60, 'at most 60 pips'); assert.equal(magPips(undefined), 30, '30 when the weapon does not say'); assert.equal(magPips(0), 30);
+  assert.ok(isHurt(99, 100)); assert.ok(!isHurt(99.6, 100), 'half a point of slack'); assert.ok(!isHurt(100, 100));
+  assert.equal(CRIT_SEGMENTS, 3); assert.ok(healthSegments(30, 100) <= CRIT_SEGMENTS); assert.ok(healthSegments(31, 100) > CRIT_SEGMENTS);
 });
 
 test('health segments: ten, and any health left lights one', () => {
@@ -35,15 +44,6 @@ test('health segments: ten, and any health left lights one', () => {
   assert.equal(healthSegments(0, 100), 0);
   assert.equal(healthSegments(50, 200), 3);
   assert.equal(healthSegments(-5, 100), 0);
-});
-
-test('the bearing of a mark is relative to where the player faces', () => {
-  assert.equal(markerBearing(at(0, 0, 0), { x: 10, z: 0 }), 90);
-  assert.equal(markerBearing(at(0, 0, 0), { x: -10, z: 0 }), -90);
-  assert.equal(markerBearing(at(0, 0, 0), { x: 0, z: -10 }), 0);
-  assert.equal(Math.abs(markerBearing(at(0, 0, 0), { x: 0, z: 10 })), 180);
-  assert.ok(Math.abs(markerBearing(at(0, 0, -Math.PI / 2), { x: 10, z: 0 })) < 1e-9, 'facing east (yaw -90 degrees), a mark due east is ahead');
-  assert.equal(headingOf(-Math.PI / 2), 90);
 });
 
 test('the damage arc points at the shooter', () => {
@@ -63,12 +63,8 @@ test('a tag inside the box stays; outside or behind it sticks to the edge of the
   assert.deepEqual(edgeClamp(0, 0, true), { x: 0, y: -0.82, offscreen: true }, 'straight behind goes to the bottom');
 });
 
-test('the compass tape puts the heading in the middle of its window', () => {
-  const x = (deg) => tapeOffset(deg, 560) + (deg + 90) * 4; // where `deg` is drawn in the window
-  assert.equal(x(0), 280); assert.equal(x(123), 280);
-  assert.equal(tapeOffset(10, 560) - tapeOffset(0, 560), -40, '4 px a degree, the tape moving left as the heading grows');
-  assert.equal(compassLetter(0), 'N'); assert.equal(compassLetter(135), 'SE'); assert.equal(compassLetter(360), 'N'); assert.equal(compassLetter(15), '');
-  assert.equal(compassLetter(90, 'A B C D E F G H'.split(' ')), 'C', 'letters come from the pack');
+test('there is no compass: nothing of it is exported', () => {
+  for (const k of ['tapeOffset', 'markerBearing', 'headingOf', 'compassLetter', 'COMPASS', 'TAPE_PX_PER_DEG', 'TAPE_FROM', 'TAPE_TO']) assert.equal(model[k], undefined, k);
 });
 
 test('typing, the hit marker, the damage arcs and the kill feed run on the numbers of the plan', () => {

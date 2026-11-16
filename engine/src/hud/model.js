@@ -1,26 +1,10 @@
 // The HUD's arithmetic: numbers in, numbers out. No DOM, no three.js, no events: tested under Node (test/hud.test.js).
-// hud.js draws what these functions say. Angles: degrees unless a name says radians; heading and bearing are
-// clockwise from grid north; `player` is { pos: { x, z }, yaw } with the engine's yaw (heading = -yaw).
+// hud.js draws what these functions say. Angles: radians unless a name says degrees; `player` is { pos: { x, z }, yaw }
+// with the engine's yaw. There is no compass: the player navigates with ATAK.
 
-export const TAPE_PX_PER_DEG = 4;
-export const TAPE_FROM = -90, TAPE_TO = 450; // the strip is drawn for these headings: one full turn plus a margin each side
 export const BOX = { x: 0.9, y: 0.82 }; // markers stick to the edge of this inner box (fraction of the half screen)
 
-const DEG = 180 / Math.PI;
-const wrap180 = (a) => { const m = ((a % 360) + 360) % 360; return m > 180 ? m - 360 : m; };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
-/** Grid heading (0..360) of an engine yaw, the same as georef.headingGrid. */
-export const headingOf = (yaw) => ((((-yaw * DEG) % 360) + 360) % 360);
-
-/** translateX, in px, of the tape strip (drawn from TAPE_FROM degrees) so that `headingDeg` is at the middle of a `widthPx` window. */
-export const tapeOffset = (headingDeg, widthPx) => widthPx / 2 - (headingDeg - TAPE_FROM) * TAPE_PX_PER_DEG;
-
-/** Degrees, -180..180, from where the player faces to a thing at `mark` ({ x, z }). 90 is to the right. */
-export function markerBearing(player, mark) {
-  const dx = mark.x - player.pos.x, dz = mark.z - player.pos.z;
-  return wrap180(Math.atan2(dx, -dz) * DEG - headingOf(player.yaw));
-}
 
 /**
  * Where a world tag is drawn, in normalised device coordinates (-1..1). A point inside the 90 % x 82 % box is left
@@ -47,13 +31,22 @@ export function crosshairGap(spread, fovDeg, heightPx, sprinting) {
 /** Radians, to rotate a damage arc that points up (ahead) so that it points at `from` ({ x, z }). */
 export const damageArcAngle = (player, from) => Math.atan2(from.x - player.pos.x, -(from.z - player.pos.z)) + player.yaw;
 
-/** The ammunition cue: reloading | reload | empty | lowAmmo | '' (a word of the pack's `hud.words`). Low is 27 % of a magazine or less. */
+/** the reference HUD's "low": at most 27 % of the magazine, rounded up (30 rounds: 9 or fewer; 10 rounds: 3 or fewer). Empty is low too. */
+export const isLowAmmo = (ammo, magSize) => Number.isFinite(ammo) && Number.isFinite(magSize) && ammo <= Math.ceil(0.27 * magSize);
+
+/** The ammunition cue: reloading | reload | empty | lowAmmo | '' (a word of the pack's `hud.words`). */
 export function ammoCue(ammo, magSize, reserve, state) {
   if (!Number.isFinite(ammo) || !Number.isFinite(magSize)) return '';
   if (state === 'reloading') return 'reloading';
   if (ammo <= 0) return reserve > 0 ? 'reload' : 'empty';
-  return ammo <= Math.floor(0.27 * magSize) ? 'lowAmmo' : '';
+  return isLowAmmo(ammo, magSize) ? 'lowAmmo' : '';
 }
+
+/** The magazine as the reference game counts it: 1..60 pips, 30 when the weapon does not say. */
+export const magPips = (magSize) => clamp(magSize | 0 || 30, 1, 60);
+
+/** Health is shown only while the player is hurt (half a point of slack, as in the reference game). */
+export const isHurt = (health, max) => health < max - 0.5;
 
 /** Lit segments of the 10 that show health: any health left lights one. */
 export const healthSegments = (health, max) => (max > 0 ? clamp(Math.ceil((10 * health) / max - 1e-9), 0, 10) : 0);
@@ -83,10 +76,6 @@ export const arcAlpha = (arc, now) => { const age = now - arc.born; return age >
 export const FEED_LINES = 4, FEED_SECONDS = 4.2;
 /** Add a line to a kill feed: at most 4, the oldest dropped. */
 export function pushFeed(lines, line) { lines.push(line); while (lines.length > FEED_LINES) lines.shift(); return lines; }
-
-/** The compass letter for a heading that is a multiple of 45 (letters are the pack's `compass` word, 8 words split on spaces). */
-export const COMPASS = 'N NE E SE S SW W NW'.split(' ');
-export const compassLetter = (deg, letters = COMPASS) => (deg % 45 === 0 ? letters[(((deg / 45) % 8) + 8) % 8] || '' : '');
 
 /** Distance in whole metres from the player to a mark. */
 export const markerDistance = (p, m) => Math.round(Math.hypot(m.x - p.x, (m.y ?? p.y ?? 0) - (p.y ?? 0), m.z - p.z));
