@@ -17,17 +17,19 @@
 // The view `v`: { pos, yaw, vx, vy, vz, alive, health (0..1), engaged, target (a point or null), aim ('idle' | 'tele' |
 // 'burst'), melee (null | 'wind' | 'lunge' | 'recover'), alert, crouch (0..1) }.
 //
-// The machine rigs are lifted (rigs.js, quadruped.js, quadcopter.js); `person` is the engine's own plain figure.
+// The machine rigs are lifted (rigs.js, quadruped.js, quadcopter.js); `person` is the engine's own (person.js), built on
+// the lifted rig builder; `plain` is the box figure a person drew before (plain.js).
 import { AdditiveBlending, Color, DoubleSide, MeshBasicMaterial, ShaderMaterial } from '../../../vendor/three.module.js';
 import { buildQuadcopterRig, buildQuadrupedRig, setRigDetail } from './rigs.js';
 import { createQuadruped } from './quadruped.js';
 import { createQuadcopter, createSearchlight } from './quadcopter.js';
 import { createPlainPerson } from './plain.js';
+import { buildPerson, createPerson, personMats, pickLook } from './person.js';
 import { createRng } from '../../shared/lifted.js';
 
 /** Beyond this distance from the camera a figure draws its far tier. */
 export const FAR_METRES = 18;
-export const FIGURES = ['person', 'quadruped', 'quadcopter'];
+export const FIGURES = ['person', 'quadruped', 'quadcopter', 'plain'];
 export { createSearchlight };
 
 const kits = new WeakMap(); // G.mats -> { kind -> kit }
@@ -83,6 +85,17 @@ function kitOf(G, kind) {
   return (byKind[kind] = { near, far, mats });
 }
 
+/** A person's kit: one look of an archetype (variant `n` of `body.look.variants`, 4 by default), both tiers. */
+function personKit(G, def, n) {
+  let byKind = kits.get(G.mats); if (!byKind) kits.set(G.mats, (byKind = {}));
+  const key = 'person/' + def.id + '/' + n;
+  if (byKind[key]) return byKind[key];
+  if (!byKind.machineMats) byKind.machineMats = machineMats(G);
+  if (!byKind.personMats) byKind.personMats = personMats(G, byKind.machineMats);
+  const look = pickLook(def.body.look, rngOf(def.id + '#look' + n));
+  return (byKind[key] = { near: buildPerson(look, 0), far: buildPerson(look, 1), mats: byKind.personMats, look });
+}
+
 /** Which figure an archetype draws. */
 export const figureOf = (def) => def.body.figure || (def.type === 'air' ? 'quadcopter' : 'person');
 
@@ -94,12 +107,17 @@ export function createFigure(G, def, seed) {
   const kind = figureOf(def), rng = rngOf(def.id + '/' + seed);
   if (kind === 'quadruped') return Object.assign(createQuadruped(G, kitOf(G, kind), rng), { machine: true });
   if (kind === 'quadcopter') return Object.assign(createQuadcopter(G, kitOf(G, kind), rng), { machine: true });
-  return createPlainPerson(G, def, rng);
+  if (kind === 'plain') return createPlainPerson(G, def, rng);
+  const variants = Math.max(1, Math.floor((def.body.look && def.body.look.variants) || 4));
+  return createPerson(G, personKit(G, def, Math.floor(rng() * variants)), rng);
 }
 
 /** Triangles of each figure kind at each tier, for the budgets (GAMEPLAY-PARITY.md J). */
 export function figureTriangles(G) {
   const out = {};
   for (const kind of Object.keys(RIGS)) { const k = kitOf(G, kind); out[kind] = { near: k.near.tris + (k.near.extra ? k.near.extra.tris : 0), far: k.far.tris + (k.far.extra ? k.far.extra.tris : 0) }; }
+  for (const look of [{ headgear: ['helmet'], pack: 1 }, { headgear: ['cap'], pack: 0 }]) {
+    const k = personKit(G, { id: 'budget-' + look.headgear[0], body: { look } }, 0); out['person-' + look.headgear[0]] = { near: k.near.tris, far: k.far.tris };
+  }
   return out;
 }

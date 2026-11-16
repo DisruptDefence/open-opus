@@ -87,3 +87,75 @@ test('a ray meets a capsule where it should', () => {
   assert.ok(Math.abs(rayCapsule(new Vector3(0, 1.6, 5), dir, a, b, 0.2) - (5 - Math.sqrt(0.04 - 0.01))) < 1e-9, 'over its round end');
   assert.equal(rayCapsule(o, dir, a, b, 0.2, 3), null, 'beyond the range');
 });
+
+// ---- the person ------------------------------------------------------------------------------------------------
+const person = (id = 'p', kind = 'sentry') => createFigure(stubG(), DEFAULT_PACK.threats[kind], id);
+
+test('the person: within budget (near 6 500, far 1 500 triangles), one draw per material, looks that differ by id', () => {
+  const G = stubG(), tris = figureTriangles(G);
+  for (const k of ['person-helmet', 'person-cap']) { assert.ok(tris[k].near <= 6500, `${k} near ${tris[k].near}`); assert.ok(tris[k].far <= 1500, `${k} far ${tris[k].far}`); }
+  const f = person(); assert.ok(f.mesh.isSkinnedMesh); assert.equal(f.mesh.material.length, f.mesh.geometry.groups.length); assert.ok(f.mesh.skeleton.bones.length >= 17);
+  const geos = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((id) => createFigure(G, DEFAULT_PACK.threats.patrol, id).mesh.geometry));
+  assert.ok(geos.size >= 2, `${geos.size} looks among eight patrol members`);
+});
+
+test('the person walks and runs with its feet planted: a walk always has a foot down, a run has moments in the air', () => {
+  for (const speed of [1.4, 4.5]) {
+    const f = person('w' + speed);
+    let last = null, lastAir = [], slid = 0, steps = 0, both = 0, minHip = 9, maxHip = 0, kneeAhead = 0, frames = 0;
+    walk(f, speed, 3, (i, v) => {
+      const now = f.feet().map((p) => p.clone()), air = f.swinging();
+      if (air.length && air[0] !== lastAir[0]) steps++; if (air.length > 1) both++;
+      if (last) for (let k = 0; k < 2; k++) if (!air.includes(k) && !lastAir.includes(k) && now[k].distanceTo(last[k]) > 1e-9) slid++;
+      const j = f.joints(), hip = j.hipC.y - v.pos.y; minHip = Math.min(minHip, hip); maxHip = Math.max(maxHip, hip);
+      // knees bend forwards: the knee is ahead of the line from hip to ankle
+      for (const s of ['L', 'R']) { const mid = j['hip' + s].clone().lerp(j['an' + s], 0.5); if (j['kn' + s].z <= mid.z + 1e-4) kneeAhead++; } frames++;
+      last = now; lastAir = air;
+    });
+    const cadence = steps / 3;
+    assert.equal(slid, 0, `${speed} m/s: no standing foot slid`);
+    if (speed < 2) assert.equal(both, 0, `${speed} m/s: never both feet in the air`); else assert.ok(both > 0, `${speed} m/s: both feet off the ground at times`);
+    assert.ok(cadence > 1.4 && cadence < 4, `${speed} m/s: ${cadence.toFixed(1)} steps a second`);
+    assert.ok(minHip > (speed < 2 ? 0.78 : 0.65) && maxHip < 0.96, `${speed} m/s: hips between ${minHip.toFixed(2)} and ${maxHip.toFixed(2)} m`);
+    assert.equal(kneeAhead, frames * 2, 'knees bend forwards');
+  }
+});
+
+test('the person on a slope keeps its feet on the ground under them', () => {
+  const ground = (x, z) => -z * 0.15, G = stubG(ground), f = createFigure(G, DEFAULT_PACK.threats.sentry, 's');
+  let worst = 0;
+  walk(f, 1.4, 3, () => { const air = f.swinging(); f.feet().forEach((p, k) => { if (!air.includes(k)) worst = Math.max(worst, Math.abs(p.y - 0.085 - ground(p.x, p.z))); }); }, ground);
+  assert.ok(worst < 0.02, `a standing foot is ${worst.toFixed(3)} m off the slope`);
+});
+
+test('the person aims: the rifle comes up to the shoulder and points at the target', () => {
+  const f = person('a'), v = view({ engaged: true, alert: true, aim: 'tele', target: new Vector3(0, 0, -12) });
+  for (let i = 0; i < 60; i++) f.update(DT, v);
+  const m = f.muzzle(new Vector3()), j = f.joints(), dir = m.clone().sub(j.grip).normalize(), want = new Vector3(0, 1.25, -12).sub(j.grip).normalize();
+  assert.ok(dir.dot(want) > 0.985, `the rifle points ${(Math.acos(Math.min(1, dir.dot(want))) * 57.3).toFixed(1)}° off the target`);
+  assert.ok(j.grip.y > 1.2, `grip at ${j.grip.y.toFixed(2)} m: in the shoulder`);
+  assert.ok(j.wrL.distanceTo(j.grip) < 0.45 && j.wrR.distanceTo(j.grip) < 0.12, 'both hands on the rifle');
+  v.aim = 'idle'; v.engaged = false; v.alert = false; v.target = null; for (let i = 0; i < 90; i++) f.update(DT, v);
+  assert.ok(f.joints().grip.y < 1.2, 'lowered on patrol');
+});
+
+test('the person crouches lower and falls down dead, lying on the ground with its rifle beside it', () => {
+  const f = person('c'), v = view({ crouch: 1 });
+  for (let i = 0; i < 60; i++) f.update(DT, v);
+  assert.ok(f.joints().headC.y < 1.3, `crouched head at ${f.joints().headC.y.toFixed(2)}`);
+  v.crouch = 0; for (let i = 0; i < 60; i++) f.update(DT, v);
+  f.die(new Vector3(0, 0, 1)); v.alive = false; // shot from the front: it goes over backwards
+  for (let i = 0; i < 150; i++) f.update(DT, v);
+  const j = f.joints();
+  assert.ok(j.headC.y < 0.4 && j.neck.y < 0.4, `the head lies at ${j.headC.y.toFixed(2)} m`);
+  assert.ok(j.headC.z > 0.6, 'it fell away from the shot');
+  for (const k of ['hipC', 'neck', 'knL', 'knR', 'wrL', 'wrR', 'grip']) assert.ok(j[k].y > 0.02, `${k} above the ground (${j[k].y.toFixed(2)})`);
+  assert.ok(j.grip.y < 0.15, 'the rifle on the ground');
+});
+
+test('the person is hit where it is: head, torso, arms and legs are separate volumes', () => {
+  const f = person('z'); for (let i = 0; i < 10; i++) f.update(DT, view());
+  const parts = new Set(f.zones().map((z) => z.part)); assert.deepEqual([...parts].sort(), ['arm', 'head', 'leg', 'torso']);
+  const at = (y) => { let best = null; for (const z of f.zones()) { const d = rayCapsule(new Vector3(0, y, 10), new Vector3(0, 0, -1), z.a, z.b, z.r); if (d !== null && (!best || d < best.d)) best = { d, part: z.part }; } return best && best.part; };
+  assert.equal(at(1.65), 'head'); assert.equal(at(1.2), 'torso'); assert.equal(at(0.3), null, 'between the legs'); assert.equal(at(2), null, 'over the head');
+});

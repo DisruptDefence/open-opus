@@ -55,11 +55,11 @@ for (const kind of Object.keys(ARCHETYPES)) test(`the player's shots kill a ${ki
   assert.ok(f.log.some((e) => e.n === 'entity' && e.change === 'despawn' && e.id === 'x'));
 });
 
-test('a round in the top of a ground threat counts 2.2 times; being shot at turns it on the player', async () => {
+test('a round in the head of a person counts 2.2 times; being shot at turns it on the player', async () => {
   const f = await fight([{ id: 's', kind: 'sentry', x: 20, z: 6, heading: 0 }]);
   f.run(0.2);
   const hit = f.shootAt('s', 'weak');
-  assert.equal(hit.part, 'weak');
+  assert.equal(hit.part, 'head', 'the top of a person is its head');
   assert.ok(Math.abs(f.G.threats.list[0].health - (90 - RIFLE * 2.2)) < 1e-6);
   f.run(0.3);
   assert.ok(f.log.some((e) => e.n === 'entity' && e.change === 'state' && e.from === 'patrol' && e.state === 'engage'));

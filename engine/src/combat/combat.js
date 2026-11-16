@@ -17,7 +17,7 @@ export function createCombat(i) {
           c = i.enemies.raycast(n, s, l ? l.dist : r);
         if (c) {
           e.hits++;
-          let u = c.part === 'weak' ? 2.2 : 1,
+          let u = c.part === 'weak' || c.part === 'head' ? 2.2 : 1, // OPUS: a person's head is its weak point
             h = c.enemy.damage(o * u, c.point, s, c.part) === !0,
             f = {
               point: c.point,
