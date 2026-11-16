@@ -45,6 +45,7 @@ Switches of the development page, as query parameters:
 | `autostart` | deploy without the click (no pointer lock and no sound without a click, by the browser's rule) |
 | `dt` | a fixed simulation step in seconds, for a repeatable run |
 | `radius` | chunks of full detail round the player |
+| `detail` | metres within which a cell is drawn in near detail (default by quality: `test` 0, `low` 45, `medium` 85, `high` 140, `ultra` 220) |
 | `seed` | the random seed |
 
 The page publishes `window.__OPUS_WORLD`, the world API, and uses nothing else of the engine after `openWorld()`.
@@ -54,10 +55,11 @@ a format.
 ## Test it
 
 ```
-node --test                                        # in this folder: about 55 tests, a few seconds
+node --test                                        # in this folder: about 95 tests, a few seconds
 ```
 
-The pure modules are tested alone. `test/world-api.test.js` is the contract test: it boots the real engine
+The pure modules are tested alone; `test/fixtures/` holds two small hand-written scenes (old keys, new keys) for
+the reader, the mesher and the collision, and every generator file has a contract test. `test/world-api.test.js` is the contract test: it boots the real engine
 without a screen (`test/headless.js` replaces the modules that need WebGL, sound or a keyboard through the
 engine's own module registry) and plays a mission through the world API. `test/combat.test.js` fights on the same
 simulation: the player's rounds kill each threat kind, and threats notice, warn, take turns, shoot bolts, rush and
@@ -80,6 +82,21 @@ Every change to how a scene looks is shown from those viewpoints, before and aft
 
 Playwright is not a dependency: point `PLAYWRIGHT` at any installed copy. Software WebGL draws a few frames a
 second, so a run takes about a minute. The exit code is 0 only when the mission reached `complete`.
+
+## Chunks, cells and detail
+
+A scene streams in chunks of 250 m (`src/level/loader.js`). A live chunk is cut into 4 × 4 cells of 62.5 m, and
+what is drawn comes in three groups (`src/gen/mesher.js`): `base` (roofs, arches, solid walls: always), `far`
+(flat façades, simple trees) and `near` (modelled façades, full trees, rails, the street's ground, props). `far`
+and `near` are two pictures of the same things: a cell shows `near` when the camera is within the detail
+distance and `far` otherwise (`src/level/detail.js`: built one cell a frame, kept across a 10 m band so nothing
+flips at the edge, thrown away 80 m further out). The distance comes from the quality tier or the `detail`
+switch, so detail scales down with the machine. `base` and `far` are one mesh per material per chunk; only cells
+in `near` add draw calls.
+
+The triangles come from the generators in `src/gen/` (pure code, one file per kind of thing, each with its
+contract in its header), and the collision comes from the same functions (`src/scene/install.js`): what is drawn
+is what collides. `world.stats()` reports `cellsNear` and `nearBuildMs`.
 
 ## Tools
 

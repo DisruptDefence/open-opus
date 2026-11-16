@@ -274,78 +274,161 @@ Collision is derived from the kind (4 below).
 
 ## 4. Engine contracts the items share
 
-`engine/src/gen/` is a new **pure** module (layer table of `docs/ARCHITECTURE.md`; `test/imports.test.js` has it
-at layer 0 already). `gen/soup.js` exists and is tested (`test/gen.test.js`): soups keyed `"<material>|<flags>"`
-(`t` triplanar, `v` vertex colours), `tri`, `quad`, `fan`, `frame`, `rect`, `slab`, `box`, `prism`, `linear`,
-`rng`, `seedOf`. Every generator writes into soups and nothing else; `level/build.js` turns soups into meshes.
+**Built by item 3 (2026-11-16) and fixed.** This section says what is in the code; where an earlier draft of it
+differed, the list at its end says what changed and why. Each generator file's header repeats its own contract
+(inputs, outputs, units, winding, UV, soups, group, budget), so an item is done by filling the body of its file.
 
-**Decoded records** (what `scene/source.js` hands on; item 3 writes the mapping for *all* of section 3 at once,
-so later items do not touch `source.js`):
+`engine/src/gen/` is a **pure** module (layer 0 of `docs/ARCHITECTURE.md`, enforced by `test/imports.test.js`):
 
-```
-building  { id, ring, holes, yBase, yMin (= yBase + mh), hEave, hRoof, levels, roofShape, roofDir, roofMat, roofColor (linear rgb or null),
-            facade, tint (linear rgb), use, blind:Set, front:Set, groundFloor, passages:[{x1,z1,x2,z2,w,h}], name, heightSource }
-road      { pts, cls (4.3 enum), surface (4.1 enum), width, sidewalk ('both'|'left'|'right'|'no'), steps:{count,handrail}|null, lit, marking, bridge }
-wall      { pts, cls, height, parapet|null, thickness, material, crenels, rail|null, name }       (the line; rings are derived)
-tree      { x, z, height, crownRadius, kind, form }
-prop      { kind (string), x, z, yaw (radians, engine convention), variant, source }
-crossing  { x, z, bearing, width }
-chunk     + roads, props, crossings, cells: 4 x 4 lists of indices (below); manifest + style, season, ambience
-```
-
-A road, wall or crossing belongs to every chunk it touches (clipped to the chunk box plus 2 m, so ribbons meet).
-
-**Cells and levels of detail.** A chunk is cut into 4 × 4 cells of 62.5 m. A record belongs to the cell of its
-bounding-box centre (clamped into the chunk). Per cell three groups of meshes:
-
-| Group | Holds | Shown |
+| File | What | Owner |
 |---|---|---|
-| `base` | roofs, flat façades (windows in the texture), plinths, walls with crenels, gates, simple trees | while the chunk is live |
-| `far` | nothing new: the flat façades of `base` are in their own meshes so they can be hidden | when the cell is not `near` |
-| `near` | façades with real openings, doors, shopfronts, cornices, dormers, chimneys, road ribbons, kerbs, steps, markings, props, rails | built lazily (at most one cell a frame) when the camera is within `R`; hidden beyond `R + 10`; disposed beyond `R + 80` |
+| `soup.js` | triangle soups keyed `"<material>\|<flags>"`; `tri`, `triN` (normals given, for round things), `quad`, `fan`, `cap` (any ring with holes), `frame`, `rect`, `slab`, `box`, `prism`, `linear`, `shade`, `mixTint`, `rng`, `seedOf` | item 3, frozen |
+| `poly.js` | `signedArea`, `centroid`, `pointInRing`, `bbox`, `obb`, `clip`, `triangulate` (built); `inset` (throws until built) | item 3; `inset` by item 4 |
+| `cells.js` | `cellBoxes`, `cellIndex`, `boxDistance`, `clipLine`, `clipSoups` | item 3, frozen |
+| `style.js` | `DEFAULT_STYLE`, `resolveStyle`, `parseColor`, `paletteColor`, the format's class names, and the **material slots** (`WALL_SOUP`, `FACADE_FAR_SOUP`, `ROOF_SOUP`, `ROOF_TINT_SOUP`, `STRUCTURE_SOUP`, `GROUND_SOUP`, `SOUP.*`) | item 3; the slot tables are edited by item 5 only, with the materials |
+| `mesher.js` | the registry: which generator draws which record into which group; `cellSoups(cell, group, env)`, `chunkEnv`, `chunkLift`, `roofInfoOf`, `piecesOf`, `wallSolids`, `propSolid` | item 3, frozen |
+| `roof.js` | `roof` | item 4 (round roofs: item 9) |
+| `facade.js` | `bays`, `facadeFar`, `facadeNear` | item 5 |
+| `ground.js` | `drape`, `roadRibbons`, `steps`, `crossing`, `liftRaster` | item 6 |
+| `structures.js`, `passage.js` | `wallRings`, `wall`; `passagePieces`, `passageArch` | item 7 |
+| `props.js`, `trees.js` | `PROP_KIT`; `tree` | item 8 |
 
-`R` by quality: `test` 0 (never), `low` 45 m, `medium` 85 m, `high` 140 m, `ultra` 220 m; the switch `detail=<m>`
-overrides it. The distance is from the camera (the photo pose in photo mode, else the player) to the cell's box
-on the plan. This is how detail scales down: at `low` only the street the player stands in is modelled.
+Every generator writes into soups and nothing else. `level/build.js` turns soups into meshes; `scene/install.js`
+turns the same functions' answers into collision. No two items share a file.
 
-**Generator signatures** (each in the file its item owns; all pure; `groundAt(x, z)` is the terrain height):
+**Soup flags** (after the bar, any order): `t` triplanar (uv not read), `v` vertex colours (a linear `[r, g, b]`
+per triangle), `d` drawn from both sides, `n` casts no shadow (flat things lying on the ground). A material name
+the library lacks is drawn with the library's fallback and one warning, so a generator may land before its material.
+
+**Material slots.** A generator never writes a material name: it takes its soup key from `style.js`
+(`WALL_SOUP[b.facade]`, `ROOF_SOUP[b.roofMat]`, `GROUND_SOUP[road.surface]`, `SOUP.trim`, `SOUP.window`, …), so two
+generators that meet on one building agree. Today the tables name the materials that exist (`roof_zinc`,
+`facade_stone`, …); item 5 adds `roof_metal`, `roof_slate`, `facade_brick`, `window`, `door`, `paint_white`,
+`glass_lamp`, `tarp` to `materials/outdoor.js` and changes the tables in the same commit. Colours in tinted soups
+are linear: `b.tint`, `b.roofColor`, or `paletteColor(style.trim, k)`.
+
+**Coordinates.** Game metres, `y` up, `z` south. A ring is `[x0, z0, x1, z1, …]`, either winding; edge `i` runs
+from vertex `i` to `i + 1`. A bearing of `d` degrees is the direction `(sin d, −cos d)`. A `yaw` is radians about
+`+y` as three.js turns: 0 faces grid north, positive towards the west (the data's degrees clockwise from north,
+negated); a thing with that yaw faces `(−sin yaw, −cos yaw)` and its right hand is `(cos yaw, −sin yaw)`.
+**Winding:** counter-clockwise seen from the front; `soup.js` computes normals from it.
+
+**Decoded records** (what `scene/source.js` hands on, single file and package alike; every field always present):
+
+```
+building  { id, ring, holes, yBase, yMin (= yBase + mh), hEave, hRoof, levels, roofShape, roofDir (0-179 or 255), roofMat,
+            roofColor (linear rgb or null), facade, tint (linear rgb), use, blind:Set, front:Set, groundFloor,
+            passages:[{x1,z1,x2,z2,w,h}], name, kind, part, heightSource }
+road      { pts, cls (4.3 enum), kind (the source's word), surface (4.1 enum), width, sidewalk ('both'|'left'|'right'|'no'),
+            steps:{count,handrail}|null, lit, marking, bridge, tunnel, name, s0, len }                    a PIECE (below)
+wall      { pts, cls, kind, height, parapet|null, thickness, material, crenels, rail|null, name, s0, len }   a PIECE (below)
+tree      { x, z, height, crownRadius, kind, form }
+prop      { kind (string), x, z, yaw, variant, source }
+crossing  { x, z, yaw, width }
+chunk     + roads, props, crossings, cells; manifest + formatMinor, style (resolved), season, ambience (or null)
+```
+
+Defaults for a file without the new keys are the rules the engine drew with before (roof from `roof` or the
+height, façade and tint from the record's number in file order, trees from their coordinates), so an old file
+draws as it did. Two rules depend on `formatMinor`: a building with `parts: 1` is skipped **only when
+`formatMinor >= 1`** (an older file's parts carry no heights of their own, and its outline is still what is
+drawn); `mh` is honoured always. `tint` is `style.palettes[<facade>][pal]` when `pal` is present; `roofColor` is
+`rc` when it parses, else `style.roofs[<roofMat>][rp]`, else `null`. A `steps` road without `sc` gets
+`round(rise / 0.17)`, at least 2, from the terrain. An unknown prop kind is kept as a record and skipped by the
+mesher with one warning.
+
+**Cells.** A chunk is cut into 4 × 4 cells of 62.5 m; `chunk.cells[k]` is `{ i, j, index, x0, z0, x1, z1,
+buildings, walls, trees, roads, props, crossings }`, the lists holding the records themselves.
+
+- A building, a tree and a prop are in the one cell of their bounding-box centre (clamped into the chunk).
+- A **wall** is cut exactly at cell edges; each piece is in one cell. `s0` is where the piece starts along the
+  whole mapped line, `len` the whole line's length.
+- A **road** piece is the part of the way inside the cell's box grown by `width / 2 + 3` m; a **crossing** is in
+  every cell its square of `width + 3` m touches. The generator draws the whole piece, and the mesher cuts what it
+  wrote to the cell's box (`cells.js clipSoups`: triangles cut by the four vertical planes, normals and uv
+  carried). The neighbouring cell draws the same way from its own piece and keeps its own side. **So everything
+  that repeats along a line (dashes, treads, merlons, posts) is placed by `s0 + distance`, never from the piece's
+  own start**: then two cells, and two chunks, meet with no gap, no overlap and no step in the pattern.
+
+**The three groups and levels of detail.**
+
+| Group | Holds | Meshes | Shown |
+|---|---|---|---|
+| `base` | roofs, passage arches, solid walls with their crenels | one per material per **chunk** | while the chunk is live |
+| `far` | flat façades with their plinth, simple trees (`lod` 0) | one per material per **chunk**; a cell is left out by rewriting the mesh's index | while the cell's `near` is not showing |
+| `near` | modelled façades with their plinth, doors, shopfronts, cornices, dormers, chimneys; full trees (`lod` 1); rails; road ribbons, kerbs, steps, markings, crossings; props | one per material per **cell** | built when the camera is within `R` (nearest first, one cell a frame; all of them at once in `preload` and `photo`); hidden beyond `R + 10`; disposed beyond `R + 80` |
+
+`far` and `near` are two pictures of the same things and are never drawn together; `base` has no second picture.
+`R` by quality: `test` 0 (never), `low` 45 m, `medium` 85 m, `high` 140 m, `ultra` 220 m; the switch
+`detail=<m>` overrides it. The distance is on the plan from the camera (the photo pose in photo mode, else the
+player) to the cell's box (`level/detail.js`). A live chunk therefore costs the draw calls it cost before plus
+one for the plinths, however many cells it has; only cells within `R` add calls.
+
+**Generator signatures** (`groundAt(x, z)` is the chunk's own height tile, sidewalks included, held at the tile's
+edge beyond it; `tile` is that tile: `nx, nz, cell, minX, minZ, data, height(), baseHeight()`):
 
 ```js
-// gen/poly.js
-signedArea(ring), centroid(ring), pointInRing(x, z, ring), bbox(ring)
-obb(ring) -> { cx, cz, ux, uz, L, W, fill }            // long axis unit (ux, uz), half length L >= half width W, fill = area / (4 L W)
-clip(ring, a, b, c) -> ring                             // the part where a x + b z + c >= 0 (Sutherland-Hodgman)
-inset(ring, d) -> ring | null                           // mitred offset towards the inside; null when it collapses (6.3)
-triangulate(ring, holes = []) -> [i, j, k, ...]         // ear clipping; indices into ring then holes, concatenated
-// gen/roof.js
-roof(soups, b, style) -> { slots: [{ ox, oz, ex, ez, len, y, slope, edge }], ridge: [{ x, z, y }] }
+// gen/roof.js                                                                                  group
+roof(soups, b, style) -> { slots: [{ ox, oz, ex, ez, len, y, slope, edge }], ridge: [{ x, z, y }], parapet }   // base
 // gen/facade.js
-facadeFar(soups, b, groundAt)                           // one quad per edge, uv = (bays, levels)
-facadeNear(soups, b, groundAt, style, roofInfo)         // openings, doors, shopfronts, cornice, dormers, chimneys
-bays(len, style, seed) -> { n, width, margin }          // the one bay rule both use
+bays(len, style, seed) -> { n, width, margin, start }          // the one bay rule both use
+facadeFar(soups, piece, groundAt, style, roofInfo)             // far: one quad per edge, uv = (bays, levels), and the plinth
+facadeNear(soups, piece, groundAt, style, roofInfo)            // near: openings, doors, shopfronts, cornice, plinth; dormers and chimneys with piece 0
 // gen/passage.js
-passagePieces(b) -> [{ ring, yMin, blind:Set }]         // the building cut by its passages: for walls and for collision
-// gen/ground.js
-drape(tri3, tile) -> [[x, y, z] x 3, ...]               // a plan triangle cut along the terrain's own triangles
-roadRibbons(soups, road, tile, style), steps(soups, road, groundAt, style), crossing(soups, c, tile)
-liftRaster(roads, x0, z0, n, style) -> Uint8Array       // centimetres to add to the ground: sidewalks
+passagePieces(b) -> [piece]                                    // far, near and collision. [b] itself without a passage; else copies of b
+                                                               // with ring, holes, yMin, blind, front (renumbered for the piece's ring), piece
+passageArch(soups, b, p, groundAt, style)                      // base: the inside of one passage
 // gen/structures.js
-wallRings(wall, groundAt) -> [{ ring, yBase, yTop }]    // also what collides
-wall(soups, wall, groundAt, style)
+wallRings(wall, groundAt) -> [{ ring, yBase, yTop }]           // collision, and what wall() must draw
+wall(soups, wall, groundAt, style)                             // base; near when wall.rail
+// gen/ground.js
+drape(tri3, tile) -> [[[x, y, z] x 3], ...]                    // a plan triangle cut along the terrain's own triangles
+roadRibbons(soups, road, tile, style)                          // near, cut to the cell by the mesher
+steps(soups, road, groundAt, style)                            // near, cut to the cell; called instead of roadRibbons when road.steps
+crossing(soups, c, tile, style)                                // near, cut to the cell
+liftRaster(roads, x0, z0, n, style) -> Uint8Array(n * n) | null    // centimetres per 1 m cell: sidewalks. null = none
 // gen/props.js
-PROP_KIT[kind] = { build(soups, x, y, z, yaw, variant, style), collider: { r, h, nav } | null }
+PROP_KIT[kind] = { build(soups, x, y, z, yaw, variant, style), collider: null | { r, h, nav } | { hw, hd, h, nav } }   // near and collision
 // gen/trees.js
-tree(soups, t, y, season, lod)
+tree(soups, t, y, season, lod)                                 // far (lod 0), near (lod 1)
 ```
 
-**Collision is what is drawn** (`scene/install.js`, item 3 writes all of it against these functions):
-buildings from `passagePieces(b)` (one prism per piece, from `yMin` when it is above the ground: one walks under
-it); walls from `wallRings`; props from `PROP_KIT[kind].collider` (a square prism of half-width `r`, height `h`;
-`noNav` when `r < 0.3`, so a lamp post stops a walker and a bullet but does not close a nav cell); trees as today;
-sidewalks through the lift raster, which `terrain/heightfield.js` adds to the height it reports
-(`createGrid({ …, lift, liftCell })`: nearest cell, centimetres), so the player, the nav grid, the props and the
-drawn sidewalk agree. Stairs stay the sloped ground they are in the terrain; the drawn treads stay within one
-riser of it.
+The mesher never passes a road with `tunnel` or `bridge`. `roofInfo` is what `roof()` returned for the whole
+building (computed once and kept); `parapet` is the height the façade raises its wall above the eave.
+
+**Collision is what is drawn** (`scene/install.js`): the ground is the chunk's heights plus `liftRaster` in one
+height tile (`terrain/heightfield.js createGrid({ …, lift, liftCell, liftN })`: `height()` with the lift,
+`baseHeight()` without), so the player, the nav grid, the props and the drawn sidewalk agree; buildings are one
+prism per piece of `passagePieces(b)`, from `yMin` when it is above the ground (one walks under it) and from 3 m
+below the ground otherwise; walls are one prism per ring of `wallRings` (a rail collides as its thin ring);
+props are `PROP_KIT[kind].collider` turned with the prop's yaw, `noNav` unless `nav` is true, so a lamp post stops
+a walker and a bullet but does not close a nav cell; trees are their trunk. Stairs stay the sloped ground they are
+in the terrain; the drawn treads stay within one riser of it. A kerb is lower than a step (`STEP = 0.45`).
+
+**What changed from the first draft of this section, and why** (found while building it):
+
+1. `base` and `far` are one mesh per material per chunk, not per cell: per-cell meshes would have cost up to 16
+   times the draw calls for a few thousand triangles. A `far` mesh leaves a cell out through its index buffer.
+2. Simple trees and plinths moved from `base` to `far`/`near`: a thing that has a near picture must be hidden
+   when that picture shows, and `base` is never hidden.
+3. Roads and crossings are cut per **cell**, with a margin, and the **mesher** clips what was drawn to the cell's
+   box. The draft clipped polylines to the chunk plus 2 m and left the clipping to the generator: 2 m is less
+   than half a wide street with its sidewalk, and a road in one cell only would have been modelled or not as a
+   whole. Walls are cut per cell exactly. Pieces carry `s0` and `len`.
+4. `passagePieces` returns whole building copies with `front` renumbered as well as `blind` (edge numbers change
+   when a ring is cut); the arch is `passageArch` in `passage.js`, not a function of `structures.js`.
+5. `roof()` also returns `parapet`; `facadeFar` takes `style` and `roofInfo` (it needs the bay rule and the parapet).
+6. A prop collider may be a box (`hw`, `hd`), turned with the prop: a bench is not a square. `nav` is stated per
+   kind instead of derived from the radius.
+7. `liftRaster` may return `null`; `crossing` takes `style`; a road carries `kind` (the 4.3 classes cannot tell a
+   living street from a residential one) and `tunnel`.
+8. A crossing and a prop carry `yaw` (radians, the engine's turn), not a bearing in degrees.
+9. `poly.js` is built except `inset`: the mesher itself needs triangulation without three.js.
+10. `parts: 1` is skipped from `formatMinor >= 1` only (3.1 says "now"): the published scene has five such
+    outlines whose parts carry no measured heights, and it must draw as before until item 2 regenerates it.
+11. The client part of a style pack (2.2) needs one more key, `sidewalk: { width, surface }`: the engine draws
+    and raises sidewalks and cannot read the builder part. `DEFAULT_STYLE` has it (1.6 m, concrete); the packs of
+    items 1 and 6 should carry it in `client`.
 
 ## 5. Budgets (stated now, measured by every item)
 
@@ -374,13 +457,13 @@ scene regenerated by the builder (`--offline --cache`), never edited by hand; do
 | 0 | Photo mode, frame statistics, the picture tool, `gen/soup.js` | — | done on `detail` | — |
 | 1 | The builder takes a place and a style | 0 | `tools/**`, `places/`, `styles/` | Sonnet |
 | 2 | Buildings in data: measured heights, roofs, façades, edges | 1 | `tools/scene_builder/buildings.py`, `styles/*` (building keys) | Sonnet |
-| 3 | The reader and the mesher: records, cells, levels of detail, collision | 0 | `engine/src/scene/source.js`, `install.js`, `engine/src/level/*`, `engine/src/terrain/heightfield.js`, stubs of every `gen/*.js` | Planning model (engine internals; every later item builds on it) |
-| 4 | Roofs | 3 | `engine/src/gen/poly.js`, `roof.js`, their tests | Sonnet |
-| 5 | Façades | 3 (4 for dormers) | `engine/src/gen/facade.js`, `engine/src/materials/outdoor.js`, test | Sonnet; colours and proportions judged by the planning model |
-| 6 | Ground: surfaces, kerbs, sidewalks, stairs, crossings | 1, 3 | `tools/scene_builder/ground.py`, `engine/src/gen/ground.js`, test | Sonnet |
-| 7 | Walls, crenels, gates as arches | 1, 3 | `tools/scene_builder/walls.py`, `engine/src/gen/structures.js`, `passage.js`, tests | Sonnet |
-| 8 | Dressing: props and trees | 1, 3 | `tools/scene_builder/props.py`, `trees.py`, `engine/src/gen/props.js`, `trees.js`, tests | Sonnet; the look of each prop judged by the planning model |
-| 9 | Landmarks from building parts | 2, 4 | `tools/scene_builder/parts.py`, additions to `roof.js` (cone, dome, onion-free) | Sonnet |
+| 3 | The reader and the mesher: records, cells, levels of detail, collision | 0 | done on `mesher` (section 4): `engine/src/scene/*`, `engine/src/level/*`, `engine/src/terrain/heightfield.js`, `gen/soup.js`, `poly.js`, `cells.js`, `style.js`, `mesher.js`, a placeholder and a contract test for every other `gen/*.js` | Planning model (engine internals; every later item builds on it) |
+| 4 | Roofs | 3 | `engine/src/gen/roof.js`, `inset` in `gen/poly.js`, `test/roof.test.js` | Sonnet |
+| 5 | Façades | 3 (4 for dormers) | `engine/src/gen/facade.js`, `engine/src/materials/outdoor.js`, the slot tables of `gen/style.js`, `test/facade.test.js` | Sonnet; colours and proportions judged by the planning model |
+| 6 | Ground: surfaces, kerbs, sidewalks, stairs, crossings | 1, 3 | `tools/scene_builder/ground.py`, `engine/src/gen/ground.js`, `test/ground.test.js` | Sonnet |
+| 7 | Walls, crenels, gates as arches | 1, 3 | `tools/scene_builder/walls.py`, `engine/src/gen/structures.js`, `passage.js`, `test/structures.test.js` | Sonnet |
+| 8 | Dressing: props and trees | 1, 3 | `tools/scene_builder/props.py`, `trees.py`, `engine/src/gen/props.js`, `trees.js`, `test/props.test.js` | Sonnet; the look of each prop judged by the planning model |
+| 9 | Landmarks from building parts | 2, 4 | `tools/scene_builder/parts.py`, additions to `roof.js` (cone, dome, onion-free), `test/parts.test.js` | Sonnet |
 | 10 | Light and air | 3 | `engine/src/core/atmosphere.js`, the `ambience` reader in `engine/src/world/engine.js` (three lines), `places/*` | Planning model (judgement), Sonnet for the wiring |
 | 11 | Proof of reuse: a second place, zero code change | 1–9 | `places/lunenburg.json`, `styles/atlantic-wood.json`, `engine/tools/viewpoints/lunenburg.json`, `scenes/lunenburg.json` | Sonnet; the verdict "zero code change" checked by `git diff --stat` |
 
@@ -518,80 +601,83 @@ vary along a street; the overview shows the measured skyline. **Done** when the 
 
 ### Item 3 — The reader and the mesher
 
+**Done on branch `mesher`, 2026-11-16.** Section 4 is its result and the contract for items 4 to 10.
+
 **Goal.** The engine reads every addition of section 3, cuts chunks into cells with the three groups of 4,
-derives collision from the same functions that draw, and calls generators that are stubs until their items land.
+derives collision from the same functions that draw, and calls generators that are placeholders until their
+items land.
 
-**Do.**
+**What was built.**
 
-1. `scene/source.js`, `jsonSource`: map the single-file keys to the decoded records of section 4. Defaults when
-   a key is absent (an old file must still draw as today): `rs` ← the old rule (`ROOF[b.roof] ?? …`), `rh` ←
-   `min(4.5, 0.28 h)` when the shape is not flat, `fa`/`pal` ← the old `id`-based pick, `lv` ← 0, `blind`,
-   `front` ← empty, `gf` ← 0, `pass` ← none, walls: `t`, `m` from today's table, trees: today's formula for the
-   missing numbers. Skip buildings with `parts: 1`. `yMin = yBase + (mh || 0)`. `tint`: `style.palettes[name][pal]`
-   through `gen/soup.js` `linear`; `roofColor`: `rc` when it parses as a colour, else `style.roofs[name][rp]`.
-   Roads, crossings and props are bucketed per chunk (clip a polyline to the chunk box grown by 2 m). The
-   surface raster keeps being burnt here, now from `sf` when present. `decodeChunk` (packages) gets the same
-   defaults so the test scene still loads. `manifest` gains `style` (merged over `gen/style.js` defaults),
-   `season`, `ambience`.
-2. `gen/style.js`: `DEFAULT_STYLE` (the client part of `styles/canada.json`, copied by hand; a test compares the
-   key sets), `resolveStyle(sceneStyle)`.
-3. Stubs, each exporting the signatures of section 4 and doing the least that keeps today's picture:
-   `gen/roof.js` (`roof` = today's frustum, moved from `build.js`), `gen/facade.js` (`facadeFar` = today's one
-   quad per edge with `uv = (bays, levels)`; `facadeNear` = the same quad), `gen/passage.js` (`passagePieces` =
-   the building itself as one piece), `gen/structures.js` (`wallRings` = today's `lineToRings` logic with `hp`
-   honoured; `wall` = prisms), `gen/ground.js` (all no-ops; `liftRaster` returns zeros), `gen/props.js`
-   (`PROP_KIT = {}`), `gen/trees.js` (`tree` = today's `buildTrees` body), `gen/poly.js` (`signedArea`,
-   `centroid`, `pointInRing`, `bbox`; the rest throw "not built"; item 4 fills them).
-4. `level/build.js`: `buildCell(G, chunk, cellIndex, group, groundAt)` for `group` in `base | far | near`, each
-   returning a three.js `Group` made from soups (`"name|tv"` → `G.mats.get(name, { triplanar, vertexColors })`);
-   terrain building stays as it is. Trees go in `base`.
-5. `level/loader.js`: keeps each live chunk's records per cell; every frame, for the cells of live chunks:
-   show/hide `far` and `near` by the rule of section 4, build at most one missing `near` cell (nearest first),
-   dispose beyond `R + 80`. `stats()` gains `cellsNear`, `nearBuildMs` (last), and triangles count only what is
-   visible. `detail` switch documented in `engine/README.md`.
-6. `terrain/heightfield.js`: `createGrid` takes `lift` (Uint8Array, centimetres) and `liftCell`; `height()` adds
-   `lift / 100` of the nearest lift cell; `baseHeight()` is the old value (the terrain mesh and `drape` use it).
-7. `scene/install.js`: collision exactly as section 4.
-8. `docs/ARCHITECTURE.md`: `gen` in the layer table and layout; `engine/README.md`: cells and the `detail` switch.
+1. `scene/source.js`: both sources hand on the decoded records of section 4, every field present, with the
+   defaults that keep an old file's picture; `layCells` cuts a chunk's records into its 16 cells; the manifest
+   gains `formatMinor`, `style` (resolved), `season`, `ambience`. The surface raster is burnt from `sf` when present.
+2. `gen/style.js`, `gen/poly.js`, `gen/cells.js`, `gen/mesher.js` (section 4), and `triN`, `cap` in `gen/soup.js`.
+3. A placeholder in every generator file, drawing exactly what the engine drew before (the frustum roof, one
+   quad per edge with the old texture, slab walls, the old tree; no ribbons, no props, no arch), under the final
+   signature, with the contract in the file's header.
+4. `level/build.js`: `buildChunkStatic` (base and far, one mesh per material per chunk, far maskable per cell),
+   `buildCellNear`; `level/detail.js`: which cells show their near group; `level/loader.js` keeps a live chunk's
+   records, runs the detail every frame and builds every near cell in reach in `preload` (so `photo()` shows the
+   place as it is). `stats()` gains `cellsNear`, `cellsBuilt`, `nearBuildMs`, `detail`; `tris` counts what is drawn.
+5. `terrain/heightfield.js`: `lift`, `liftCell`, `liftN`, `baseHeight()`. `scene/install.js`: collision as section 4.
+6. `world.stats()` gains `cellsNear` and `nearBuildMs` (additive; `docs/WORLD-API.md`).
 
-**Tests** (`engine/test/`):
+**Tests** (`engine/test/`): `poly.test.js` (polygons, cells, line and soup clipping), `scene.test.js` (the two
+fixture scenes of `test/fixtures/`: old keys decode to the old rules, new keys to their values; parts, `mh`,
+passages, roads across a chunk edge, wall pieces, crossings, props, style), `terrain.test.js` (the lift),
+`physics.test.js` (under a floating part; a post and a bench from their colliders), `level.test.js` (the
+distance rule and its band; the three groups; meshes per chunk and the far mask; the engine on a new-style
+scene; budgets on the published scene), and one contract test per generator file (`roof`, `facade`, `ground`,
+`structures`, `props`, `parts`) that passes on the placeholder, must keep passing, and lists the item's own
+tests as todo.
 
-- `scene.test.js`: an old-style record (no new keys) decodes with the defaults above; a new-style record decodes
-  to the given values; a building with `parts: 1` is absent from every chunk; a part with `mh: 12` has
-  `yMin = yBase + 12`; a road crossing two chunks appears in both, and the two clipped pieces share the crossing point within 2 m.
-- `terrain.test.js`: a grid with `lift` = 14 in one cell reports `base + 0.14` inside it and `base` outside; `baseHeight` ignores it.
-- `physics.test.js`: a capsule walks under a piece with `yMin = yBase + 4` and is stopped by one with `yMin = yBase`;
-  a prop collider of `r = 0.15` stops the capsule and is `noNav`.
-- `world-api.test.js` stays green untouched (the mission on the test scene still plays).
-- A new `level.test.js` (three.js runs under Node without a screen, as `headless.js` shows): with `R = 50`, a
-  cell 30 m away has `near` visible and `far` hidden; at 70 m the reverse; at 140 m the `near` group is disposed;
-  moving the camera 5 m back and forth across `R` does not flip the groups (the 10 m band).
+**Measured** (2026-11-16, this machine, software WebGL, the published scene, placeholders in every generator):
 
-**Budget.** Draw calls at `q=low` ≤ 300 with per-cell meshes: measure all six views; if over, merge `base` roofs
-per chunk instead of per cell (their triangles are few) and report. **Proof.** The six views are unchanged to
-the eye at this point (stubs draw today's picture), and `play.mjs old-quebec` passes. **Done** when a generator
-item can land by editing only its own file.
+| | 1 street | 2 square | 3 gate | 4 terrace | 5 lower | 6 overview |
+|---|---|---|---|---|---|---|
+| draw calls, `q=low`, before → after | 147 → 173 | 180 → 211 | 86 → 100 | 142 → 149 | 164 → 193 | 182 → 189 |
+| triangles, `q=low`, before → after | 166 k → 166 k | 234 k → 234 k | 114 k → 115 k | 170 k → 169 k | 234 k → 235 k | 233 k → 233 k |
+| near cells, `q=low` (R = 45 m) | 4 | 6 | 5 | 4 | 6 | 2 |
+| draw calls, `q=high`, before → after | 214 → 343 | 204 → 280 | 90 → 130 | 154 → 214 | 176 → 234 | 247 → 282 |
+| triangles, `q=high`, before → after | 281 k → 275 k | 317 k → 314 k | 114 k → 114 k | 210 k → 208 k | 296 k → 296 k | 389 k → 388 k |
+| near cells, `q=high` (R = 140 m) | 28 | 24 | 24 | 28 | 25 | 17 |
+
+Frame time at `q=low`, 960 × 540, mean of the five street views, old and new code run in turn three times with
+40 frames a view: before 252, 245, 241 ms; after 244, 242, 239 ms (no slower). Load to ready at `q=low`: 3.9 to
+6.1 s before, 3.9 to 6.2 s after (the spread is the machine's). `node --test`: 96 pass, 35 todo (the items' own
+tests), 2 s. The densest near cell of the scene (1 768 triangles with the placeholders) builds in under 3 ms. The extra draw
+calls are the near groups (a group per cell and material, drawn again in each shadow pass); with the
+placeholders they show nothing the far picture did not, and `detail=0` gives the old numbers back.
+
+**Proof.** The six views are unchanged to the eye (placeholders draw the old picture; against a second run of the
+old code the pictures differ by no more than two runs of the old code do), and `play.mjs` completes on both
+scenarios. **Done**: a generator item lands by editing only its own file.
 
 ### Item 4 — Roofs
 
 **Goal.** Every roof shape of the format drawn as real planes on any footprint, with the places dormers and
 chimneys go.
 
-**Algorithms** (`gen/poly.js`, `gen/roof.js`). `e` = `yBase + hEave`, `H` = `hRoof`. Roof soup:
-`"roof_metal|tv"` for `metal_seam`, `copper`, `sheet_metal` (one light standing-seam texture, coloured by the
-vertex tint: zinc, copper green, painted red or black); `"roof_slate|tv"` for slate, shingle, tile;
-`"roof_membrane|t"` for membrane, concrete. Gable walls go to the façade's wall soup with the building's tint.
+**Contract** (section 4, and the header of `gen/roof.js`, which is the placeholder to replace): `roof(soups, b,
+style) -> { slots, ridge, parapet }`, called once per whole building for the `base` group; `poly.js` is built
+except `inset`, which this item writes. Soups come from `style.js`: `ROOF_TINT_SOUP[b.roofMat]` with `b.roofColor`
+when the building has a colour, else `ROOF_SOUP[b.roofMat]`; gable walls `WALL_SOUP[b.facade]` with `b.tint`. Do
+not edit the tables: item 5 points them at `roof_metal`, `roof_slate` when those materials exist. The placeholder
+lifts a roof colour by 1.6 to suit the old zinc texture; write the plain colour.
+
+**Algorithms** (`gen/roof.js`, `inset` in `gen/poly.js`). `e` = `yBase + hEave`, `H` = `hRoof`.
 
 - **`inset(ring, d)`**: for each vertex, the intersection of the two adjacent edges moved inwards by `d` (mitre;
   when the edges are within 1° of parallel, the vertex moved along the normal). Valid when: the signed area
   keeps its sign and is at least 5 % of the original; every new edge points the same way as its old edge (dot
   product > 0); no two non-adjacent new edges intersect. Otherwise `null`.
-- **`triangulate`**: holes are joined to the outer ring by a bridge from each hole's vertex of greatest x to
-  the nearest outer vertex it can see (no edge crossed), then ears are clipped; a ring that defeats ear clipping
-  (no ear in a full pass) is finished as a fan and a warning counter is raised (tests assert it stays 0 on the scene).
+- **`triangulate`** is built (item 3): ear clipping with holes bridged in; triangles come out facing up; a ring
+  that defeats it is finished as a fan and counted in `triangulate.fallbacks` (a test keeps it at 0 on the scene).
+  `soup.js cap(s, ring, holes, y, tint)` draws a flat polygon with it.
 - **flat (0)**: `in = inset(ring, 0.3)`. If valid: cap of `in` at `e` (membrane), parapet top strip between ring
   and `in` at `e + 0.45`, inner parapet face from `e` to `e + 0.45`; the façade is told the parapet height
-  through the return value so the outer wall rises to it. If not valid, or with holes: a plain cap at `e`.
+  through the return value (`parapet: 0.45`) so the outer wall rises to it. If not valid, or with holes: a plain cap at `e`.
 - **gabled (1), gambrel (8)**: axis = `roofDir` or the long axis of `obb`. `s(p)` = signed distance from the
   centre line, `W` = the greatest `|s|` on the ring. Height `H (1 − |s| / W)`. The two halves are
   `clip(ring, s ≥ 0)` and `clip(ring, s ≤ 0)`, each triangulated and lifted. Every ring edge whose ends are not
@@ -644,6 +730,13 @@ model has looked at the pairs.
 **Goal.** Walls with storeys, window bays with real depth, doors, shopfronts, cornices, dormers and chimneys,
 varied by material and seeded choice; and a flat far façade that lines up with them.
 
+**Contract** (section 4, and the header of `gen/facade.js`): `facadeFar(soups, piece, groundAt, style, roofInfo)`
+fills the `far` group and `facadeNear(…)` the `near` group; the two are never drawn together, so **each draws the
+whole wall, plinth included**. They are called once per piece of `passagePieces(b)`: a piece is a building record
+with its own `ring`, `holes`, `yMin`, `blind`, `front`; the wall starts at `max(ground, yMin)`. Dormers and
+chimneys are drawn with piece 0 only. Soup keys come from `style.js` (`FACADE_FAR_SOUP`, `WALL_SOUP`, `SOUP.*`);
+this item adds the materials below and edits those tables in the same commit (it is the only item that does).
+
 **Layout rule** (shared by far and near, `bays(len, style, seed)`): bay width `w` = seeded value in
 `style.window.bay` fixed per building; `margin = 0.45`; `n = floor((len − 2 margin) / w)`; if `n < 1` the edge has
 no openings; the bays are centred: first bay starts at `(len − n w) / 2`. Per edge the wall starts at
@@ -683,7 +776,7 @@ proportions as the style's defaults.
 - Chimneys: `rng`-picked count from `style.chimneys.perBuilding` on `roofInfo.ridge` points (pitched roofs
   only): `box` `width × depth`, from the eave to `ridge.y + above`, soup `"brick|tv"` or the wall soup for stone
   buildings, a 0.08 cap slab.
-- With `passagePieces` (item 7) the function is called per piece; edges in the piece's `blind` set get one quad.
+- The function is called per piece (see the contract); edges in the piece's `blind` set get one quad.
 
 **Materials** (`materials/outdoor.js`; our own generators, same form as the file's others):
 
@@ -735,6 +828,16 @@ building covers is written into a new area list `bare` (`areas` records with `k:
 polygons from merged 5 m cells, simplified to 1 m) so the reader burns rock there; cells of slope 0.25–0.6
 uncovered and outside any `green` become `k: "bare", s: "grass"` (the wooded bank). Rules sentences added.
 
+**Contract** (section 4, and the header of `gen/ground.js`): a `road` is a **piece**: the part of a way within
+reach of one cell, with `s0` (where it starts along the whole way) and `len` (the whole way's length). Draw the
+whole piece; the mesher cuts the triangles to the cell's box, and the next cell draws its own piece the same way.
+So place dashes, treads and posts by `s0 + distance`, never from the piece's start, and do not drop triangles
+yourself. `road.kind` is the source's word (`living_street`, `footway`, …); the mesher never passes a tunnel or a
+bridge. Sidewalk width and surface are `style.sidewalk` (a key the packs' `client` part must carry; the neutral
+style has 1.6 m, concrete), the kerb `style.kerb`. `crossing(soups, c, tile, style)`: `c.yaw` in radians, the
+direction the road runs. `liftRaster` gets every road piece of the chunk (pieces overlap: the result must not
+depend on it) and may return `null`.
+
 **Engine** (`gen/ground.js`):
 
 - **`drape(tri, tile)`**: the terrain mesh splits cell `(i, j)` (corner `a = (i, j)`, `b = (i + 1, j)`,
@@ -749,18 +852,19 @@ uncovered and outside any `green` become `k: "bare", s: "grass"` (the wooded ban
   vertical quad from +0.03 to `kerb`, per draped edge piece) and a kerb-stone strip 0.15 wide in `"stone|t"`;
   roads with `sw = no` of class pedestrian, footway, living street get a level margin strip 0.6 wide in paving
   that hides the raster's staircase edge. Centre line (`mk`): dashes 3 m long, 0.12 wide, every 9 m, lifted
-  0.04, soup `"paint_white|t"`. Bridges and tunnels are skipped. Triangles outside the chunk box are dropped
-  (the neighbour draws them).
+  0.04, soup `"paint_white|t"`. Bridges and tunnels never arrive. Triangles outside the cell are cut away by the
+  mesher (the neighbour draws them).
 - **`liftRaster`**: 1 m cells whose centre lies in a sidewalk strip get `round(kerb × 100)`.
-- **`steps`**: for a `steps` road: walk the polyline; `count` treads; tread `k` is a box from its going
+- **`steps`**: for a `steps` road (called instead of `roadRibbons`): walk the polyline; `count` treads over the
+  whole way (`road.len`), of which this piece shows those from `s0` on; tread `k` is a box from its going
   (length / count) wide `road.width`, top at the ground height of its upper end, front face down to the tread
   below; soup `"stone|t"`. Side stringers 0.2 wide down to the ground − 0.3. Handrails (`hr`): posts every 2 m
   and a rail at 0.95 above the tread line, soup `"metal|t"`, via `PROP_KIT.rail_iron` when item 8 has landed,
   else two boxes.
 - **`crossing`**: stripes 0.5 wide, 0.5 apart, across the road width, 3 m deep, draped, lifted 0.04, white.
 
-`scene/install.js` already feeds `liftRaster` to the terrain (item 3). Nothing else collides: a kerb is lower
-than a step (`STEP = 0.45`).
+`scene/install.js` already feeds `liftRaster` to the height tile (item 3): a walker on the sidewalk stands
+`style.kerb` higher. Nothing else collides: a kerb is lower than a step (`STEP = 0.45`).
 
 **Tests** (`engine/test/ground.test.js`):
 
@@ -798,15 +902,23 @@ footprint extended 0.5 m each end, `w` = `max(road.width, 3)` but at most the fo
 minus 2 × 1.2 m (so piers remain; if nothing remains, no passage), `hgt` = `min(0.7 × hEave, w + 1)`. Such a
 building gets `rs = 0`, `cr`-style parapet through `gf = 0` and no front edges.
 
-**Engine.** `gen/structures.js`: `wallRings` cuts the line into pieces of at most 6 m (so tops step with the
+**Contract** (section 4, and the headers of `gen/structures.js` and `gen/passage.js`): a `wall` is a **piece** cut
+exactly at the edges of one cell, with `s0` and `len`; merlons and posts are placed by `s0 + distance` so two
+pieces meet in step. `wallRings(wall, groundAt)` is the collision and `wall()` must draw those rings; a wall with
+`rail` is drawn in `near`, every other wall in `base` (the mesher decides). `passagePieces(b)` returns `[b]`
+itself without a passage, else copies of the building with `ring`, `holes`, `yMin`, `blind`, `front` (both
+renumbered for the piece's ring) and `piece` (0, 1, …); the façades and the collision are made per piece.
+`passageArch(soups, b, p, groundAt, style)` in `passage.js` draws the inside of one passage, in `base`.
+
+**Engine.** `gen/structures.js`: `wallRings` cuts the piece into runs of at most 6 m (so tops step with the
 ground), each a quad ring of the thickness, `yBase` = lowest ground under it − 1, `yTop` = `higher + hp` or
 `highest + h`. `wall` draws each ring as a `prism` in the wall material; with `cr`: merlons 1.1 long, 0.7 high,
 0.5 thick, every 2.2 m on the edge over the lower ground (both edges when free-standing), and a coping slab.
 With `rail`: no prism; `PROP_KIT[rail]` posts every 2 m and two rails (the collider stays the thin ring).
 `gen/passage.js`: `passagePieces(b)`: for each passage with axis unit `u` and normal `v`: left piece
 `clip(ring, v·p ≥ w/2)`, right piece `clip(ring, v·p ≤ −w/2)`, middle `clip(clip(ring, …), …)` with
-`yMin = yBase + hgt`; edges created by the cut are in the piece's `blind` set. Drawing the arch (in
-`structures.js`, called by the façade's caller for buildings with passages): the two inner walls of the passage
+`yMin = yBase + hgt`; edges created by the cut are in the piece's `blind` set. Drawing the arch
+(`passageArch` in `passage.js`, called by the mesher once per passage): the two inner walls of the passage
 up to the springing `hgt − w/2` (or 0.6 `hgt` when `w/2 > hgt − 2`), a barrel vault of 8 segments between them
 along the middle piece's extent on the axis, and at both mouths the wall between the vault curve and `hgt`
 (fans), all in the wall soup.
@@ -846,6 +958,14 @@ surface model (`max` of `surface_height − ground` within 2 m, accepted between
 `kind`, `form` from `style.trees` by genus (the first word of the species), `leaf_type=needleleaved` → conifer.
 Drop a tree inside a building footprint.
 
+**Contract** (section 4, and the headers of `gen/props.js` and `gen/trees.js`): `PROP_KIT[kind] = { build(soups,
+x, y, z, yaw, variant, style), collider }`; `yaw` in radians, 0 facing grid north, positive towards the west;
+`collider` is `null`, `{ r, h, nav }` (a square of half-width `r`) or `{ hw, hd, h, nav }` (a box of half-width
+`hw` along the prop's right hand and half-depth `hd` along its facing), from which `scene/install.js` makes the
+solid: the sizes in the table below are half sizes, and "no" in its last column is `nav: false`. Round parts use
+`soup.js triN` with normals away from the axis. `tree(soups, t, y, season, lod)`: `lod` 0 is drawn in `far`,
+`lod` 1 in `near`, never together. `test/props.test.js` checks every kind added to the kit against this.
+
 **Engine.** `gen/props.js`, the kit. Each kind is a function of boxes, prisms and lathed rings (a helper
 `lathe(soup, cx, cz, profile [[r, y], …], segments, tint)`), 30–250 triangles, in at most three soups
 (`"metal|tv"` dark iron, `"wood|tv"`, `"stone|tv"`, plus `"glass_lamp|"` for a lantern's panes). Dimensions:
@@ -867,7 +987,7 @@ Drop a tree inside a building footprint.
 | `bike_rack` | three inverted-U hoops 0.8 high, 0.9 apart | 1.2 × 0.4 box, 0.8, yes |
 | `rail_iron` | (for lines) post r 0.03, 1.05 high every 2 m; top rail and mid rail boxes 0.05 | from the wall record |
 
-No lettering, no logo, no flag of a real state on any prop. `gen/trees.js`: `lod 0` (base): trunk of 5 sides and
+No lettering, no logo, no flag of a real state on any prop. `gen/trees.js`: `lod 0` (far): trunk of 5 sides and
 a crown of two rings and a tip (≤ 70 triangles); `lod 1` (near): trunk of 8 sides with a flare, 3–5 crown lobes
 (squashed spheres of 3 rings × 8) placed by `form` (`round`: clustered; `vase`: a high wide cluster on a long
 trunk; `column`: stacked; `cone`: conifer tiers; `spreading`: wide and low). Season: `summer` the leaves
@@ -885,7 +1005,7 @@ smaller lobes. Soups `"wood|t"`, `"leaves|tv"`.
 - Physics: the capsule is stopped by a bench and a cannon and passes between two bollards 1.6 m apart.
 - Builder: a 100 m road, spacing 28, stagger → 4 lamps, alternating sides, each `offset + width / 2` from the axis; a mapped lamp at 14 m removes the first ruled one; a lamp that would stand in a building moves to the other side; `amenity=bench` with `direction=180` → yaw 180; an inventory tree 2 m from an OSM tree replaces it; a tree in a footprint is dropped.
 
-**Budget.** Props are `near`: ≤ 25 k triangles per cell; trees in `base` ≤ 70 × count. Scene file: ≤ 22 bytes a
+**Budget.** Props are `near`: ≤ 25 k triangles per cell; trees in `far` ≤ 70 × count. Scene file: ≤ 22 bytes a
 prop, ≤ 30 a tree. **Proof.** Views 1, 2, 3, 4, 5. **Done** when tests pass and the planning model has looked at
 each kind alone (a contact sheet of the kit, one prop per picture, taken in photo mode on the test scene).
 
@@ -893,6 +1013,10 @@ each kind alone (a contact sheet of the kit, one prop per picture, taken in phot
 
 **Goal.** A building mapped with `building:part` is drawn from its parts (towers, wings, steep roofs,
 turrets), each with its own measured height.
+
+**Contract** (section 4): the engine's side is built. An outline with `parts: 1` is skipped when the scene says
+`formatMinor >= 1`; a part is walled, roofed and solid from `yBase + mh` (`test/parts.test.js`). This item writes
+the data and, in `roof.js`, the round roofs.
 
 **Do.** `parts.py`: a part takes `h` from item 2's measurement over its own ring; `mh` from `min_height` or
 `building:min_level × storey`; a part whose ring lies inside a larger part of the same building and is at most
@@ -919,7 +1043,8 @@ carry a landmark (no parts, nothing in the surface model), it stays a plain buil
 **Goal.** The place is shown in flattering light by default, from data; what is not real is listed.
 
 **Do.** `engine/src/world/engine.js`: where `params.tod`, `day`, `haze`, `cloud`, `wet` are read, fall back to
-`manifest.ambience` before the built-in default (three lines; a host's switch still wins). `places/*.json`
+`source.manifest.ambience` (the reader hands it on since item 3; `null` when the scene has none) before the
+built-in default (three lines; a host's switch still wins). `places/*.json`
 `ambience`: chosen by looking at the six views at `tod` 8, 10, 14, 16.5, 18.5 and haze 0.15, 0.3, 0.45 (a
 contact sheet), keeping the one where façades on both sides of views 1 and 5 show relief and the far town in 4
 and 6 is still separated by air. `core/atmosphere.js`: only if a view shows a fault (banding, a black sky

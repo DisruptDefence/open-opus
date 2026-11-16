@@ -46,7 +46,8 @@ engine/
   index.js              the only file a host page imports
   src/<module>/         one folder per module (table below)
   vendor/               three.js r180, with its licence
-  test/                 node --test: the pure modules, threats, the direction of imports, the world API contract
+  test/                 node --test: the pure modules, the generators' contracts, threats, the direction of imports,
+                        the world API contract; fixtures/ holds two small hand-written scenes
   scenes/test/          a generated scene package for tests (tools/make-test-scene.mjs)
   host/, dev.html       the development host page, and a stand-in mission host with two development scenarios
                         (host/play.js is the player's page, play.html at the repository root)
@@ -72,8 +73,8 @@ Tests are `cd engine && node --test` and `node --test "phone/test/*.test.js"`. T
 
 | Layer | Modules (`engine/src/…`) | May import |
 |---|---|---|
-| Pure | `geo`, `terrain`, `physics`, `nav`, `scene`, `gen` (records into triangles: plain arrays; `docs/plans/SCENE-DETAIL.md`) | Each other. No three.js, no DOM: they run under Node and are unit-tested there |
-| Engine | `core` (clock, atmosphere, session state), `render`, `materials`, `input`, `fx`, `audio`, `hud`, `level` (scene data into drawn chunks), `shared` | Pure, three.js |
+| Pure | `geo`, `terrain`, `physics`, `nav`, `scene` (reads a scene into records and cells; puts a chunk's ground and solids into the simulation), `gen` (records into triangles: plain arrays. One file per generator, `mesher.js` says which draws what; `docs/plans/SCENE-DETAIL.md` 4) | Each other. No three.js, no DOM: they run under Node and are unit-tested there |
+| Engine | `core` (clock, atmosphere, session state), `render`, `materials`, `input`, `fx`, `audio`, `hud`, `level` (streams chunks, turns the generators' triangles into meshes, shows each 62.5 m cell far or near), `shared` | Pure, three.js |
 | Simulation | `player`, `combat`, `weapons`, `threats`, `director` | Pure, engine, three.js |
 | Door | `world`: `open.js` and `world-api.js` (the world API), and `engine.js`, which builds the shared context and boots the modules | Everything above |
 | Outside | host pages, mission client, phone host, session hosts, tools | `engine/index.js` to boot, then the world API only |
