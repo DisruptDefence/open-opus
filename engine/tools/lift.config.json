@@ -1,10 +1,11 @@
 {
-  "roots": ["Hg", "Gg", "h3", "Cf", "c_", "v_", "x_", "zv", "dm", "zy", "Dy", "il"],
+  "roots": ["Hg", "Gg", "h3", "Cf", "c_", "v_", "x_", "zv", "dm", "zy", "Dy", "il", "Z_", "j_", "pm", "q_"],
   "stub": [],
   "three": "vendor/three.module.js",
   "shared": "src/shared/lifted.js",
   "rename": { "Hg": "createRender", "Gg": "createMaterials", "h3": "applyMaterialPatch", "Cf": "createFx", "c_": "createAudio", "v_": "createInput", "x_": "createPlayer", "zv": "createCombat", "dm": "createWeapon",
-    "zy": "pickQuality", "Dy": "createEvents", "il": "createRng", "Pr": "QUALITY_TIERS", "Mn": "SUN", "en": "SKY", "Pi": "BODY", "Zn": "clamp", "bi": "lerp", "Fo": "saturate", "sl": "smoothstep", "kn": "damp", "sa": "mergeGeometries", "Mt": "PLAYER_TUNING" },
+    "zy": "pickQuality", "Dy": "createEvents", "il": "createRng", "Pr": "QUALITY_TIERS", "Mn": "SUN", "en": "SKY", "Pi": "BODY", "Zn": "clamp", "bi": "lerp", "Fo": "saturate", "sl": "smoothstep", "kn": "damp", "sa": "mergeGeometries", "Mt": "PLAYER_TUNING",
+    "iu": "RigBuilder", "pm": "instantiateRig", "q_": "solveLegIK", "Z_": "buildQuadrupedRig", "j_": "buildQuadcopterRig", "$v": "QUADRUPED", "xm": "QUADCOPTER", "FC": "rotorGuard", "su": "strut" },
   "modules": [
     { "file": "src/render/render.js", "from": 353, "to": 367 },
     { "file": "src/materials/materials.js", "from": 371, "to": 416 },
@@ -13,6 +14,12 @@
     { "file": "src/input/input.js", "from": 773, "to": 774 },
     { "file": "src/player/player.js", "from": 775, "to": 776 },
     { "file": "src/combat/combat.js", "from": 777, "to": 780 },
-    { "file": "src/weapons/weapon.js", "from": 781, "to": 823 }
+    { "file": "src/weapons/weapon.js", "from": 781, "to": 823 },
+    { "file": "src/threats/figures/rigs.js", "from": 825, "to": 836 }
+  ],
+  "handCut": [
+    { "file": "src/threats/figures/rigs.js", "from": "343, 346 (ot, Dc)", "why": "two geometry helpers only the rigs use, kept beside them so shared/lifted.js is unchanged" },
+    { "file": "src/threats/figures/quadruped.js", "from": "841 (iM)", "why": "the animation half of the four-legged machine: gait, body springs, leg IK, crash. Its behaviour is threats.js over the archetype" },
+    { "file": "src/threats/figures/quadcopter.js", "from": "838 (Q_), 846 (the searchlight)", "why": "the animation half of the quadcopter: rotors, strobes, gimbal, attitude; and the searchlight on the render light pool" }
   ]
 }
