@@ -53,7 +53,6 @@ test('triangulate: ears on any ring, in either winding, with holes; triangles fa
   const s = createSoups().get('x|'); cap(s, SQ, [hole], 7); assert.ok(Math.abs(planArea(s) - 91) < 1e-9); assert.ok(s.pos.every((v, i) => i % 3 !== 1 || v === 7));
   const d = createSoups().get('x|'); cap(d, SQ, [], 7, null, false); assert.ok(d.nrm[1] < -0.99, 'a cap can look down');
 });
-test('inset is left for the roofs item and says so', () => { assert.throws(() => inset(SQ, 1), /not built/); });
 
 test('a chunk is 4 x 4 cells; a point has one cell, clamped into the chunk', () => {
   const boxes = cellBoxes(-100, -200, 250);

@@ -16,7 +16,7 @@ test('a building drawn from its parts: no outline, each part from its own base t
   for (const b of [wing, tower]) {
     const { chunk, env } = all.find((c) => c.chunk.buildings.includes(b)), cell = chunk.cells.find((c) => c.buildings.includes(b)), only = { ...cell, buildings: [b], trees: [], walls: [], roads: [], props: [], crossings: [] };
     const ys = ['base', 'far'].flatMap((g) => vertices(cellSoups(only, g, env))).map((v) => v[1]);
-    assert.ok(Math.abs(Math.max(...ys) - (b.yBase + b.hEave + b.hRoof)) < 1e-6, 'the top of the roof is the record\'s height'); assert.ok(Math.min(...ys) >= b.yMin - 0.5 - 1e-6, 'nothing is drawn below the part\'s base');
+    const over = Math.max(...ys) - (b.yBase + b.hEave + b.hRoof); assert.ok(over > -1e-6 && over < 0.45 + 1e-6, 'the top of the roof is the record\'s height (a flat roof\'s parapet stands 0.45 m above it)'); assert.ok(Math.min(...ys) >= b.yMin - 0.5 - 1e-6, 'nothing is drawn below the part\'s base');
     const solid = [...physics.solids].find((s) => s.ref === b);
     assert.equal(solid.max.y, b.yBase + b.hEave + b.hRoof); assert.equal(solid.min.y, b === tower ? b.yMin : b.yBase - 3, 'a floating part is solid from its base, a standing one from below the ground');
   }

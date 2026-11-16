@@ -64,7 +64,7 @@ test('meshes: a chunk\'s base and far are one mesh per material, and far leaves 
   const { chunks } = await installAll(jsonSource(fixture('scene-new')));
   const { chunk, env } = [...chunks.values()].find((c) => c.chunk.buildings.length >= 3);
   const fixed = buildChunkStatic(G, chunk, env), far = fixed.group.children.find((g) => g.name === 'far'), base = fixed.group.children.find((g) => g.name === 'base');
-  const names = (g) => g.children.map((m) => m.material.name).sort();
+  const names = (g) => g.children.map((m) => m.material.name + JSON.stringify(m.material.opts)).sort(); // one mesh per soup key: a material with other flags is another mesh
   assert.equal(new Set(names(far)).size, far.children.length, 'one mesh per material in the whole chunk'); assert.equal(new Set(names(base)).size, base.children.length);
   const stone = far.children.find((m) => m.material.name === 'facade_stone'); assert.equal(stone.material.opts.vertexColors, true); assert.equal(stone.material.opts.triplanar, false);
   const cell = chunk.cells.find((c) => c.buildings.length), all = fixed.tris(), inCell = cellSoups(cell, 'far', env).triangles();
