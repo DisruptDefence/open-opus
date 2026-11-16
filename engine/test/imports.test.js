@@ -56,7 +56,8 @@ test('pure modules do not touch the DOM', () => {
   for (const file of files(join(ROOT, 'src'))) {
     if (LAYER[moduleOf(file)] !== 0) continue;
     const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-    const m = code.match(/\b(document|window|navigator|HTMLElement|requestAnimationFrame|localStorage)\b/);
+    // the global, not a field that happens to share its name (a style has a `window`)
+    const m = code.match(/(?<![.\w$'"])\b(document|window|navigator|HTMLElement|requestAnimationFrame|localStorage)\b(?!\s*:|['"])/);
     if (m) bad.push(`${relative(ROOT, file)}: uses ${m[1]}`);
   }
   assert.deepEqual(bad, []);

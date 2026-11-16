@@ -2,8 +2,14 @@
 // Pure code: plain arrays of numbers, no three.js. One soup per material; a key names the material and how it is
 // drawn: "stone|tv" is the material `stone`, triplanar (t), with vertex colours (v).
 //
+// Flags after the bar: t triplanar (the material is laid by world position; uv is ignored), v vertex colours (a
+// linear [r, g, b] tint per triangle), d drawn from both sides, n casts no shadow (flat things lying on the ground).
+// Order of the letters does not matter. docs/plans/SCENE-DETAIL.md section 4 lists the material names.
+//
 // Winding: a triangle (a, b, c) faces the side from which a, b, c run counter-clockwise; its normal is
 // (b - a) x (c - a). Every helper here computes the normal from the winding, so a face can never be lit from behind.
+
+import { triangulate } from './poly.js';
 
 export function createSoup(colored = false) {
   return { pos: [], nrm: [], uv: [], col: colored ? [] : null };
@@ -13,10 +19,13 @@ export function createSoups() {
   return {
     map,
     get(key) { let s = map.get(key); if (!s) map.set(key, (s = createSoup(/\|[a-z]*v/.test(key)))); return s; },
+    /** Append every soup of another set to this one. */
+    add(other) { for (const [key, o] of other.map) { if (!o.pos.length) continue; const s = this.get(key); append(s.pos, o.pos); append(s.nrm, o.nrm); append(s.uv, o.uv); if (s.col) append(s.col, o.col || new Array(o.pos.length).fill(1)); } },
     triangles() { let n = 0; for (const s of map.values()) n += s.pos.length / 9; return n; },
   };
 }
 const WHITE = [1, 1, 1], UV0 = [0, 0];
+function append(to, from) { for (let i = 0; i < from.length; i++) to.push(from[i]); }
 
 export function tri(s, a, b, c, tint, ua = UV0, ub = UV0, uc = UV0) {
   const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
@@ -25,6 +34,16 @@ export function tri(s, a, b, c, tint, ua = UV0, ub = UV0, uc = UV0) {
   nx /= l; ny /= l; nz /= l;
   s.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
   s.nrm.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
+  s.uv.push(ua[0], ua[1], ub[0], ub[1], uc[0], uc[1]);
+  if (s.col) { const t = tint || WHITE; s.col.push(t[0], t[1], t[2], t[0], t[1], t[2], t[0], t[1], t[2]); }
+}
+/**
+ * A triangle with a normal given per vertex, for smooth surfaces (a lathed post, a tree crown). The winding must
+ * still be counter-clockwise seen from the front: the normals shade the face, they do not turn it.
+ */
+export function triN(s, a, b, c, na, nb, nc, tint, ua = UV0, ub = UV0, uc = UV0) {
+  s.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+  s.nrm.push(na[0], na[1], na[2], nb[0], nb[1], nb[2], nc[0], nc[1], nc[2]);
   s.uv.push(ua[0], ua[1], ub[0], ub[1], uc[0], uc[1]);
   if (s.col) { const t = tint || WHITE; s.col.push(t[0], t[1], t[2], t[0], t[1], t[2], t[0], t[1], t[2]); }
 }
@@ -75,6 +94,16 @@ export function prism(s, ring, y0, y1, tint, top = true, bottom = false) {
   // game z points south: seen from above, a ring with positive area2 must be reversed to run counter-clockwise
   if (top) fan(s, out > 0 ? pts(y1).reverse() : pts(y1), tint);
   if (bottom) fan(s, out > 0 ? pts(y0) : pts(y0).reverse(), tint);
+}
+
+/** A flat polygon with holes at height y, facing up (or down): any outline, either winding. uv = (x, z) in metres. */
+export function cap(s, ring, holes, y, tint, up = true) {
+  const all = holes && holes.length ? ring.concat(...holes) : ring, t = triangulate(ring, holes || []);
+  const p = (k) => [all[k * 2], y, all[k * 2 + 1]], u = (k) => [all[k * 2], all[k * 2 + 1]];
+  for (let i = 0; i < t.length; i += 3) {
+    const a = t[i], b = up ? t[i + 1] : t[i + 2], c = up ? t[i + 2] : t[i + 1];
+    tri(s, p(a), p(b), p(c), tint, u(a), u(b), u(c));
+  }
 }
 
 /** sRGB hex (0xrrggbb or "#rrggbb") to linear [r, g, b]. */
