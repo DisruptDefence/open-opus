@@ -1,0 +1,22 @@
+{
+  "name": "Report the square on ATAK",
+  "scene": "../scenes/old-quebec.json",
+  "start": { "x": 0, "z": -60, "heading": 0 },
+  "objectives": [
+    { "text": "Walk north to the observation point", "rule": 0 },
+    { "text": "On ATAK (T): drop a hostile marker on Place d'Armes, the square 90 m to your east-north-east, and send it", "rule": 1 }
+  ],
+  "places": [
+    { "id": "place-darmes", "x": 79.5, "z": -85.9, "radius": 35, "hidden": true }
+  ],
+  "setup": [
+    { "op": "say", "text": "Move north to the observation point", "seconds": 8 },
+    { "op": "mark", "id": "obs", "kind": "objective", "label": "Observation point", "x": 0, "z": -68, "radius": 2.5 }
+  ],
+  "rules": [
+    { "when": { "event": "interact", "id": "obs", "action": "reached" },
+      "do": [ { "op": "unmark", "id": "obs" }, { "op": "say", "text": "Observation point reached. Press T: report Place d'Armes as hostile on ATAK and send the marker.", "seconds": 12 } ] },
+    { "when": { "event": "phone", "action": "cot", "affiliation": "hostile", "near": "place-darmes" },
+      "do": [ { "op": "say", "text": "Report received. Mission complete" }, { "op": "end", "result": "complete" } ] }
+  ]
+}

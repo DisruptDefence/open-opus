@@ -1,0 +1,7 @@
+{
+  "name": "opus-phone",
+  "private": true,
+  "type": "module",
+  "description": "The in-game phone for Open OPUS: a host on the world API, a placeholder screen, and a viewer for a real ATAK run locally.",
+  "scripts": { "test": "node --test \"test/*.test.js\"" }
+}
