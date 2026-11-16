@@ -67,7 +67,7 @@ const boxOf = (r) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -I
 /** Fill in every field of a building record the format lets a file leave out. */
 function completeBuilding(b, style) {
   b.holes = b.holes || []; b.levels = b.levels || 0; b.roofShape = b.roofShape || 0; b.roofDir = b.roofDir ?? 255; b.roofMat = b.roofMat ?? 1; b.facade = b.facade ?? 4;
-  b.hRoof = b.hRoof || 0; b.use = b.use || 0; b.groundFloor = b.groundFloor || 0; b.name = b.name || ''; b.kind = b.kind || ''; b.part = !!b.part;
+  b.hRoof = b.hRoof || 0; b.use = b.use || 0; b.groundFloor = b.groundFloor || 0; b.name = b.name || ''; b.kind = b.kind || ''; b.part = !!b.part; b.look = b.look || '';
   b.blind = new Set(b.blind || []); b.front = new Set(b.front || []);
   b.passages = (b.passages || []).map((p) => (Array.isArray(p) ? { x1: p[0], z1: p[1], x2: p[2], z2: p[3], w: p[4], h: p[5] } : p));
   b.yMin = b.yMin ?? b.yBase + (b.minHeight || 0);
@@ -77,6 +77,8 @@ function completeBuilding(b, style) {
     const pick = b.styled ? paletteColor(style.palettes[FACADE_NAMES[b.facade]] || style.palettes.generic, b.palette || 0) : legacyTint(b.palette || 0);
     b.tint = b.styled ? jitterTint(pick, b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13)) : pick;
   }
+  const lookWall = b.look && style.looks && style.looks[b.look] && style.looks[b.look].wall; // a landmark look may colour its walls itself (a colour list)
+  if (lookWall) b.tint = jitterTint(paletteColor(lookWall, b.id ?? 0), b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13));
   if (b.roofColor === undefined || typeof b.roofColor === 'string') b.roofColor = parseColor(b.roofColor) || (b.roofPalette != null ? paletteColor(style.roofs[ROOF_MAT_NAMES[b.roofMat]] || style.roofs.generic, b.roofPalette, null) : null);
   return b;
 }
@@ -106,7 +108,7 @@ const HALF_OPEN = 1e-6;
  * `lines.crossings`. Sets c.walls, c.roads, c.crossings and c.cells.
  */
 function layCells(c, lines = {}) {
-  const cells = cellBoxes(c.x0, c.z0, CHUNK).map((box) => ({ ...box, buildings: [], walls: [], trees: [], roads: [], props: [], crossings: [] }));
+  const cells = cellBoxes(c.x0, c.z0, CHUNK).map((box) => ({ ...box, buildings: [], walls: [], trees: [], roads: [], props: [], crossings: [], terraces: [] }));
   const at = (x, z) => cells[cellIndex(x, z, c.x0, c.z0, CHUNK)];
   for (const b of c.buildings) { const [x0, x1, z0, z1] = boxOf(b.ring); at((x0 + x1) / 2, (z0 + z1) / 2).buildings.push(b); }
   for (const t of c.trees) at(t.x, t.z).trees.push(t);
@@ -118,6 +120,7 @@ function layCells(c, lines = {}) {
     const inner = { x0: cell.x0, z0: cell.z0, x1: cell.x1 - HALF_OPEN, z1: cell.z1 - HALF_OPEN };
     for (const w of lines.walls || []) for (const p of clipLine(w.pts, inner)) { const piece = { ...w, pts: p.pts, s0: w.s0 + p.s0 }; cell.walls.push(piece); c.walls.push(piece); }
     for (const r of lines.roads || []) for (const p of clipLine(r.pts, cell, r.width / 2 + ROAD_REACH)) { const piece = { ...r, pts: p.pts, s0: r.s0 + p.s0 }; cell.roads.push(piece); c.roads.push(piece); }
+    for (const t of lines.terraces || []) { const [bx0, bx1, bz0, bz1] = boxOf(t.ring); if (bx1 > cell.x0 && bx0 < cell.x1 && bz1 > cell.z0 && bz0 < cell.z1) cell.terraces.push(t); }
     for (const k of lines.crossings || []) { const h = (k.width + ROAD_REACH) / 2; if (k.x + h > cell.x0 && k.x - h < cell.x1 && k.z + h > cell.z0 && k.z - h < cell.z1) { cell.crossings.push(k); if (!c.crossings.includes(k)) c.crossings.push(k); } }
   }
   c.cells = cells;
@@ -249,7 +252,7 @@ export function jsonSource(scene) {
     put(own(...boxOf(b.r)), 'buildings', completeBuilding({ id: b.id ?? n, ring: b.r, holes: b.holes || [], yBase, minHeight: b.mh || 0, hEave: b.h - hRoof, hRoof, levels: b.lv || 0,
       roofShape, roofDir: b.rd ?? 255, roofMat: b.rmt ?? (b.mat === 'copper' || /^#(4|5|6|7|8)/.test(b.rc || '') ? 2 : 1), roofColor: b.rc || undefined, roofPalette: b.rp,
       facade: b.fa ?? FACADE[b.mat] ?? (b.k === 'church' || b.h > 14 ? 1 : ((n + 1) % 3 ? 4 : 1)), styled, palette: styled ? b.pal : (n + 1) % 5,
-      use: b.use || 0, blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
+      use: b.use || 0, look: b.lm || '', blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
   }
   // Trees: [x, z, height, crownRadius, kind, form]; a short record takes the old seeded numbers.
   for (const [x, z, height, crown, kind, form] of scene.trees || []) put(own(x, x, z, z), 'trees', completeTree({ x, z, height: height ?? 7 + ((x * 13.7 + z * 7.3) % 5 + 5) % 5, crownRadius: crown ?? 2.5 + (((x * 3.1 + z * 5.9) % 2) + 2) % 2, kind: kind || 1, form: form || 0 }));
@@ -269,6 +272,8 @@ export function jsonSource(scene) {
     const rec = completeRoad({ pts: r.p, kind: r.k || '', surface: roadSurface(r), width: r.w || 4, sidewalk: r.sw || 'no', steps, lit: r.lit, marking: r.mk || 0, bridge: r.br, tunnel: r.tn, name: r.n || '' });
     return withBox(rec, rec.width / 2 + ROAD_REACH);
   });
+  // decks: a mapped platform of boards (terraces layer): ring, holes, board direction and width
+  const terraces = (scene.terraces || []).filter((d) => d.r && d.r.length >= 6).map((d, i) => withBox({ id: d.id ?? i + 1, ring: d.r, holes: d.holes || [], dir: d.d ?? 255, boardWidth: d.bw || 0.14, name: d.n || '', pts: d.r }, 0.5));
   const crossings = (scene.crossings || []).map((k) => ({ x: k[0], z: k[1], yaw: (-(k[2] || 0) * Math.PI) / 180, width: k[3] || 4 }));
   const touching = (list, x0, z0) => list.filter((l) => l.box[1] >= x0 && l.box[0] <= x0 + CHUNK && l.box[3] >= z0 && l.box[2] <= z0 + CHUNK).map(({ box, ...rec }) => rec); // eslint-disable-line no-unused-vars
 
@@ -299,7 +304,7 @@ export function jsonSource(scene) {
       for (let j = 0; j < sn; j++) for (let i = 0; i < sn; i++) surface[j * sn + i] = ras.at(hx0 + i + 0.5, hz0 + j + 0.5) || 4;
       const b = bucket.get(cg.key(ce, cn)) || { buildings: [], trees: [], props: [], landmarks: [] };
       return layCells({ ce, cn, x0: ox, z0: oz, hx0, hz0, sn, step, n, heights, surfaceStep: 1, surface, walk: null, buildings: b.buildings, walls: [], trees: b.trees, props: b.props, water: [], landmarks: b.landmarks },
-        { walls: touching(walls, ox, oz), roads: touching(roads, ox, oz), crossings });
+        { walls: touching(walls, ox, oz), roads: touching(roads, ox, oz), terraces: touching(terraces, ox, oz), crossings });
     },
   };
 }

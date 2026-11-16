@@ -53,12 +53,48 @@
    "fov": 55
   },
   {
+   "id": "8-frontenac",
+   "what": "The Château Frontenac from Rue du Fort / Place d'Armes: tower, turrets, copper roofs",
+   "x": 126,
+   "z": -104,
+   "heading": 183,
+   "pitch": 16,
+   "fov": 62
+  },
+  {
+   "id": "9-terrasse",
+   "what": "Terrasse Dufferin along the boardwalk, the balustrade and the drop to the river on the right, the Château at the end",
+   "x": 190.5,
+   "z": 128,
+   "heading": 349,
+   "pitch": 4,
+   "fov": 80
+  },
+  {
    "id": "10-sv-saint-louis-52",
    "what": "Rue Saint-Louis at no. 52, matching a street-level reference photo (46.8112502, -71.2082071, bearing 50.7)",
    "x": -108.9,
    "z": 58.1,
    "heading": 50.7,
    "pitch": -8
+  },
+  {
+   "id": "11-south",
+   "what": "The Château and the terrace from across the river, south-east (far view)",
+   "x": 440,
+   "z": 230,
+   "y": 75,
+   "heading": 300,
+   "pitch": -1,
+   "fov": 45
+  },
+  {
+   "id": "12-sv-saint-louis-38",
+   "what": "Rue Saint-Louis at no. 38 toward the Château closing the street, matching a street-level reference photo (46.8116263, -71.2074607, bearing 84.8)",
+   "x": -50.8,
+   "z": 17.9,
+   "heading": 84.8,
+   "pitch": 2
   }
  ]
 }

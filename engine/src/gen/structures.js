@@ -138,7 +138,36 @@ function rail(s, wall, groundAt) {
   }
 }
 
+const BALUSTER = { every: 0.14, size: 0.03, post: 2.4, postSize: 0.16, topRail: 0.1 };
+/** A cast-iron balustrade: a post with a ball every 2.4 m, a top rail, a foot rail and square balusters every 0.15 m, all by s0 + distance. */
+function balustrade(s, wall, groundAt) {
+  const pts = wall.pts, H = wall.height, B = BALUSTER;
+  let g = wall.s0 || 0;
+  for (let p = 0; p + 3 < pts.length; p += 2) {
+    const ax = pts[p], az = pts[p + 1], bx = pts[p + 2], bz = pts[p + 3], l = Math.hypot(bx - ax, bz - az);
+    if (l < 0.05) continue;
+    const ux = (bx - ax) / l, uz = (bz - az) / l, at = (d) => [ax + ux * d, az + uz * d];
+    for (let q = Math.ceil((g - 1e-9) / B.post) * B.post; q < g + l + 1e-9; q += B.post) { // posts
+      const [x, z] = at(Math.min(l, Math.max(0, q - g))), y = groundAt(x, z);
+      box(s, x, z, ux, uz, B.postSize / 2, B.postSize / 2, y - 0.05, y + H, IRON, true); box(s, x, z, ux, uz, B.postSize * 0.75, B.postSize * 0.75, y + H, y + H + 0.1, IRON, true);
+      box(s, x, z, ux, uz, B.postSize * 0.5, B.postSize * 0.5, y + H + 0.1, y + H + 0.22, IRON, true);
+    }
+    const n = Math.max(1, Math.ceil(l / 3)), segLen = l / n;
+    for (let i = 0; i < n; i++) { // rails follow the ground in pieces of about 3 m
+      const [x0, z0] = at(i * segLen), [x1, z1] = at((i + 1) * segLen), y0 = groundAt(x0, z0), y1 = groundAt(x1, z1);
+      bar(s, [x0, y0 + H - 0.06, z0], [x1, y1 + H - 0.06, z1], B.topRail, IRON); bar(s, [x0, y0 + 0.14, z0], [x1, y1 + 0.14, z1], 0.07, IRON);
+      bar(s, [x0, y0 + 0.3, z0], [x1, y1 + 0.3, z1], 0.16, IRON);   // the kick plate: a solid band that reads at a distance
+    }
+    for (let q = Math.ceil((g - 1e-9) / B.every) * B.every; q < g + l; q += B.every) { // balusters
+      const [x, z] = at(q - g), y = groundAt(x, z), t = B.size / 2;
+      box(s, x, z, ux, uz, t, t, y + 0.16, y + H - 0.08, IRON, false);
+    }
+    g += l;
+  }
+}
+
 export function wall(soups, wall, groundAt, style) { // eslint-disable-line no-unused-vars
+  if (wall.rail === 'balustrade_iron') { balustrade(soups.get(SOUP.iron), wall, groundAt); return; }
   if (wall.rail) { rail(soups.get(SOUP.iron), wall, groundAt); return; }
   const s = soups.get(STRUCTURE_SOUP[wall.material] || STRUCTURE_SOUP[1]);
   const runs = runsOf(wall, groundAt);

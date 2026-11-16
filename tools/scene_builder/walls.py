@@ -172,11 +172,10 @@ def passages(ctx) -> dict:
     roads = ctx.layers.get("roads", [])
     part_points = [ft["centroid"] for ft in ctx.features["buildings"] if ft["is_part"]]
     for ft in ctx.features["buildings"]:
-        if ft["is_part"]:
-            continue
         ring, tags = ft["ring"], ft["tags"]
         bx0, bz0, bx1, bz1 = bbox(ring)
-        if any(bx0 <= c[0] <= bx1 and bz0 <= c[1] <= bz1 and inside(c, ring) for c in part_points):
+        # an outline that parts draw is not drawn, so the way through it belongs to the part it crosses
+        if not ft["is_part"] and any(bx0 <= c[0] <= bx1 and bz0 <= c[1] <= bz1 and inside(c, ring) for c in part_points):
             continue
         gate = tags.get("historic") == "city_gate"
         cands = []

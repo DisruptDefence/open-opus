@@ -1024,6 +1024,12 @@ material; `autumn` vertex tint per tree from a seeded pick of green, yellow, ora
 `winter` no lobes on broadleaf trees, 6 bare branches (thin boxes) instead; `spring` lighter green and 20 %
 smaller lobes. Soups `"wood|t"`, `"leaves|tv"`.
 
+**Built so far (branch `landmarks`):** `props.py` writes mapped nodes and ruled terrace furniture for `bench_slat`, `lamp_lantern`, `bollard_iron`, `cannon`,
+`flagpole`, `plinth`, `monument_tall` (a place rule's `prop`), `pavilion` (a round `amenity=shelter`; variant = radius in half metres) and `planter`; the
+kit has those nine, each within the 250-triangle contract. `glass_lamp` is not in the material library yet (item 5): the lantern's panes use the library's fallback. Rails:
+`balustrade_iron` joins `rail_iron` in `gen/structures.js`. Terrace decks: `gen/terrace.js`, layer `terraces` (SCENE-FORMAT 4.4a). Not built: hydrant, bin,
+fountain, post_box, sign_stop, bike_rack, trees by species.
+
 **Tests** (`engine/test/props.test.js`, builder tests):
 
 - Every kind in the kit builds at yaw 0 and 90°: triangle count within its bound; every vertex within the
@@ -1067,6 +1073,18 @@ and its parts have at least 4 distinct heights.
 **Budget.** ≤ 60 parts added. **Proof.** Views 2 and 6: a skyline with a tall central tower, turrets and steep
 green roofs; the office tower steps back as it rises. **Done** when the pair shows it. If the data does not
 carry a landmark (no parts, nothing in the surface model), it stays a plain building: say which.
+
+**Built (branch `landmarks`, 2026-11-16): place-level landmark rules.** What the data lacks is written in the place file, not in code:
+`places/<id>.json` → `landmarks: [{ id, match: { osm | wikidata | name }, source, fill, set, turrets, terrace, prop }]`
+(`tools/scene_builder/landmark_rules.py`, `terrace.py`, `props.py`). `fill` makes parts of the area of an outline that no mapped part covers
+(a 0.5 m raster, traced and simplified; measured like any part); `set` gives the building and its parts a façade, palette, roof material,
+the style's roof colours instead of the tagged one, and a `look`; `turrets` adds round corner turrets with conical roofs on the outer square
+corners of the parts (**estimated**: `syn: 1`, `hs: "rule"`, one sentence in `rules.landmarks`); `terrace` turns a mapped pedestrian area into a deck
+with its cliff-side balustrade and lamps; `prop` gives one named node its own prop kind. A `look` is a table in the style pack
+(`client.looks.<name>`, `gen/landmark.js`): string courses, corbel table, oriel bays, ridge cresting, finials, a porte-cochère canopy, a flagpole,
+and overrides of the window bay, dormers and chimneys for that building. A passage through a part belongs to the part (`walls.passages`), and a
+part keeps its measured roof over a passage. The first landmark rule is the one for the Château Frontenac in `places/old-quebec.json`; its
+`source` field lists what is data and what is estimated.
 
 ### Item 10 — Light and air
 

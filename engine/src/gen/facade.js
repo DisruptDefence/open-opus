@@ -48,7 +48,9 @@ function edgesOf(ring, hole, blindOf) {
     if (len < 0.02) continue;
     const cross = (k, m, o) => (ring[m * 2] - ring[k * 2]) * (ring[o * 2 + 1] - ring[m * 2 + 1]) - (ring[m * 2 + 1] - ring[k * 2 + 1]) * (ring[o * 2] - ring[m * 2]);
     const sg = pos ? 1 : -1, nx = (j + 1) % n;
-    const convA = !hole && cross(p, i, j) * sg > 0 && !(blindOf && blindOf.has(p)), convB = !hole && cross(i, j, nx) * sg > 0 && !(blindOf && blindOf.has(j));
+    // a corner is convex when the wall turns by at least about 37 degrees: the 22.5 degree steps of a round tower get no quoins or cornice kinks
+    const turn = (k, m, o) => { const c = cross(k, m, o) * sg, a = Math.hypot(ring[m * 2] - ring[k * 2], ring[m * 2 + 1] - ring[k * 2 + 1]) * Math.hypot(ring[o * 2] - ring[m * 2], ring[o * 2 + 1] - ring[m * 2 + 1]); return a > 0 && c / a > 0.6; };
+    const convA = !hole && turn(p, i, j) && !(blindOf && blindOf.has(p)), convB = !hole && turn(i, j, nx) && !(blindOf && blindOf.has(j));
     const f = flip ? frame(bx, bz, (ax - bx) / len, (az - bz) / len) : frame(ax, az, (bx - ax) / len, (bz - az) / len);
     out.push({ i, f, len, ax, az, bx, bz, hole, uA: flip ? len : 0, convLeft: flip ? convB : convA, convRight: flip ? convA : convB });
   }

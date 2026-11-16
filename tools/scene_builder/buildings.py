@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import re
 
-from . import parts as parts_mod
+from . import landmark_rules, parts as parts_mod
 from .geom import bbox, flat, inside, num, obb, ring_area, ring_edges, seg_dist, seg_nearest
 from .style import FACADES, ROOF_MATS, ROOF_SHAPES, USES, pick
 
@@ -351,6 +351,7 @@ def build(ctx) -> dict:
     st = ctx.style
     storey = st.storey
     fts = ctx.features["buildings"]
+    lm_found = landmark_rules.expand(ctx, fts)       # place landmark rules may add parts (the area the mapped parts leave)
     ids = assign_ids([ft["src"] for ft in fts])
     rings = [ft["ring"] for ft in fts]
 
@@ -377,7 +378,7 @@ def build(ctx) -> dict:
 
     pitches = {"flat": 0, "low": 0, "steep": 0}
     stats = {"measured": 0, "roofShape": 0, "facade": 0, "blind": 0, "front": 0}
-    buildings, parts = [], []
+    buildings, parts, recs = [], [], {}
     for i, ft in enumerate(fts):
         t, ring, holes, kind, area = ft["tags"], ft["ring"], ft["holes"], ft["kind"], ft["area"]
         bid = ids[i]
@@ -489,7 +490,9 @@ def build(ctx) -> dict:
             if clear >= 2.2:
                 gate.append([x1, z1, x2, z2, w, round(rise + clear, 1)])
         if gate:
-            rs, rh, rd, gf, front = 0, 0.0, 255, 0, []
+            gf, front = 0, []
+            if not ft["is_part"]:                       # a part keeps its measured roof: the passage runs under it
+                rs, rh, rd = 0, 0.0, 255
         stats["blind"] += bool(blind)
         stats["front"] += bool(front)
 
@@ -516,7 +519,9 @@ def build(ctx) -> dict:
         if gate:
             b["pass"] = gate
         (parts if ft["is_part"] else buildings).append(b)
+        recs[i] = b
 
+    parts += landmark_rules.finish(ctx, fts, recs, lm_found, set(ids))
     parts_mod.mark(buildings, parts)
     _rules(ctx, have_surface)
     ctx.stats = {"measured": stats["measured"], "roof_shape_from_style": stats["roofShape"], "facade": stats["facade"],
