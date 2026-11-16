@@ -42,8 +42,8 @@ void surf(vec2 uv){
   } else {                                            // masonry: grain, pits, soot
     float pit = smoothstep(0.7, 0.82, fbm(uv, vec2(200.0), 3, 78.0));
     float soot = smoothstep(0.5, 0.8, fbm(uv, vec2(3.0), 4, 97.0));
-    lum = 0.5 * (0.84 + 0.3 * fine) * (0.88 + 0.22 * mid) * (0.94 + 0.12 * big) * (1.0 - pit * 0.3) * (1.0 - soot * 0.2);
-    h = 0.5 + (fine - 0.5) * 0.45 + (mid - 0.5) * 0.3 - pit * 0.25;
+    lum = 0.5 * (0.84 + 0.3 * fine) * (0.88 + 0.22 * mid) * (0.94 + 0.12 * big) * (1.0 - pit * 0.2) * (1.0 - soot * 0.2);
+    h = 0.5 + (fine - 0.5) * 0.25 + (mid - 0.5) * 0.3 - pit * 0.2;
     ao = 1.0 - pit * 0.35; r = 0.9 + (mid - 0.5) * 0.1;
   }
   emit(vec3(lum), 1.0, h, ao, r, 0.0);

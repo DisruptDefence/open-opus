@@ -1690,7 +1690,11 @@ float roughnessFactor = roughness * slORM.g;
 #endif
 #if defined( USE_NORMALMAP_TANGENTSPACE ) && !defined( SL_TRIPLANAR )
   { float slNl = length(texture2D(normalMap, slUv).xyz * 2.0 - 1.0);
-    roughnessFactor = sqrt(roughnessFactor * roughnessFactor + clamp(1.0 - slNl, 0.0, 1.0) * 0.6); }
+    float slRv = clamp(1.0 - slNl, 0.0, 1.0) * 0.6;
+    #ifdef SL_LIVE
+      slRv *= 1.0 - slLiveFlat;
+    #endif
+    roughnessFactor = sqrt(roughnessFactor * roughnessFactor + slRv); }
 #endif
 roughnessFactor = clamp(roughnessFactor, 0.045, 1.0);
 `,
