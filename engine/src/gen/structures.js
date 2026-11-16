@@ -56,9 +56,9 @@ function runsOf(wall, groundAt) {
       for (let i = 0; i < 8; i += 2) sample(ring[i], ring[i + 1]);
       sample((ring[0] + ring[2]) / 2, (ring[1] + ring[3]) / 2); sample((ring[4] + ring[6]) / 2, (ring[5] + ring[7]) / 2);
       const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, yTop = hi + (held ? wall.parapet : wall.height);
-      // the side the ground falls to: where the crenels stand on a wall that holds ground back
+      // the side the ground falls to: the crenels stand on that edge only (the other edge is the walk behind the parapet; one edge halves the triangles of a free-standing wall)
       const ls = groundAt(mx + nx * (h + 1), mz + nz * (h + 1)), rs = groundAt(mx - nx * (h + 1), mz - nz * (h + 1));
-      const side = held ? (ls < rs ? 1 : -1) : 0;
+      const side = ls < rs ? 1 : -1;
       out.push({ ring, yBase: lo - 1, yTop, ax: ax + ux * d0, az: az + uz * d0, ux, uz, nx, nz, len: d1 - d0, g0: g + d0, side, seg: p, segG0: g, segG1: g + l });
     }
     g += l;
@@ -98,7 +98,7 @@ function merlonsOf(runs, wall) {
       if (hi - lo < 0.02) continue;
       const centre = (a + b) / 2, home = rs.find((r) => centre >= r.g0 && centre < r.g0 + r.len + 1e-9) || (centre < segG0 ? rs[0] : rs[rs.length - 1]);
       const y0 = Math.min(...rs.filter((r) => r.g0 < hi && r.g0 + r.len > lo).map((r) => r.yTop), home.yTop), mid = (lo + hi) / 2 - home.g0;
-      for (const side of home.side ? [home.side] : [1, -1]) out.push({ cx: home.ax + home.ux * mid + home.nx * off * side, cz: home.az + home.uz * mid + home.nz * off * side, ux: home.ux, uz: home.uz, hu: (hi - lo) / 2, hd: th / 2, y0, y1: home.yTop + height });
+      for (const side of [home.side]) out.push({ cx: home.ax + home.ux * mid + home.nx * off * side, cz: home.az + home.uz * mid + home.nz * off * side, ux: home.ux, uz: home.uz, hu: (hi - lo) / 2, hd: th / 2, y0, y1: home.yTop + height });
     }
   }
   return out;

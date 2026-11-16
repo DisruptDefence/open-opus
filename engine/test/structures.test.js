@@ -85,9 +85,10 @@ test('a 22 m crenellated wall: 10 merlons within its thickness, none floating; t
   joined.forEach((e, i) => { assert.ok(Math.abs(e[0] - whole[i][0]) < 1e-9 && Math.abs(e[1] - whole[i][1]) < 1e-9); });
   assert.ok(ms.every((m) => m.cz < 0), 'on the low edge only');
 });
-test('a free-standing crenellated wall has merlons on both edges', () => {
-  const ms = merlons(piece({ pts: [0, 0, 22, 0], crenels: true, thickness: 1.2, height: 3, len: 22 }), () => 5);
-  assert.equal(ms.length, 20);
+test('a free-standing crenellated wall has its merlons on the edge over the lower ground, one edge only', () => {
+  const ms = merlons(piece({ pts: [0, 0, 22, 0], crenels: true, thickness: 1.2, height: 3, len: 22 }), (x, z) => (z > 0 ? 6 : 5));
+  assert.equal(ms.length, 10);
+  assert.ok(ms.every((m) => m.cz < 0), 'on the side where the ground is lower');
 });
 test('a rail is posts and rails in iron, not a prism; its collision is the thin ring', () => {
   const ground = () => 3, w = piece({ pts: [0, 0, 10, 0], rail: 'rail_iron', thickness: 0.08, height: 1.1, len: 10 }), soups = createSoups();
