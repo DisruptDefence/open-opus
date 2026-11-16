@@ -122,7 +122,7 @@ repository yet; the list is what a product's phone host uses today and will be s
 ## Status, 2026-11-15
 
 Implemented in `engine/src/world/` (`open.js`, `world-api.js`) and `engine/src/director/director.js`. This
-document was brought into line with that code as it stood uncommitted on 2026-11-15 (added since the first
+document was brought into line with that code on 2026-11-15 (engine commit `84a657c`) (added since the first
 draft: `pause`, `resume`, `scene`, `headingTrue`, `label`, `radius`, `toUTM`, `convergenceDeg`, headings in
 degrees instead of yaw, the options and size of `overhead`, the event payloads and the command table). Where
 the two disagree, fix one of them in the same change and say which in the commit message.
@@ -131,5 +131,5 @@ Known gaps:
 
 - `state()` never returns `intro`, and no entity of kind `prop` is produced.
 - A `mark` is always drawn. A host must not mark a place the player is meant to find (`SESSION-PROTOCOL.md` 4).
-- No contract test exists (`engine/test/` covers the pure modules and threats). Wanted: one that boots the
-  engine headless and checks every member and payload above.
+
+The contract test is `engine/test/world-api.test.js`: it runs the real simulation under Node without a screen.

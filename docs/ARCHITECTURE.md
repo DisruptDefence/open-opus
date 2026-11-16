@@ -44,7 +44,7 @@ engine/
   index.js              the only file a host page imports
   src/<module>/         one folder per module (table below)
   vendor/               three.js r180, with its licence
-  test/                 node --test: the pure modules and threats
+  test/                 node --test: the pure modules, threats, the direction of imports, the world API contract
   scenes/test/          a generated scene package for tests (tools/make-test-scene.mjs)
   host/, dev.html       the development host page, and a stand-in mission host with two development scenarios
   tools/                engine tools
@@ -66,8 +66,8 @@ Tests are `cd engine && node --test`. The TypeScript in `WORLD-API.md` is notati
 | Door | `world`: `open.js` and `world-api.js` (the world API), and `engine.js`, which builds the shared context and boots the modules | Everything above |
 | Outside | host pages, mission client, phone host, session hosts, tools | `engine/index.js` to boot, then the world API only |
 
-Imports go down the table, never up; a module talks upward through events. No test enforces this yet; one that
-reads the import lines of every module is wanted.
+Imports go down the table, never up; a module talks upward through events. `engine/test/imports.test.js`
+enforces it.
 
 A product replaces a module without editing the engine by passing its own factory to `openWorld`
 (`modules: { hud: … }`).
