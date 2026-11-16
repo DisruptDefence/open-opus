@@ -76,8 +76,9 @@ second, so a run takes about a minute. The exit code is 0 only when the mission 
 
 - `tools/make-test-scene.mjs` writes `scenes/test/`, the generated scene package the tests use. Same code, same bytes.
 - `tools/play.mjs` is the browser run above.
-- `tools/lift.cjs` is how the lifted modules were cut out of the stand-in game's bundle. It is kept as a record;
-  no more code is to be lifted (`../AGENTS.md`, rule 8).
+- `tools/lift.cjs` is how the lifted modules were cut out of the stand-in game's bundle (`../AGENTS.md`, rule 8).
+  The lifted files have been edited by hand since: never give it `src/` as its output folder; lift into a scratch
+  folder and bring single files across.
 
 ## Where the scene reader differs from the format
 
