@@ -22,6 +22,7 @@ import { createNav } from '../nav/navgrid.js';
 import { createRender } from '../render/render.js';
 import { createMaterials } from '../materials/materials.js';
 import '../materials/outdoor.js';
+import '../materials/facades.js';
 import { createInput } from '../input/input.js';
 import { createFx } from '../fx/fx.js';
 import { createAudio } from '../audio/audio.js';

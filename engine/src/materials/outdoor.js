@@ -228,7 +228,7 @@ MATERIALS.water = MATERIALS.water_dark; MATERIALS.wood = MATERIALS.wood_dark; MA
 /** Scene-format classes to material names (SCENE-FORMAT.md 4.1 and 4.2). */
 export const SURFACE_MATERIAL = ['paving', 'asphalt', 'concrete', 'cobble', 'paving', 'gravel', 'dirt', 'grass', 'sand', 'rock',
   'concrete', 'dirt', 'wood', 'metal', 'sand', 'grass'];
-export const FACADE_MATERIAL = ['facade_stucco', 'facade_stone', 'facade_stone', 'facade_stone', 'facade_stucco', 'facade_stucco',
+export const FACADE_MATERIAL = ['facade_stucco', 'facade_stone', 'facade_rubble', 'facade_brick', 'facade_stucco', 'facade_stucco',
   'facade_stucco', 'facade_stucco', 'facade_stucco', 'facade_stucco', 'facade_stucco'];
 export const WALL_MATERIAL = ['stone', 'stone', 'rubble', 'brick', 'stucco', 'wood', 'concrete', 'concrete', 'galv', 'stucco', 'concrete'];
 export const ROOF_MATERIAL = ['roof_membrane', 'roof_zinc', 'roof_copper', 'roof_zinc', 'roof_zinc', 'roof_zinc', 'roof_membrane',
