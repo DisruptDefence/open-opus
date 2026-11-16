@@ -44,7 +44,7 @@ export function createHud(G) {
   }
   if (on.has('feed')) { part.feed = h('div', 'oh-feed'); root.appendChild(part.feed); part.feedLines = []; }
   if (on.has('warn')) { part.warn = h('div', 'oh-warn'); root.appendChild(part.warn); part.warnLeft = 0; }
-  if (on.has('message')) { part.msg = h('div', 'oh-msg'); root.appendChild(part.msg); part.msgLeft = 0; }
+  if (on.has('message')) { part.msg = h('div', 'oh-msg pan'); root.appendChild(part.msg); part.msgLeft = 0; }
   if (on.has('prompt')) {
     const box = h('div', 'oh-prompt pan'), svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 44 44'); svg.innerHTML = '<circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/>';
@@ -132,8 +132,9 @@ export function createHud(G) {
           if (part.compass) {
             const c = part.compass; let t = c.tagFor.get(id);
             if (!t) { t = h('span', 'tag ' + m.kind); c.tags.appendChild(t); c.tagFor.set(id, t); }
-            const px = Math.max(14, Math.min(c.width - 14, c.width / 2 + markerBearing(p, m) * TAPE_PX_PER_DEG)), label = `${text} ${dist}`;
-            t.style.left = px + 'px'; if (t.textContent !== label) t.textContent = label; if (t.style.background !== color) t.style.background = color;
+            const label = `${text} ${dist}`; if (t.textContent !== label) t.textContent = label; if (t.style.background !== color) t.style.background = color;
+            const half = t.offsetWidth / 2 + 3, px = Math.max(half, Math.min(c.width - half, c.width / 2 + markerBearing(p, m) * TAPE_PX_PER_DEG));
+            t.style.left = px + 'px';
           }
           if (part.worldTags && cam) {
             let t = part.worldMap.get(id);
@@ -143,7 +144,9 @@ export function createHud(G) {
             v3.set(m.x, m.y + (m.kind === 'extraction' ? 1.2 : 1.9), m.z).applyMatrix4(cam.matrixWorldInverse);
             const behind = v3.z > 0; v3.applyMatrix4(cam.projectionMatrix);
             const e = edgeClamp(v3.x, v3.y, behind);
-            t.style.transform = `translate(${((e.x * 0.5 + 0.5) * W).toFixed(1)}px, ${((0.5 - e.y * 0.5) * H).toFixed(1)}px) translate(-50%, -50%)`;
+            let tx = (e.x * 0.5 + 0.5) * W, ty = (0.5 - e.y * 0.5) * H;
+            if (!e.offscreen && Math.abs(tx - W / 2) < 70 && Math.abs(ty - H / 2) < 60) ty = H / 2 - 60; // a tag on the crosshair goes just above it
+            t.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) translate(-50%, -50%)`;
             t.classList.toggle('edge', e.offscreen); t.style.display = ads ? 'none' : '';
           }
           present.add(id);

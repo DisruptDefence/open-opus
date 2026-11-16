@@ -36,9 +36,10 @@ window.__OPUS_WORLD = openWorld({ source, params, modules: { hud: createHud } })
 window.__OPUS_WORLD.ready().then(() => { window.__ready = true; }, (e) => { window.__fatal = String((e && e.stack) || e); });
 // what has been seen displayed, sampled every frame
 window.__seen = {};
-const SEL = { compass: '.oh-compass', 'compass tag': '.oh-compass .tag', 'world tag': '.oh-tag', objective: '.oh-obj', 'objective pips': '.oh-obj .pips i', health: '.oh-health', ammo: '.oh-ammo', 'ammo pips': '.oh-ammo .pips i', crosshair: '.oh-x',
-  hitmarker: '.oh-hit', damage: '.oh-arcs i', feed: '.oh-feed div', prompt: '.oh-prompt', radio: '.oh-radio', warn: '.oh-warn', message: '.oh-msg', cue: '.oh-ammo .cue' };
-const shown = (e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.05 && (e.textContent.trim() !== '' || !/warn|msg|cue|obj$/.test(e.className) || e.className.includes('pips')); };
+const SEL = { compass: '.oh-compass', 'compass tag': '.oh-compass .tag', 'world tag': '.oh-tag', objective: '.oh-obj', 'objective pips': '.oh-obj .pips i', health: '.oh-health', ammo: '.oh-ammo', 'ammo pips': '.oh-ammo .pips i', crosshair: '.oh-x i.d',
+  hitmarker: '.oh-hit i', damage: '.oh-arcs i', feed: '.oh-feed div', prompt: '.oh-prompt', radio: '.oh-radio', warn: '.oh-warn', message: '.oh-msg', cue: '.oh-ammo .cue' };
+const alpha = (e) => { let a = 1; for (; e && e.nodeType === 1 && !e.classList.contains('oh'); e = e.parentElement) { const s = getComputedStyle(e); if (s.display === 'none') return 0; a *= +s.opacity; } return a; };
+const shown = (e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && alpha(e) > 0.05 && (e.textContent.trim() !== '' || !/warn|msg|cue|obj$/.test(e.className) || e.className.includes('pips')); };
 window.__sel = SEL;
 (function sample() { for (const k in SEL) for (const e of document.querySelectorAll(SEL[k])) if (shown(e)) window.__seen[k] = true; requestAnimationFrame(sample); })();
 window.__layout = () => { // panels that must never overlap each other or leave the window
@@ -73,7 +74,7 @@ try {
     await world((s) => { const W = window.__OPUS_WORLD; window.__ev = []; for (const n of ['player:hit', 'say']) W.on(n, (e) => window.__ev.push([n, e])); W.on('entity', (e) => window.__ev.push(['entity', e])); W.start(s ? { at: s } : {}); }, start);
     await until('play', () => window.__OPUS_WORLD.state() === 'playing', undefined, 20);
     await until('the fade-in', () => window.__OPUS_WORLD.snapshot().time > 3.2, undefined, 90); // start() fades in from black over 2.6 s
-    const me = await world(() => { const s = window.__OPUS_WORLD.snapshot().self; return { x: s.x, z: s.z, heading: s.heading }; });
+    const me = await world(() => { const s = window.__OPUS_WORLD.snapshot().self; return { x: s.x, y: s.y, z: s.z, heading: s.heading }; });
     const fwd = (d, side = 0) => { const a = (me.heading * Math.PI) / 180; return { x: +(me.x + d * Math.sin(a) + side * Math.cos(a)).toFixed(2), z: +(me.z - d * Math.cos(a) + side * Math.sin(a)).toFixed(2) }; };
     const apply = (c) => world((cmd) => window.__OPUS_WORLD.apply(cmd), c);
     const seen = () => world(() => window.__seen);
@@ -107,13 +108,32 @@ try {
     await until('reloaded', () => window.__OPUS_WORLD.snapshot().self.weapon.state !== 'reloading', undefined, 60);
 
     // under fire: a sentry in front of the player, facing it
-    await apply({ op: 'spawn', id: 'shooter', kind: 'sentry', ...fwd(11), heading: (me.heading + 180) % 360, alerted: true });
+    // the player cannot look up or down through the world API, so the sentry stands on ground level with the player's feet
+    let spot = null, best = 9;
+    for (const d of [11, 9, 13, 7, 15, 5]) for (const side of [0, 2, -2, 4, -4, 7, -7]) {
+      const at = fwd(d, side); await apply({ op: 'spawn', id: 'probe', kind: 'sentry', ...at });
+      const y = await world(() => window.__OPUS_WORLD.snapshot().entities.find((e) => e.id === 'probe').y); await apply({ op: 'despawn', id: 'probe' });
+      const off = Math.abs(y - me.y - 0.2); if (off < best) { best = off; spot = at; }
+      if (best < 0.2) break;
+    }
+    size.spot = { spot, levelError: +best.toFixed(2) };
+    await apply({ op: 'spawn', id: 'shooter', kind: 'sentry', ...spot, heading: (me.heading + 180) % 360, alerted: true });
     await until('a hit', () => window.__ev.some((e) => e[0] === 'player:hit'), undefined, 90);
     await shot('5-damage');
-    await page.keyboard.down('Enter');
-    await until('a kill', () => { const e = window.__OPUS_WORLD.snapshot().entities.find((x) => x.id === 'shooter'); return !e || e.state === 'dead' || e.alive === false || window.__ev.some((x) => x[0] === 'entity' && x[1].change === 'killed'); }, undefined, 90);
-    await shot('6-kill'); await page.keyboard.up('Enter');
-    await page.waitForTimeout(400);
+    // keep facing the sentry (place with now moves the player where it stands, turned to it) and fire short bursts (held fire climbs
+    // with the recoil) until the round that kills it; the picture is taken at once, while the kill marker is still up
+    const killed = () => world(() => window.__ev.some((x) => x[0] === 'entity' && x[1].change === 'killed' && x[1].id === 'shooter'));
+    let got = false;
+    for (let i = 0; i < 30 && !got; i++) {
+      await world(() => { const W = window.__OPUS_WORLD, s = W.snapshot(), t = s.entities.find((e) => e.id === 'shooter'); if (!t) return;
+        W.apply({ op: 'place', x: s.self.x, z: s.self.z, heading: ((Math.atan2(t.x - s.self.x, -(t.z - s.self.z)) * 180) / Math.PI + 360) % 360, now: true }); });
+      await page.keyboard.down('Enter');
+      for (let j = 0; j < 6 && !got; j++) { await page.waitForTimeout(80); got = await killed(); }
+      if (got) await shot('6-kill');
+      await page.keyboard.up('Enter'); if (!got) await page.waitForTimeout(900);
+    }
+    if (!got) { await shot('failed-kill'); throw new Error('timed out waiting for a kill: ' + JSON.stringify(await world(() => { const sn = window.__OPUS_WORLD.snapshot(); return { self: sn.self, stats: sn.stats, shooter: sn.entities.find((e) => e.id === 'shooter') }; }))); }
+    await page.waitForTimeout(500);
     await shot('7-after-kill');
 
     size.seen = await seen(); size.errors = await world(() => window.__errors);

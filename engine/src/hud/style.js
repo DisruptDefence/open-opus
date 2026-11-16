@@ -42,6 +42,7 @@ export const HUD_CSS = `
 .oh-warn, .oh-msg { position: absolute; left: 50%; transform: translateX(-50%); max-width: 70vw; text-align: center; white-space: pre-wrap; }
 .oh-warn { top: 6.8em; font-size: 1.15em; color: #fff; background: rgba(180,40,20,.78); padding: .15em .8em; letter-spacing: .06em; text-transform: uppercase; border-radius: .2em; }
 .oh-msg { top: 10.4em; font-size: 1.1em; }
+.oh-msg.pan { padding: .2em .7em; }
 .oh-warn:empty, .oh-msg:empty { display: none; }
 
 .oh-prompt { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); display: flex; align-items: center; gap: .6em; padding: .35em .9em .35em .5em; }
@@ -90,5 +91,5 @@ export const HUD_CSS = `
 .oh-arcs { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 .oh-arcs i { position: absolute; width: 48vh; height: 48vh; left: -24vh; top: -24vh; border-radius: 50%; opacity: 0;
   background: conic-gradient(from -24deg, rgba(255,60,40,.95) 0deg, rgba(255,60,40,.95) 48deg, transparent 48deg);
-  -webkit-mask: radial-gradient(circle, transparent 0, transparent calc(50% - .9em), #000 calc(50% - .85em), #000 50%, transparent calc(50% + .5px)); mask: radial-gradient(circle, transparent 0, transparent calc(50% - .9em), #000 calc(50% - .85em), #000 50%, transparent calc(50% + .5px)); }
+  -webkit-mask: radial-gradient(circle, transparent 0, transparent calc(50% - 1.2em), #000 calc(50% - 1.15em), #000 50%, transparent calc(50% + .5px)); mask: radial-gradient(circle, transparent 0, transparent calc(50% - 1.2em), #000 calc(50% - 1.15em), #000 50%, transparent calc(50% + .5px)); }
 `;
