@@ -72,7 +72,7 @@ test('meshes: a chunk\'s base and far are one mesh per material, and far leaves 
   fixed.setNear(cell.index, true); assert.equal(fixed.tris(), all - inCell, 'the cell\'s far triangles are not drawn while its near group shows');
   let drawn = 0; for (const m of far.children) if (m.visible) drawn += m.geometry.drawRange.count / 3; assert.equal(drawn, all - inCell - base.userData.tris);
   fixed.setNear(cell.index, true); assert.equal(fixed.tris(), all - inCell); fixed.setNear(cell.index, false); assert.equal(fixed.tris(), all, 'and come back');
-  const nearGroup = buildCellNear(G, chunk, cell, env); assert.equal(nearGroup.userData.tris, cellSoups(cell, 'near', env).triangles()); assert.ok(nearGroup.children.every((m) => m.castShadow));
+  const nearGroup = buildCellNear(G, chunk, cell, env); assert.equal(nearGroup.userData.tris, cellSoups(cell, 'near', env).triangles()); assert.ok(nearGroup.children.some((m) => m.castShadow) && nearGroup.children.every((m) => m.castShadow || m.material.name.length), 'things cast shadows; flat ground (soup flag n) does not');
   disposeGroup(nearGroup); disposeGroup(fixed.group);
 });
 
@@ -82,7 +82,7 @@ test('the engine on a scene with the new records: near cells round the camera, t
   const level = engine().G.level, s0 = level.stats();
   assert.equal(s0.detail, 45, 'low quality: 45 m'); assert.ok(s0.cellsNear >= 1 && s0.cellsNear <= 9, `near cells at the start: ${s0.cellsNear}`); assert.equal(s0.cellsBuilt, s0.cellsNear, 'the first frame has them: they are built with the start window');
   level.setDetail(0); run(0.1); const none = level.stats(); assert.equal(none.cellsNear, 0); assert.equal(none.cellsBuilt, 0);
-  assert.equal(none.tris, s0.tris, 'the placeholders draw the same triangles near and far, so nothing appears or vanishes when a cell changes over');
+  assert.ok(s0.tris >= none.tris, 'near and far draw the same buildings and trees; the street ground (item 6) exists in near only');
   level.setDetail(400); run(0.5); const wide = level.stats();
   assert.ok(wide.cellsNear > s0.cellsNear, 'one cell a frame until all within reach are in'); assert.ok(wide.nearBuildMs >= 0 && wide.nearBuilt >= wide.cellsNear);
   const st = world.stats(); assert.equal(st.cellsNear, wide.cellsNear); assert.equal(typeof st.nearBuildMs, 'number');

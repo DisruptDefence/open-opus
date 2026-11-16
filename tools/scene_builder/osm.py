@@ -51,7 +51,7 @@ def classify(ctx, road_width: dict) -> dict:
         ins = [r for r in (clean_ring(i) for i in inner) if r]
         return [(o, [h for h in ins if inside(centroid(h), o)]) for o in outs]
 
-    f = {k: [] for k in ("buildings", "pois", "roads", "areas", "walls", "green", "water", "trees", "gates", "landmarks")}
+    f = {k: [] for k in ("buildings", "pois", "roads", "areas", "walls", "green", "water", "trees", "gates", "landmarks", "crossings")}
 
     def landmark(el: dict, x: float, z: float, kind: str) -> None:
         f["landmarks"].append({"el": el, "x": x, "z": z, "kind": kind})
@@ -67,6 +67,8 @@ def classify(ctx, road_width: dict) -> dict:
                 f["pois"].append({"x": x, "z": z, "tags": t})
             if t.get("natural") == "tree" and in_ext((x, z)):
                 f["trees"].append({"x": x, "z": z, "tags": t, "node": el["id"]})
+            if t.get("highway") == "crossing" and in_ext((x, z)):  # item 6: snapped to a road by ground.py
+                f["crossings"].append({"x": x, "z": z, "tags": t})
             if t.get("historic") == "city_gate" and in_ext((x, z)):
                 f["gates"].append({"n": t.get("name", ""), "x": x, "z": z})
             kind = t.get("historic") or t.get("tourism") or t.get("amenity") or t.get("place")

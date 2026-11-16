@@ -90,7 +90,7 @@ test('the Old Quebec single file is cut into the same absolute chunks, with the 
   for (const c of source.manifest.chunks) installChunk(physics, terrain, await source.chunk(c.ce, c.cn));
   for (const [i, j] of [[188, 168], [10, 10], [300, 40], [57, 311], [376, 336], [0, 0]]) {
     const x = t.minX + i * t.cell, z = t.minZ + j * t.cell;
-    assert.ok(Math.abs(terrain.height(x, z, true) - fileHeight(i, j)) < 0.01, `ground at ${x}, ${z}`);
+    const lifted = terrain.height(x, z, true) - fileHeight(i, j); assert.ok(lifted > -0.01 && lifted < 0.15, `ground at ${x}, ${z}: the file's sample, or a sidewalk's kerb above it`);
   }
   // every building is in exactly one chunk, the one its bounding box's centre lies in
   let n = 0;

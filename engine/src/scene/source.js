@@ -30,7 +30,7 @@
 //             len. parapet and rail are null when absent. A package may instead ship { ring, yBase, yTop, material }.
 //   road      { pts, cls, kind, surface, width, sidewalk, steps, lit, marking, bridge, tunnel, name, s0, len }: a PIECE
 //             of a mapped way within reach of one cell (its box grown by width / 2 + 3 m). steps: null, or
-//             { count, handrail }. sidewalk: 'both' | 'left' | 'right' | 'no'.
+//             { count, handrail }. sidewalk: 'both' | 'left' | 'right' | 'no' | 'self' (the way is itself a raised sidewalk).
 //   tree      { x, z, height, crownRadius, kind, form }
 //   prop      { kind, x, z, yaw, variant, source }: kind is the word; yaw in radians about +y as three.js turns
 //             (0 faces grid north, positive towards the west): the data's degrees clockwise from north, negated.

@@ -822,6 +822,8 @@ are measured, and the planning model has judged colours and proportions on the p
 
 ### Item 6 — Ground
 
+**Built (2026-11-16, branch `ground`).** Decisions that differ from the text below: a mapped `footway=sidewalk` way is itself a raised sidewalk (`sw: "self"`, 1.6 m); a `footway=crossing` way takes the surface of the street it crosses; the paving margin is drawn only beside hard surfaces (asphalt, concrete, cobble, paving); nothing yet cuts one road's sidewalk where another crosses it (junction mouths stay raised); steps rails are boxes (no `rail_iron` yet); bare ground is 5 m rectangles.
+
 **Goal.** Streets with crisp edges, the right surface, kerbs and raised sidewalks, real stairs, crossings and
 centre lines; the cliff drawn as rock.
 
