@@ -4,7 +4,7 @@
 // CONTRACT (fixed by item 3; change it only together with gen/mesher.js, scene/install.js and the plan)
 //
 //   drape(tri3, tile) -> [[[x, y, z], [x, y, z], [x, y, z]], …]
-//   roadRibbons(soups, road, tile, style)
+//   roadRibbons(soups, road, tile, style, others = null)   others: the cell's road pieces, so a sidewalk can stop at a junction mouth
 //   steps(soups, road, groundAt, style)
 //   crossing(soups, c, tile, style)
 //   liftRaster(roads, x0, z0, n, style) -> Uint8Array(n * n) | null
@@ -278,7 +278,7 @@ function between(P, cum, sa, sb) {
 // asphalt with their sealed seams, oil stains, manhole covers. Everything is placed by distance along the whole way
 // (s0 + s) and by numbers drawn from the way's own length and width, never from the piece, so the two cells that
 // draw one place draw the same thing. `style.wear` says how much of each kind (0 = none).
-const WEAR_BAND = [0, 0.25, 0.5, 0.75], LIFT_WEAR = 0.012, WEAR_TILE = 4;
+const WEAR_BAND = [0, 0.25, 0.5, 0.75], LIFT_WEAR = 0.02, WEAR_TILE = 4, WEAR_STEP = 2.5;
 const wearV = (band, t) => WEAR_BAND[band] + (0.08 + 0.84 * t) * 0.25;
 const hash32 = (...v) => { let h = 2166136261; for (const x of v) { h = Math.imul(h ^ (Math.round(x) | 0), 16777619); h ^= h >>> 15; } return h >>> 0; };
 
@@ -289,11 +289,26 @@ function layUV(soup, q, uv, tile, lift) {
   const at = (x, z) => { const a = ((x - q[0][0]) * bz - (z - q[0][1]) * bx) / det, b = ((z - q[0][1]) * ax - (x - q[0][0]) * az) / det; return [uv[0][0] + a * (uv[1][0] - uv[0][0]) + b * (uv[3][0] - uv[0][0]), uv[0][1] + a * (uv[1][1] - uv[0][1]) + b * (uv[3][1] - uv[0][1])]; };
   for (const tr of [[q[0], q[1], q[2]], [q[0], q[2], q[3]]]) for (const t of drape(tr, tile)) tri(soup, [t[0][0], t[0][1] + lift, t[0][2]], [t[1][0], t[1][1] + lift, t[1][2]], [t[2][0], t[2][1] + lift, t[2][2]], null, at(t[0][0], t[0][2]), at(t[1][0], t[1][2]), at(t[2][0], t[2][2]));
 }
-/** A band along two lines of the same length: t = 0 on A, 1 on B; u runs with the metres along the whole way (WEAR_TILE m a repeat). */
+/** A triangle facing up, whatever the order it was given in. */
+function triUp(soup, a, b, c, ua, ub, uc) {
+  const ny = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+  if (ny >= 0) tri(soup, a, b, c, null, ua, ub, uc); else tri(soup, a, c, b, null, ua, uc, ub);
+}
+/**
+ * A band along two lines of the same length: t = 0 on A, 1 on B; u runs with the metres along the whole way (WEAR_TILE m a
+ * repeat). Not cut along the terrain triangles like the road under it (that is most of the cost of a street): each segment
+ * is split every WEAR_STEP metres and the points are put on the drawn ground, which the thin band follows to a centimetre.
+ */
 function wearBand(soup, A, B, cum, s0, band, tile, lift) {
+  const v0 = wearV(band, 0), v1 = wearV(band, 1);
   for (let i = 0; i + 1 < A.length; i++) {
-    const u0 = (s0 + cum[i]) / WEAR_TILE, u1 = (s0 + cum[i + 1]) / WEAR_TILE, v0 = wearV(band, 0), v1 = wearV(band, 1);
-    layUV(soup, [A[i], A[i + 1], B[i + 1], B[i]], [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], tile, lift);
+    const len = cum[i + 1] - cum[i], n = Math.max(1, Math.ceil(len / WEAR_STEP));
+    const pt = (P0, P1, f) => { const x = P0[0] + (P1[0] - P0[0]) * f, z = P0[1] + (P1[1] - P0[1]) * f; return [x, meshHeight(tile, x, z) + lift, z]; };
+    for (let k = 0; k < n; k++) {
+      const f0 = k / n, f1 = (k + 1) / n, u0 = (s0 + cum[i] + len * f0) / WEAR_TILE, u1 = (s0 + cum[i] + len * f1) / WEAR_TILE;
+      const a = pt(A[i], A[i + 1], f0), b = pt(A[i], A[i + 1], f1), c = pt(B[i], B[i + 1], f1), d = pt(B[i], B[i + 1], f0);
+      triUp(soup, a, b, c, [u0, v0], [u1, v0], [u1, v1]); triUp(soup, a, c, d, [u0, v0], [u1, v1], [u0, v1]);
+    }
   }
 }
 /** A rectangle centred at metre `s` along the piece, `len` along and `w` across, `off` metres left of the centre line, uv spanning the band's own square. */

@@ -7,6 +7,8 @@
     { "id": "3-porte-saint-louis", "what": "Porte Saint-Louis and the wall, from inside", "x": -312, "z": 220, "heading": 230, "pitch": 6 },
     { "id": "4-terrasse", "what": "Terrasse Dufferin toward the river and the lower town", "x": 186, "z": 62, "heading": 48, "pitch": -8 },
     { "id": "5-lower-street", "what": "Rue du Petit-Champlain, lower town", "x": 247.8, "z": -40, "heading": 179, "pitch": 5 },
+    { "id": "7-place-royale", "what": "Place Royale, a sett square, from its north-east corner (ground texture check)", "x": 322, "z": -128, "heading": 235, "pitch": 6 },
+    { "id": "8-sett-street", "what": "Rue Notre-Dame / Sous-le-Fort, a sett street in the lower town, at street level", "x": 302, "z": -105, "heading": 180, "pitch": 5 },
     { "id": "6-overview", "what": "The town from above the river (not a street view: for the skyline and the cliff)", "x": 420, "z": 60, "y": 110, "heading": 285, "pitch": -14, "fov": 55 }
   ]
 }
