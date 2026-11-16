@@ -16,6 +16,7 @@ test('phone code imports only phone code; the host page takes the engine\'s publ
   for (const file of files(join(REPO, 'phone'))) {
     const name = relative(REPO, file).split('\\').join('/');
     for (const spec of importsOf(readFileSync(file, 'utf8'))) {
+      if (spec.startsWith('node:') && name.startsWith('phone/tools/')) continue; // a tool run under Node, not page code
       if (!spec.startsWith('.')) { bad.push(`${name}: imports the package "${spec}"`); continue; }
       const target = relative(REPO, resolve(dirname(file), spec)).split('\\').join('/');
       if (target.startsWith('phone/')) continue;
