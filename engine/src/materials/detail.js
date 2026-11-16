@@ -19,6 +19,7 @@ uniform sampler2D uDtMap; uniform sampler2D uDtNrm; uniform sampler2D uDtOrm;
 uniform vec4 uDt;   // x strength, y normal, z rough mix, w ao mix
 uniform vec4 uDtA;  // rgb average colour of the set (linear), w far distance in m
 uniform vec4 uDtB;  // x 1/tile u, y 1/tile v, z base brightness, w hue kept
+uniform vec4 uDtT;  // rgb colour multiplier (warm / cool the set)
 #ifdef SL_DETAIL_ALT
 uniform sampler2D uDtMap2; uniform sampler2D uDtNrm2; uniform sampler2D uDtOrm2;
 uniform vec4 uDtC;  // x noise threshold, y softness, z noise frequency (1/m), w unused
@@ -83,7 +84,7 @@ const BLOCK = `
       if (slTw.z > 0.03) { dc += dtAxis(dqz, dxz, dyz, eqz, ex3, ey3, dam, n1, o1) * slTw.z; dorm += o1 * slTw.z; slDnZ = n1; dw += slTw.z; }
       dc /= dw; dorm /= dw;
       float dM = 1.0 + uSlMacro.x * 2.0 * (slMac * 0.65 + slMac2 * 0.35 - 0.5);
-      vec3 dAlb = diffuse * uDtB.z * dc * dM;
+      vec3 dAlb = diffuse * uDtB.z * uDtT.rgb * dc * dM;
       diffuseColor.rgb = mix(diffuseColor.rgb, dAlb, slDtF);
       slORM.r = mix(slORM.r, dorm.r, slDtF * uDt.w);
       slORM.g = mix(slORM.g, dorm.g, slDtF * uDt.z);
@@ -156,7 +157,7 @@ export function withDetail(create) {
       let loaded = 0;
       for (const [name, spec] of res.materials) {
         const u = { uDtMap: { value: dummies.map }, uDtNrm: { value: dummies.nrm }, uDtOrm: { value: dummies.orm }, uDt: { value: new THREE.Vector4(0, spec.normal, spec.rough, spec.ao) },
-          uDtA: { value: new THREE.Vector4(0.3, 0.3, 0.3, Math.min(spec.far, budget.far)) }, uDtB: { value: new THREE.Vector4(1, 1, spec.base, spec.hue) } };
+          uDtA: { value: new THREE.Vector4(0.3, 0.3, 0.3, Math.min(spec.far, budget.far)) }, uDtB: { value: new THREE.Vector4(1, 1, spec.base, spec.hue) }, uDtT: { value: new THREE.Vector4(spec.tint[0], spec.tint[1], spec.tint[2], 1) } };
         if (spec.alt) Object.assign(u, { uDtMap2: { value: dummies.map }, uDtNrm2: { value: dummies.nrm }, uDtOrm2: { value: dummies.orm },
           uDtC: { value: new THREE.Vector4(spec.alt.threshold, spec.alt.edge, 1 / spec.alt.size, 0) }, uDtD: { value: new THREE.Vector4(0.3, 0.3, 0.3, spec.alt.tone) },
           uDtE: { value: new THREE.Vector4(1, 1, spec.alt.hue, 0) } });

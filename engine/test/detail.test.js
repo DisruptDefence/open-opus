@@ -35,6 +35,7 @@ test('style mapping: fallbacks, defaults, overrides, unknown sets', () => {
   const r = resolveDetail({ default: { strength: 0.5 }, materials: { stone: { set: ['nope', 'b', 'a'], scale: 2 }, brick: { set: 'a', strength: 2, hue: 0.4 }, ghost: { set: ['zzz'] } } }, cat);
   const s = r.materials.get('stone');
   assert.deepEqual(s.entries.map((e) => e.name), ['b', 'a']); assert.equal(s.strength, 0.5); assert.deepEqual(tileMetres(s, s.entries[0]), [4, 4]);
+  assert.deepEqual(s.tint, [1, 1, 1]);
   assert.equal(r.materials.get('brick').strength, 1); assert.equal(r.materials.get('brick').hue, 0.4);
   assert.ok(!r.materials.has('ghost')); assert.ok(r.problems.some((p) => p.includes('ghost')) && r.problems.some((p) => p.includes('"nope"')));
   assert.equal(resolveDetail(null, cat).materials.size, 0);
@@ -66,4 +67,8 @@ test('a patch set (alt): resolved with defaults, clamped, and dropped with a mes
 });
 test('the patch threshold falls as the wanted cover grows, and is centred at half cover', () => {
   assert.equal(altThreshold(0.5), 0.5); assert.ok(altThreshold(0.2) > altThreshold(0.4)); assert.ok(altThreshold(0) < 0.75 && altThreshold(1) > 0.25);
+});
+test('a tint warms a set: three numbers, clamped; anything else is no change', () => {
+  const r = resolveDetail({ materials: { a1: { set: 'a', tint: [1.2, 1, 9] }, a2: { set: 'a', tint: [1, 1] }, a3: { set: 'a', tint: 'warm' } } }, cat);
+  assert.deepEqual(r.materials.get('a1').tint, [1.2, 1, 4]); assert.deepEqual(r.materials.get('a2').tint, [1, 1, 1]); assert.deepEqual(r.materials.get('a3').tint, [1, 1, 1]);
 });

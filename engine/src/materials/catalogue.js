@@ -16,7 +16,7 @@
 // `set` is a list of fallbacks: the first one the catalogue knows wins. `scale` multiplies the catalogue's tile size.
 // `strength` mixes the image over the procedural surface (0 = nothing), `normal` scales the image's relief, `rough` and
 // `ao` mix its roughness and occlusion in, `hue` keeps that much of the image's own colour (0 = the style palette's tint
-// alone, the default), `base` is the brightness the tint is multiplied by, `far` the distance in metres where it fades out.
+// alone, the default), `base` is the brightness the tint is multiplied by, `tint` [r, g, b] a linear colour multiplier on top (warm a cold set: [1.15, 1, 0.8]), `far` the distance in metres where it fades out.
 
 export const DEFAULT_DETAIL = { strength: 0.85, normal: 1, rough: 1, ao: 0.8, hue: 0.1, base: 0.3, far: 60, scale: 1 };
 
@@ -81,10 +81,12 @@ export function resolveDetail(detail, cat) {
     for (const n of names) if (!cat.sets.has(n)) problems.push(`${mat}: set "${n}" is not in the catalogue`);
     const num = (k) => (isNum(spec[k]) ? spec[k] : def[k]);
     out.set(mat, { alt: resolveAlt(spec.alt, cat, problems, mat), material: mat, entries, strength: clamp01(num('strength')), normal: Math.max(0, num('normal')), rough: clamp01(num('rough')), ao: clamp01(num('ao')),
-      hue: clamp01(num('hue')), base: Math.max(0.01, num('base')), far: Math.max(1, num('far')), scale: Math.max(0.05, num('scale')) });
+      hue: clamp01(num('hue')), base: Math.max(0.01, num('base')), tint: tintOf(spec.tint), far: Math.max(1, num('far')), scale: Math.max(0.05, num('scale')) });
   }
   return { materials: out, problems };
 }
+/** A colour multiplier [r, g, b] (linear, 0 to 4 each) that warms or cools a set; anything else is no change. */
+export function tintOf(t) { return Array.isArray(t) && t.length === 3 && t.every(isNum) ? t.map((v) => Math.min(4, Math.max(0, v))) : [1, 1, 1]; }
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
 /**

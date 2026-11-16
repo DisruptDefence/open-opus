@@ -139,3 +139,25 @@ test('street wear: decals on a street, none off it, the same either side of a ce
   const gravel = make(road({ pts: [0, 0, 100, 0], len: 230, surface: 5 }));
   assert.ok(!has(gravel, 'wear|n'), 'no wear on a gravel road');
 });
+
+test('junctions: a street ending on another cuts its sidewalk across the mouth, and stops its own at the kerb; a way that goes straight on or bends does not', () => {
+  const tile = tileOf(() => 0, { n: 61, minX: -50, minZ: -50 }), main = road({ pts: [-40, 0, 40, 0], len: 80, sidewalk: 'both', width: 7 });
+  const stem = road({ pts: [0, 30, 0, 0], len: 30, sidewalk: 'both', width: 6, kind: 'residential' }), cont = road({ pts: [40, 0, 80, 0], len: 40, sidewalk: 'both', width: 7 });
+  const lift = (roads, x, z) => { const a = liftRaster(roads, -50, -50, 100, STYLE); return a ? a[Math.floor(z + 50) * 100 + Math.floor(x + 50)] : 0; };
+  assert.equal(lift([main], 0.5, 4.5), 14, 'alone, the sidewalk runs on at the mouth');
+  assert.equal(lift([main, stem], 0.5, 4.5), 0, 'a street ending on it: the mouth is clear');
+  assert.equal(lift([main, stem], 0.5, -4.5), 14, 'the far side is still a sidewalk');
+  assert.equal(lift([main, stem], 12.5, 4.5), 14, 'and the sidewalk is back beyond the mouth');
+  assert.equal(lift([main, stem], 2.5, 4.5), 0, 'the cut is the street width (6 m) and a little more: 3.35 m each way'); assert.equal(lift([main, stem], -2.5, 4.5), 0);
+  assert.equal(lift([main, stem], 3.5, 4.5), 14); assert.equal(lift([main, stem], -3.5, 4.5), 14);
+  assert.equal(lift([main, stem], -3.5, 15.5), 14, 'the stem keeps its sidewalk away from the junction');
+  assert.equal(lift([stem], -3.5, 2.5), 14); assert.equal(lift([main, stem], -3.5, 2.5), 0, 'the stem stops at the main street kerb: no strip over its carriageway (z < 3.5)');
+  assert.equal(lift([main, cont], 39.5, 4.5), 14, 'a way continuing straight on is not a junction'); assert.equal(lift([main, cont], 41.5, 4.5), 14);
+  const bend = road({ pts: [40, 0, 40, 30], len: 30, sidewalk: 'both', width: 7 });
+  assert.equal(lift([main, bend], 39.5, -4.5), 14, 'a bend into the next way keeps its outer sidewalk');
+  const tee = [road({ pts: [-40, 0, 0, 0], len: 40, sidewalk: 'both', width: 7 }), road({ pts: [0, 0, 41, 0], len: 41, sidewalk: 'both', width: 7 }), stem];
+  assert.equal(lift(tee, 0.5, 4.5), 0, 'a main street split at the node: the stem still clears the mouth'); assert.equal(lift(tee, -10.5, 4.5), 14); assert.equal(lift(tee, 0.5, -4.5), 14, 'and the far side runs through');
+  const s = createSoups(); roadRibbons(s, main, tile, STYLE, [main, stem]);
+  const without = createSoups(); roadRibbons(without, main, tile, STYLE);
+  assert.ok(upArea(s.map.get('concrete|tn')) < upArea(without.map.get('concrete|tn')) - 10, 'the drawn sidewalk loses the mouth');
+});

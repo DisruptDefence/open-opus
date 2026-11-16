@@ -100,7 +100,7 @@ export function cellSoups(cell, group, env) {
     for (const w of cell.walls) if (w.rail && !w.ring) drawWall(soups, w, groundAt, style);
     if (cell.roads.length || cell.crossings.length) {
       const ground = createSoups();
-      for (const r of cell.roads) { if (r.tunnel || r.bridge) continue; if (r.steps) steps(ground, r, groundAt, style); else roadRibbons(ground, r, tile, style); }
+      for (const r of cell.roads) { if (r.tunnel || r.bridge) continue; if (r.steps) steps(ground, r, groundAt, style); else roadRibbons(ground, r, tile, style, cell.roads); }
       for (const c of cell.crossings) crossing(ground, c, tile, style);
       soups.add(clipSoups(ground, cell));
     }
