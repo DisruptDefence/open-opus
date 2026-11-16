@@ -140,8 +140,9 @@ float lvNz(vec2 p, float s){
 void lvWeather(inout vec3 c, inout float h, inout float ao, float x, float y, float base, uint bid, float kind, float aa){
   float gr = mix(0.5, 1.25, lvU(lvH(bid, 31u))) * uBwOpt.z;
   float sd = floor(lvU(lvH(bid, 32u)) * 61.0);
-  c *= 1.0 + (lvNz(vec2(x, y) * vec2(0.11, 0.09), sd + 0.0) - 0.5) * 0.36 + (lvNz(vec2(x, y) * vec2(0.37, 0.33), sd + 5.0) - 0.5) * 0.14;
-  c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), lvNz(vec2(x, y) * vec2(0.07, 0.07), sd + 9.0));
+  float t1 = lvNz(vec2(x, y) * vec2(0.11, 0.09), sd);
+  c *= 1.0 + (t1 - 0.5) * 0.36 + (lvNz(vec2(x, y) * vec2(0.37, 0.33), sd + 5.0) - 0.5) * 0.14;
+  c *= mix(vec3(1.04, 1.0, 0.95), vec3(0.96, 0.99, 1.04), t1);
   float st = lvNz(vec2(x, y) * vec2(0.5, 0.45), sd + 3.0) * 0.6 + lvNz(vec2(x, y) * vec2(1.3, 1.1), sd + 1.0) * 0.4;
   c *= 1.0 - smoothstep(0.52, 0.72, st) * 0.22 * gr;
   float sx = lvNz(vec2(x * 2.6, y * 0.4), sd) * lvNz(vec2(x * 8.0, y * 0.7), sd + 3.0);
@@ -190,6 +191,9 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
   if (w > fit){ float k = fit / w; w *= k; if (shape == 3) hh = w; }
   float a = w * 0.5;
   vec2 q = vec2(p.x, p.y - sill);
+  bool shu = lvU(lvH(hbv, 91u)) < T3.x && shape != 4;
+  // most of a bay is wall: leave early where nothing of the window, its dressing, hood, sill shadow or shutters can reach
+  if (q.y < -sw - 0.3 || q.y > hh + sw + 0.95 || abs(q.x) > (shu ? 2.0 : a + sw + 0.25)) return;
   // the opening as a signed distance: negative inside
   float d, rise = 0.0;
   if (shape == 1 || shape == 2){
@@ -255,7 +259,7 @@ void lvWindow(vec2 p, float bayW, uint bid, uint bayI, uint stor, float aa, vec3
     }
   }
   // shutters, open (a leaf each side of the opening) or closed (over it)
-  if (lvU(lvH(hbv, 91u)) < T3.x && shape != 4){
+  if (shu){
     float closed = step(lvU(lvH(hbv, 92u)), 0.25);
     float ws = min(a, bayW * 0.5 - (a + sw + 0.07));
     float zy = step(-0.03, q.y) * step(q.y, hh + 0.03);
