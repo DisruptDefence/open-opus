@@ -3,7 +3,8 @@
 The running game is reached through this contract and nothing else. Missions, the phone, the session protocol
 and tests all use it. `openWorld()` (`engine/index.js`) returns it at once, in state `loading`, and boots the
 engine behind it; the host page publishes it as `window.__OPUS_WORLD` and awaits `ready()`. Until then only
-`on`, `state`, `ready`, `canHold`, `hold`, `held` and `release` answer; the rest throw. The object is frozen.
+`on`, `state`, `ready`, `canHold`, `hold`, `held` and `release` answer; the rest throw (`apply` throws its
+usual `ScenarioCommandError`, with code `not-ready`). The object is frozen.
 Additive changes keep the version number.
 
 ```ts
@@ -12,14 +13,14 @@ interface WorldApi {
 
   // lifecycle
   ready(): Promise<void>;                       // scene loaded, first frames drawn
-  state(): 'loading' | 'title' | 'intro' | 'playing' | 'paused' | 'dead' | 'complete';
+  state(): 'loading' | 'title' | 'playing' | 'paused' | 'dead' | 'complete';
   on(event: WorldEvent, fn: (e: object) => void): () => void;    // returns the function that stops listening
-  start(opts?: { quick?: boolean; at?: Pose }): void;            // must be called from a user gesture
+  start(opts?: { at?: Pose }): void;                             // must be called from a user gesture
   pause(): void;
   resume(): void;
 
   // holding the game while the phone or a mission screen is up
-  canHold(): boolean;
+  canHold(): boolean;                           // playing, and not held already
   hold(mode: 'pause' | 'slow'): boolean;        // input off, pointer released, HUD hidden, view tilts down
   setHoldMode(mode: 'pause' | 'slow'): void;
   held(): 'pause' | 'slow' | null;              // null also when the game ended under the hold
@@ -32,9 +33,10 @@ interface WorldApi {
             heading: number;                    // degrees clockwise from GRID north
             headingTrue: number;                // the same from TRUE north: what a TAK client shows
             speed: number; health: number };
-    entities: Array<{ id: string; kind: 'objective' | 'threat' | 'extraction' | 'prop';
+    entities: Array<{ id: string; kind: 'objective' | 'threat' | 'extraction';   // 'prop' is reserved, see Status
                       type: string; label?: string; x: number; y: number; z: number;
                       radius?: number;          // marks only
+                      archetype?: string;       // threats only: the archetype id; `type` is its class, ground | air
                       alive: boolean; state?: string }>;
   };
   scene(): { id: string; name: string; version: string; bounds: Box; walkable: Box; credits: string[] };
@@ -54,7 +56,7 @@ interface WorldApi {
     Promise<{ image: ImageBitmap; width: number; height: number; bounds: Box }>;
 
   // scenario commands
-  apply(cmd: ScenarioCommand): void;            // throws when the command is unknown or cannot be applied
+  apply(cmd: ScenarioCommand): void;            // throws a ScenarioCommandError when it cannot be applied
 }
 
 type Pose = { x: number; z: number; y?: number; heading?: number };
@@ -68,14 +70,14 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | Event | Payload | When |
 |---|---|---|
 | `state` | `{ state, from }` | The state changed |
-| `player:dead` | `{}` | |
+| `player:dead` | `{}` | The player died: under fire, or by an `end` command with `result: 'dead'`. It follows the `state` event that says `dead` |
 | `player:hit` | `{ amount, health }` | |
 | `entity` | an entity as in `snapshot()`, plus `change: 'spawn' \| 'state' \| 'killed' \| 'fire' \| 'despawn'` | A threat appeared, changed behaviour, fired, died or was removed; a mark was placed or removed |
 | `interact` | `{ id, kind, action: 'reached', time }` | The player entered a mark's radius |
 | `shot` | `{ ammo }` | The player fired |
 | `say` | `{ text }` | A `say` command was shown |
-| `hold` | `{ mode }` (`null` on release) | |
-| `chunk` | `{ cx, cz, live }` | A scene chunk became live or was released |
+| `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
+| `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
 
 An event is a report, not a decision. The engine says a mark was reached; what that is worth is the host's.
 
@@ -88,18 +90,36 @@ and knows no condition.
 | `op` | Fields | Effect |
 |---|---|---|
 | `place` | `x`, `z`, `y?`, `heading?`, `now?` | Sets where the player starts; with `now`, moves the player there at once |
-| `spawn` | `id`, `kind` (an archetype id, or its class `ground` \| `air`), `x`, `z`, `y?`, `heading?`, `route?: [[x, z], …]` | A threat. The route is walked or flown in a loop. Throws on an id already in the world or an unknown kind |
+| `spawn` | `id`, `kind` (an archetype id, or its class `ground` \| `air`), `x`, `z`, `y?`, `heading?`, `route?: [[x, z], …]` | A threat. The route is walked or flown in a loop. An id already in the world is replaced |
 | `despawn` | `id` | Removes it |
-| `mark` | `id`, `kind: 'objective' \| 'extraction'`, `x`, `z`, `y?`, `radius?` (3 m), `label?`, `type?` | A **visible** place in the world; appears in `snapshot().entities`; `interact` fires when the player enters it |
+| `mark` | `id`, `kind: 'objective' \| 'extraction'`, `x`, `z`, `y?`, `radius?` (3 m), `label?`, `type?` | A **visible** place in the world; appears in `snapshot().entities`; `interact` fires when the player enters it. An id already in the world is replaced |
 | `unmark` | `id` | Removes it |
+| `clear` | — | Removes every threat and every mark |
 | `say` | `text`, `seconds?` | A line on the HUD |
-| `end` | `result?: 'complete' \| 'dead'` | Ends play; the state becomes `complete` or `dead` |
+| `end` | `result?: 'complete' \| 'dead'` | Ends play; the state becomes `complete` or `dead`. `dead` kills the player and `player:dead` is reported, as when dying under fire. Ignored when play has already ended |
 | `time` | `hour` (0–24) | Time of day |
 | `weather` | `wet` (0–1) | |
 
-`y` omitted means "on the ground at that point". A command that is unknown or cannot be applied throws, so a
-host learns at once that its scenario is wrong (over the session protocol the mission client catches it and
-answers `refused`). New commands are additive.
+`y` omitted means "on the ground at that point". New commands are additive.
+
+**A command says what stands, not what changes.** Applying one twice leaves the world as applying it once does:
+a `spawn` or `mark` whose id is already there replaces it (at the place and in the state the command gives);
+`despawn`, `unmark` and `clear` of what is not there do nothing; `place`, `time` and `weather` set a value. A host
+can therefore send everything that stands again when the player deploys again or returns
+(`SESSION-PROTOCOL.md` 5); `clear` first removes what no longer stands. `say` is the exception: it is shown
+each time.
+
+**A command that cannot be applied throws, and changes nothing.** `apply()` throws a `ScenarioCommandError`
+(exported by `engine/index.js`) and nothing else:
+
+| Member | |
+|---|---|
+| `name` | `'ScenarioCommandError'` |
+| `code` | `'not-ready'` the world is still loading · `'unknown-op'` no such command · `'invalid'` a field is missing or has a value the command cannot take, or the command is not a plain object · `'unknown-kind'` no threat archetype of that name |
+| `op` | the command's `op`, when it had one |
+| `message` | a sentence a person can read |
+
+Over the session protocol the mission client catches it and answers `refused` with the command's `seq`.
 
 ## Rules
 
@@ -127,9 +147,16 @@ draft: `pause`, `resume`, `scene`, `headingTrue`, `label`, `radius`, `toUTM`, `c
 degrees instead of yaw, the options and size of `overhead`, the event payloads and the command table). Where
 the two disagree, fix one of them in the same change and say which in the commit message.
 
+Changed on 2026-11-15 after review: `start()` lost `quick`, which did nothing; `state()` lost `intro`; `end` with
+`dead` reports `player:dead`; `apply()` throws a typed error; `spawn` of an id already in the world replaces it
+instead of throwing; `clear` was added; the `chunk` event names chunks `ce`, `cn` as the scene format does.
+
 Known gaps:
 
-- `state()` never returns `intro`, and no entity of kind `prop` is produced.
+- There is no `intro` state: the engine has no opening sequence of its own. A host page shows its briefing
+  before it calls `start()`. If the engine gets one, the state is added then.
+- The entity kind `prop` is reserved and never produced: no command places an object that is neither a threat
+  nor a mark. It needs content packs, which do not exist yet.
 - A `mark` is always drawn. A host must not mark a place the player is meant to find (`SESSION-PROTOCOL.md` 4).
 
 The contract test is `engine/test/world-api.test.js`: it runs the real simulation under Node without a screen.

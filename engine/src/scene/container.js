@@ -2,7 +2,7 @@
 // header length, a UTF-8 JSON header, then binary sections aligned to 4 bytes, little-endian. Pure code: the scene
 // builder (engine/tools/make-test-scene.mjs) writes with it, the loader reads with it, the tests do both.
 //
-// Deviation from the format as written, stated here and in engine/README.md: the raster layers (heights, surface,
+// Deviation from the format as written, stated here and in engine/README.md ("Where the scene reader differs"): the raster layers (heights, surface,
 // walk mask) are binary sections as specified; the vector layers (buildings, walls, trees, water, landmarks) are
 // JSON records inside the header for now, with the specified fields and enum values, instead of fixed-size binary
 // records with a shared vertex pool. A dense town chunk stays well under the 600 KB budget after HTTP compression

@@ -54,9 +54,10 @@ export function createThreats(G, { archetypes = ARCHETYPES } = {}) {
   G.events.on('player:land', (e) => noise(e && e.pos, 10));
   G.events.on('explosion', (e) => noise(e && e.pos, 150));
 
+  // `kind` is an archetype id, or the broad class the scene format's anchors use (ground | air)
+  const defOf = (kind) => (typeof kind === 'string' && Object.hasOwn(archetypes, kind) ? archetypes[kind] : Object.values(archetypes).find((d) => d.type === kind)) || null;
   function spawn(kind, pos, opts = {}) {
-    // `kind` is an archetype id, or the broad class the scene format's anchors use (ground | air)
-    const def = archetypes[kind] || Object.values(archetypes).find((d) => d.type === kind);
+    const def = defOf(kind);
     if (!def) return null;
     const model = buildModel(def), t = {
       id: opts.id || `${def.id}-${nextId++}`, type: def.type, archetype: def.id, def, model,
@@ -275,6 +276,7 @@ export function createThreats(G, { archetypes = ARCHETYPES } = {}) {
 
   return {
     root, list, archetypes, spawn, raycast, alert, update,
+    knows: (kind) => !!defOf(kind),
     aliveCount: () => list.reduce((n, t) => n + (t.alive ? 1 : 0), 0),
     despawn(id) { const t = list.find((x) => x.id === id); if (t) remove(t); return !!t; },
     clear() { for (const t of [...list]) remove(t); },

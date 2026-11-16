@@ -5,22 +5,28 @@
 //   { op: 'spawn',   id, kind, x, z, y?, heading?, route? }     kind: an archetype id, or its class (ground | air);
 //                                                               route: [[x, z], ...] walked or flown in a loop
 //   { op: 'despawn', id }
-//   { op: 'say',     text, seconds? }
 //   { op: 'mark',    id, kind, x, z, y?, radius?, label?, type? }   kind: objective | extraction
 //   { op: 'unmark',  id }
+//   { op: 'clear' }                                             removes every threat and every mark
+//   { op: 'say',     text, seconds? }
 //   { op: 'end',     result }                                   result: complete | dead
 //   { op: 'time',    hour }       { op: 'weather', wet }
 //
-// Positions are game metres; `heading` is degrees clockwise from grid north. A command that cannot be applied
-// throws: a host must learn at once that its scenario is wrong.
-// It also watches the marks and reports when the player reaches one. What reaching one is worth is the host's
-// business: the engine reports the fact and scores nothing.
+// Positions are game metres; `heading` is degrees clockwise from grid north.
+// A command says what stands, not what changes: applying one twice leaves the world as applying it once does. A
+// `spawn` or `mark` whose id is already in the world replaces it; `despawn`, `unmark` and `clear` of what is not
+// there do nothing. So a host can send everything that stands again when a player deploys again or comes back.
+// A command that cannot be applied throws a ScenarioCommandError and changes nothing.
+// The director also watches the marks and reports when the player reaches one. What reaching one is worth is the
+// host's business: the engine reports the fact and scores nothing.
 import { Color, CylinderGeometry, Group, Mesh, MeshBasicMaterial, TorusGeometry } from '../../vendor/three.module.js';
+import { ScenarioCommandError } from './command-error.js';
 
 const yawOf = (headingDeg) => (-(+headingDeg || 0) * Math.PI) / 180;
-const fail = (c, why) => { throw new Error(`apply ${c.op}: ${why}`); };
-const needXZ = (c) => { if (!Number.isFinite(c.x) || !Number.isFinite(c.z)) fail(c, 'x and z (game metres) are required'); };
-const needId = (c) => { if (typeof c.id !== 'string' || !c.id) fail(c, 'an id is required'); };
+const fail = (c, why, code = 'invalid') => { throw new ScenarioCommandError(code, c.op, why); };
+const num = (c, k) => { if (c[k] !== undefined && !Number.isFinite(c[k])) fail(c, `\`${k}\` must be a number`); };
+const needXZ = (c) => { if (!Number.isFinite(c.x) || !Number.isFinite(c.z)) fail(c, 'x and z (game metres) are required'); num(c, 'y'); num(c, 'heading'); };
+const needId = (c) => { if (typeof c.id !== 'string' || !c.id) fail(c, 'an id (a string) is required'); };
 
 export function createDirector(G, { setTimeOfDay = () => {}, setWet = () => {} } = {}) {
   const marks = new Map();
@@ -28,7 +34,9 @@ export function createDirector(G, { setTimeOfDay = () => {}, setWet = () => {} }
   function mark(c) {
     needId(c); needXZ(c);
     if (c.kind !== 'objective' && c.kind !== 'extraction') fail(c, `kind must be objective or extraction, not "${c.kind}"`);
-    unmark(c);
+    if (c.radius !== undefined && !(c.radius > 0)) fail(c, 'radius must be a positive number of metres');
+    if (G.threats.list.some((t) => t.id === c.id)) fail(c, `"${c.id}" is a threat`);
+    unmark(c); // the same id again replaces
     const y = groundY(c), g = new Group(), col = c.kind === 'extraction' ? 0x30ff90 : 0xffb020, radius = c.radius > 0 ? +c.radius : 3;
     const beam = new Mesh(new CylinderGeometry(0.12, 0.12, 30, 8), new MeshBasicMaterial({ color: new Color(col).multiplyScalar(3), transparent: true, opacity: 0.35, depthWrite: false }));
     beam.position.y = 15;
@@ -53,10 +61,14 @@ export function createDirector(G, { setTimeOfDay = () => {}, setWet = () => {} }
     },
     spawn(c) {
       needId(c); needXZ(c);
-      if (G.threats.list.some((t) => t.id === c.id)) fail(c, `"${c.id}" is already in the world`);
-      if (!G.threats.spawn(c.kind, { x: c.x, y: groundY(c), z: c.z }, { id: c.id, yaw: yawOf(c.heading), route: c.route })) fail(c, `no threat archetype "${c.kind}"`);
+      if (!G.threats.knows(c.kind)) fail(c, `no threat archetype "${c.kind}"`, 'unknown-kind');
+      if (c.route !== undefined && !(Array.isArray(c.route) && c.route.every((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])))) fail(c, 'route must be [[x, z], ...]');
+      if (marks.has(c.id)) fail(c, `"${c.id}" is a mark`);
+      G.threats.despawn(c.id); // the same id again: the command says what stands, so it replaces
+      G.threats.spawn(c.kind, { x: c.x, y: groundY(c), z: c.z }, { id: c.id, yaw: yawOf(c.heading), route: c.route });
     },
     despawn(c) { G.threats.despawn(c.id); },
+    clear() { G.threats.clear(); for (const k of [...marks.values()]) unmark(k); },
     say(c) { const text = String(c.text || ''); G.hud.message(text, c.seconds > 0 ? +c.seconds : 4); G.events.emit('director:say', { text }); },
     mark, unmark,
     end(c) {
@@ -69,7 +81,12 @@ export function createDirector(G, { setTimeOfDay = () => {}, setWet = () => {} }
   };
   return {
     marks, commands: Object.keys(COMMANDS),
-    apply(cmd) { const fn = cmd && COMMANDS[cmd.op]; if (!fn) throw new Error(`apply: unknown command "${cmd && cmd.op}"`); fn(cmd); },
+    apply(cmd) {
+      if (!cmd || typeof cmd !== 'object' || Array.isArray(cmd)) throw new ScenarioCommandError('invalid', undefined, 'a command is an object with `op`');
+      const fn = Object.hasOwn(COMMANDS, cmd.op) ? COMMANDS[cmd.op] : null;
+      if (!fn) throw new ScenarioCommandError('unknown-op', cmd.op, 'no such command');
+      fn(cmd);
+    },
     update() {
       if (G.game.state !== 'playing') return;
       const p = G.player.pos;

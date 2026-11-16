@@ -1,11 +1,15 @@
-// A mission host in miniature. It stands where a session host will stand and does what one does: it holds the
-// scenario (the engine never sees it), sends commands when things happen, and decides when the run is over.
-// It uses the world API and nothing else, so it runs the same against a browser's world and a test's.
+// THROWAWAY. A stand-in mission host for development, so the engine can be played before a session host exists.
+// The scenario shape it reads (below) is NOT the scenario format: that format is an open decision of the maintainer
+// and nothing should be written against this one. When a session host speaking docs/SESSION-PROTOCOL.md lands,
+// this file and host/scenarios/ go.
 //
-// A development scenario (the real scenario format is not written yet; this is only what this host reads):
+// It does what a session host does, in the page: it holds the scenario (the engine never sees it), sends commands
+// when things happen, and decides when the run is over. It uses the world API and nothing else, so it runs the same
+// against a browser's world and a test's.
+//
 //   { "name", "scene",
 //     "start":  { x, z, heading },                 where the player enters
-//     "setup":  [ command, ... ],                  applied once, before the first start
+//     "setup":  [ command, ... ],                  what stands in the world at deploy
 //     "rules":  [ { "when": { "event", ...fields to match }, "do": [ command, ... ] } ] }   each rule fires once
 // Commands are the scenario commands of world.apply().
 export function runMission(world, scenario, { log = () => {} } = {}) {
@@ -25,7 +29,7 @@ export function runMission(world, scenario, { log = () => {} } = {}) {
     record,
     /** Put the scenario into the world, from the top, and enter play. Call it from a user gesture in a browser. */
     start() {
-      for (const e of world.snapshot().entities) world.apply({ op: e.kind === 'threat' ? 'despawn' : 'unmark', id: e.id }); // a redeploy starts clean
+      world.apply({ op: 'clear' }); // a redeploy starts clean
       fired.clear();
       for (const cmd of scenario.setup || []) world.apply(cmd);
       deployed = true;

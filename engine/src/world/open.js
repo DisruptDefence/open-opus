@@ -3,6 +3,7 @@
 // anything else throws, because there is no world to act on yet.
 import { createEngine } from './engine.js';
 import { createWorldApi } from './world-api.js';
+import { ScenarioCommandError } from '../director/command-error.js';
 
 /**
  * @param source   a scene source (scene/source.js), or a promise of one
@@ -37,7 +38,7 @@ export function openWorld({ source, params = {}, modules = {}, onProgress } = {}
     geo: { toGeo: geo('toGeo'), toGame: geo('toGame'), toMGRS: geo('toMGRS'), toUTM: geo('toUTM'), headingTrue: geo('headingTrue'), get convergenceDeg() { return need('geo.convergenceDeg').geo.convergenceDeg; } },
     scene: call('scene'),
     overhead: call('overhead'),
-    apply: call('apply'),
+    apply: (cmd) => { if (!api) throw new ScenarioCommandError('not-ready', cmd && cmd.op, 'the world is still loading; await ready() first'); api.apply(cmd); },
   };
   // For the engine's own checks (frame statistics, a manual frame in tests). Not on the world object, so nothing
   // that holds only the door can reach it.
