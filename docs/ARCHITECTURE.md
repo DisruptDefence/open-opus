@@ -72,7 +72,7 @@ Tests are `cd engine && node --test` and `node --test "phone/test/*.test.js"`. T
 
 | Layer | Modules (`engine/src/…`) | May import |
 |---|---|---|
-| Pure | `geo`, `terrain`, `physics`, `nav`, `scene`, `gen` (records into triangles: plain arrays; `docs/plans/SCENE-DETAIL.md`) | Each other. No three.js, no DOM: they run under Node and are unit-tested there |
+| Pure | `geo`, `terrain`, `physics`, `nav`, `scene`, `gen` (records into triangles: plain arrays; `docs/plans/SCENE-DETAIL.md`), `content` (content packs: data and their validator) | Each other. No three.js, no DOM: they run under Node and are unit-tested there |
 | Engine | `core` (clock, atmosphere, session state), `render`, `materials`, `input`, `fx`, `audio`, `hud`, `level` (scene data into drawn chunks), `shared` | Pure, three.js |
 | Simulation | `player`, `combat`, `weapons`, `threats`, `director` | Pure, engine, three.js |
 | Door | `world`: `open.js` and `world-api.js` (the world API), and `engine.js`, which builds the shared context and boots the modules | Everything above |

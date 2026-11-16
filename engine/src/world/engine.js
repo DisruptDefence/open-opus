@@ -31,6 +31,9 @@ import { createPlayer } from '../player/player.js';
 import { createCombat } from '../combat/combat.js';
 import { createWeapon } from '../weapons/weapon.js';
 import { createThreats } from '../threats/threats.js';
+import { validateBehaviour } from '../threats/brain.js';
+import { DEFAULT_PACK } from '../content/default.js';
+import { validatePack, mergePacks } from '../content/pack.js';
 import { createDirector } from '../director/director.js';
 
 export const DEFAULT_MODULES = {
@@ -43,12 +46,18 @@ export const silentAudio = () => { const h = { setPos: nothing, setGain: nothing
 const RADIUS = { test: 1, low: 1, medium: 1, high: 2, ultra: 2 }; // chunks of full detail round the player
 
 /** Boot the engine on a scene source (scene/source.js). Returns the engine object the world API is built on. */
-export async function createEngine({ source, params = {}, modules = {}, onProgress = () => {} }) {
+export async function createEngine({ source, params = {}, modules = {}, content, onProgress = () => {} }) {
   const F = { ...DEFAULT_MODULES, ...modules }, clock = createClock();
   const G = { THREE, params, events: createEvents(), rng: createRng(+(params.seed || 4207)), time: clock.time, clock, quality: pickQuality(params.q || ''), hold: { mode: null }, photo: null };
   const step = async (label, k, fn) => { onProgress(label, k); await new Promise((r) => setTimeout(r, 0)); return fn(); };
   const vec = (x, y, z) => new THREE.Vector3(x, y, z);
   const m = source.manifest;
+
+  // the content pack: the product's (an object or a promise of one) over the default
+  const extra = (await content) || {};
+  G.content = mergePacks(DEFAULT_PACK, extra);
+  const bad = validatePack(G.content, { validateBehaviour });
+  if (bad.length) throw new Error('content pack: ' + bad.join('; '));
 
   G.georef = createGeoref(m.georef);
   // the sky is set before anything captures it (environment, fx)
@@ -80,7 +89,7 @@ export async function createEngine({ source, params = {}, modules = {}, onProgre
   G.player = F.player(G);
   G.combat = F.combat(G);
   await step('weapon', 0.8, async () => { G.weapon = await F.weapon(G); });
-  G.threats = G.enemies = F.threats(G); // `enemies` is the name the lifted combat and audio modules read
+  G.threats = G.enemies = F.threats(G, { archetypes: G.content.threats, tuning: G.content.threatTuning }); // `enemies` is the name the lifted combat and audio modules read
   G.hud = await F.hud(G);
   G.game = F.game(G);
   G.director = createDirector(G, { setTimeOfDay: (h) => engine.setTimeOfDay(h), setWet: (k) => engine.setWet(k) });

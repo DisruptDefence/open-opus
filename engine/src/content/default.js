@@ -1,6 +1,9 @@
+// The default content pack (opus-content/1): what the engine ships with. A product's pack is merged over it
+// (pack.js, docs/CONTENT-PACK.md). Pure data, no imports.
+//
 // Threats as data. An archetype says what a threat is (body, senses, weapon) and how it behaves (a state table).
 // The engine has a fixed vocabulary of things to do and things to notice; a new threat is a new entry here, or in
-// a content pack later, not new code.
+// a content pack (docs/CONTENT-PACK.md), not new code.
 //
 //   do      followRoute | gotoLastKnown | attack | skirmish | gotoCover | orbitTarget | hold
 //           attack: stand and shoot;  skirmish: run to a firing place `tactics.rangeMin`..`rangeMax` from the target,
@@ -23,10 +26,10 @@
 //   melee    range (starts the rush), windup, speed, time, reach, damage, cooldown, recover
 //   death    explode { radius, damage }: an air threat blows up where it falls
 //
-// How many threats may shoot at once, and how fast aim improves, is the module's tuning (threats.js, TUNING): the
-// numbers are the stand-in game's, so a fight has its rhythm.
+// How many threats may shoot at once, and how fast aim improves, is `threatTuning` below: the numbers are the
+// stand-in game's, so a fight has its rhythm.
 
-export const ARCHETYPES = {
+const THREATS = {
   // A dismounted sentry: walks a beat, goes to look at what it hears, fights from a firing place it runs to and
   // changes after a burst or two, falls back to cover when hurt.
   sentry: {
@@ -84,4 +87,20 @@ export const ARCHETYPES = {
       },
     },
   },
+};
+
+export const DEFAULT_PACK = {
+  format: 'opus-content/1',
+  id: 'opus-default',
+  threats: THREATS,
+  threatTuning: { maxTokens: 2, maxTokensCrowd: 3, crowd: 5, tokenGap: 1.25, exposureUp: 0.1, exposureDown: 0.45, maxBolts: 32, boltLife: 1.3, maxWrecks: 5, wreckSeconds: 12, nearMetres: 26 },
+  weapons: { carbine: { name: 'Carbine', magSize: 30, reserve: 150, rpm: 720, damage: 26, range: 300, weakMultiplier: 2.2, view: 'carbine' } },
+  loadout: ['carbine'],
+  player: {},
+  sounds: { threats: { ground: { fire: 'ground_fire', step: 'ground_step', die: 'ground_die', loop: 'ground_servo', voice: 1 }, air: { fire: 'air_fire', die: 'air_die', loop: 'air_rotor', voice: 0 } } },
+  hud: {
+    elements: ['compass', 'markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
+    words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point' },
+  },
+  marks: { objective: { color: '#ffb020' }, extraction: { color: '#30ff90' } },
 };

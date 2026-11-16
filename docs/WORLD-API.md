@@ -15,7 +15,7 @@ interface WorldApi {
   ready(): Promise<void>;                       // scene loaded, first frames drawn
   state(): 'loading' | 'title' | 'playing' | 'paused' | 'dead' | 'complete';
   on(event: WorldEvent, fn: (e: object) => void): () => void;    // returns the function that stops listening
-  start(opts?: { at?: Pose }): void;                             // must be called from a user gesture
+  start(opts?: { at?: Pose; fadeIn?: number }): void;            // must be called from a user gesture; fadeIn: seconds from black, default 2.6
   pause(): void;
   resume(): void;
 
@@ -32,13 +32,19 @@ interface WorldApi {
     self: { x: number; y: number; z: number;
             heading: number;                    // degrees clockwise from GRID north
             headingTrue: number;                // the same from TRUE north: what a TAK client shows
-            speed: number; health: number };
+            speed: number; health: number;
+            weapon: { id: string; name: string; ammo: number; magSize: number; reserve: number; state: string } };
+    stats: { shots: number; hits: number; kills: number };      // this run
     entities: Array<{ id: string; kind: 'objective' | 'threat' | 'extraction';   // 'prop' is reserved, see Status
                       type: string; label?: string; x: number; y: number; z: number;
                       radius?: number;          // marks only
                       archetype?: string;       // threats only: the archetype id; `type` is its class, ground | air
-                      alive: boolean; state?: string }>;
+                      alive: boolean;
+                      state?: string;           // marks: 'open' | 'reached' | 'used'
+                      use?: { prompt: string; progress: number } }>;   // a mark that is used with a key: progress 0..1
   };
+  settings(patch?: { sensitivity?: number; invertY?: boolean; volume?: number; fov?: number }):
+    { sensitivity: number; invertY: boolean; volume: number; fov: number };   // see "Settings"
   scene(): { id: string; name: string; version: string; bounds: Box; walkable: Box; credits: string[] };
 
   // the Earth (from the scene's georeference, SCENE-FORMAT.md section 2)
@@ -86,11 +92,12 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 |---|---|---|
 | `state` | `{ state, from }` | The state changed |
 | `player:dead` | `{}` | The player died: under fire, or by an `end` command with `result: 'dead'`. It follows the `state` event that says `dead` |
-| `player:hit` | `{ amount, health }` | |
+| `player:hit` | `{ amount, health, from? }` | `from` is `{ x, y, z }`, where the shot came from, when known |
 | `entity` | an entity as in `snapshot()`, plus `change: 'spawn' \| 'state' \| 'killed' \| 'fire' \| 'despawn'` | A threat appeared, changed behaviour, fired, died or was removed; a mark was placed or removed |
 | `interact` | `{ id, kind, action: 'reached', time }` | The player entered a mark's radius |
+| `interact` | `{ id, kind, action: 'begin' \| 'cancel' \| 'used', time, progress }` | A mark with `use`: the player began holding the key, progress fell back to 0, or it reached 1 (once). Such a mark is never `reached` |
 | `shot` | `{ ammo }` | The player fired |
-| `say` | `{ text }` | A `say` command was shown |
+| `say` | `{ text, channel }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
 | `photo` | `{ on }` | Photo mode began or ended |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
@@ -116,12 +123,13 @@ and knows no condition.
 | `op` | Fields | Effect |
 |---|---|---|
 | `place` | `x`, `z`, `y?`, `heading?`, `now?` | Sets where the player starts; with `now`, moves the player there at once |
-| `spawn` | `id`, `kind` (an archetype id, or its class `ground` \| `air`), `x`, `z`, `y?`, `heading?`, `route?: [[x, z], …]` | A threat. The route is walked or flown in a loop. An id already in the world is replaced |
+| `spawn` | `id`, `kind` (an archetype id, or its class `ground` \| `air`), `x`, `z`, `y?`, `heading?`, `route?: [[x, z], …]`; or in place of `x`, `z`: `at?: [[x, z], …]` (1 to 64 places), `hidden?`, `minDistance?` (18), `alerted?` | A threat. The route is walked or flown in a loop. An id already in the world is replaced. With `at` the engine picks the place (see below). `alerted`: it starts looking for the player |
 | `despawn` | `id` | Removes it |
-| `mark` | `id`, `kind: 'objective' \| 'extraction'`, `x`, `z`, `y?`, `radius?` (3 m), `label?`, `type?` | A **visible** place in the world; appears in `snapshot().entities`; `interact` fires when the player enters it. An id already in the world is replaced |
+| `mark` | `id`, `kind: 'objective' \| 'extraction'`, `x`, `z`, `y?`, `radius?` (3 m; 2.2 with `use`), `label?`, `type?`, `use?: { seconds?, prompt }` | A **visible** place in the world; appears in `snapshot().entities`; `interact` fires when the player enters it, or, with `use`, when they hold the interact key at it (see below). An id already in the world is replaced |
 | `unmark` | `id` | Removes it |
 | `clear` | — | Removes every threat and every mark |
-| `say` | `text`, `seconds?` | A line on the HUD |
+| `say` | `text`, `seconds?`, `channel?: 'message' \| 'radio' \| 'warn'` (default `message`), `who?` (radio only) | A line on the HUD, on that channel |
+| `objective` | `text`, `done?`, `total?` (integers, 0 or more) | The objective line and its progress (`done` of `total`). A value: applying it twice changes nothing; `clear` empties it |
 | `end` | `result?: 'complete' \| 'dead'` | Ends play; the state becomes `complete` or `dead`. `dead` kills the player and `player:dead` is reported, as when dying under fire. Ignored when play has already ended |
 | `time` | `hour` (0–24) | Time of day |
 | `weather` | `wet` (0–1) | |
@@ -134,6 +142,34 @@ a `spawn` or `mark` whose id is already there replaces it (at the place and in t
 can therefore send everything that stands again when the player deploys again or returns
 (`SESSION-PROTOCOL.md` 5); `clear` first removes what no longer stands. `say` is the exception: it is shown
 each time.
+
+**A mark with `use`.** Each frame while playing, the candidate is the nearest unused `use` mark within its radius
+(horizontally), within 2.5 m in height, that the player is within 0.9 m of or faces (the cosine between their
+horizontal forward and the direction to it is at least 0.45). While there is a candidate and the `interact` input
+is held, its progress rises by `dt / seconds` (2.4 s by default); every other mark's progress falls by `1.6 · dt`.
+At 1 the mark's `state` becomes `used`, it is never a candidate again, and `interact` reports `used`. The
+`interact` events `begin` and `cancel` bracket a hold that did not finish. Engine events for the HUD:
+`director:prompt` `{ id, prompt, progress }` each frame a candidate exists and `{ id: null }` once when it stops,
+`objective:progress` `{ id, t }` and `objective:done` `{ id }`.
+
+**`spawn` with `at` is the one command that does not say exactly what stands**: the engine picks one of the places,
+and applying it again may pick another. It scores each place: a random 0 to 1.5; a place at least `minDistance`
+from the player scores +2 (and up to +0.5 more the farther it is, to 30 m beyond); a nearer one loses a quarter
+point per metre short; with `hidden`, +2.5 when there is no line of sight from the place (1 m up; an air threat at
+its altitude) to the player's eye; −3 for a place used in the last 6 s of play. The host decides that something
+comes and from which places; the engine only avoids making it appear in the player's view.
+
+## Settings
+
+`settings(patch?)` returns `{ sensitivity, invertY, volume, fov }` and, given a patch, first sets what it names:
+`sensitivity` 0.2 to 3, `invertY` boolean, `volume` 0 to 1, `fov` 60 to 100 (clamped); other keys are ignored.
+Storing them is the host's. Like `start`, it throws before `ready()`.
+
+## Start, death and the end
+
+`start({ at, fadeIn })`: play begins at once (no new state) from black: `fadeIn` seconds (default 2.6, 0 allowed) to the
+view. After a death the colour drains and the view dims; at `complete` the view dims. These are engine looks and
+need nothing from the host.
 
 **A command that cannot be applied throws, and changes nothing.** `apply()` throws a `ScenarioCommandError`
 (exported by `engine/index.js`) and nothing else:
@@ -229,6 +265,11 @@ the two disagree, fix one of them in the same change and say which in the commit
 Changed on 2026-11-15 after review: `start()` lost `quick`, which did nothing; `state()` lost `intro`; `end` with
 `dead` reports `player:dead`; `apply()` throws a typed error; `spawn` of an id already in the world replaces it
 instead of throwing; `clear` was added; the `chunk` event names chunks `ce`, `cn` as the scene format does.
+
+Added on 2026-11-16 (gameplay parity, A1 to A5; all additive, version stays 1): `mark.use` with the `interact`
+actions `begin`, `cancel`, `used` and the mark states `used`; `say.channel` and `who`; the `objective` command;
+`spawn.at`, `hidden`, `minDistance`, `alerted`; `player:hit.from`; `snapshot().self.weapon` and `stats`;
+`settings()`; `start({ fadeIn })` and the fades.
 
 Known gaps:
 
