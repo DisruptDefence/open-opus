@@ -80,12 +80,30 @@ export function resolveDetail(detail, cat) {
     if (!entries.length) { problems.push(`${mat}: none of ${JSON.stringify(names)} is in the catalogue`); continue; }
     for (const n of names) if (!cat.sets.has(n)) problems.push(`${mat}: set "${n}" is not in the catalogue`);
     const num = (k) => (isNum(spec[k]) ? spec[k] : def[k]);
-    out.set(mat, { material: mat, entries, strength: clamp01(num('strength')), normal: Math.max(0, num('normal')), rough: clamp01(num('rough')), ao: clamp01(num('ao')),
+    out.set(mat, { alt: resolveAlt(spec.alt, cat, problems, mat), material: mat, entries, strength: clamp01(num('strength')), normal: Math.max(0, num('normal')), rough: clamp01(num('rough')), ao: clamp01(num('ao')),
       hue: clamp01(num('hue')), base: Math.max(0.01, num('base')), far: Math.max(1, num('far')), scale: Math.max(0.05, num('scale')) });
   }
   return { materials: out, problems };
 }
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+/**
+ * A second set that patches the first (asphalt repairs, worn and dry grass, a different slab) where a slow world-space
+ * noise is high: `alt: { set: [...], scale: 1, cover: 0.3, edge: 0.04, size: 6, tone: 1, hue: 0.5 }`. `cover` is the
+ * share of the ground it takes (0 to 1), `edge` how soft its border is (0 = a hard seam), `size` the metres of one noise
+ * cell, `tone` its brightness relative to the main set. null when the entry is absent or none of its sets is known.
+ */
+export function resolveAlt(a, cat, problems, mat) {
+  if (!a || typeof a !== 'object') return null;
+  const names = Array.isArray(a.set) ? a.set : a.set ? [a.set] : [];
+  const entries = names.map((n) => cat.sets.get(n)).filter(Boolean);
+  if (!entries.length) { problems.push(`${mat}.alt: none of ${JSON.stringify(names)} is in the catalogue`); return null; }
+  const num = (v, d) => (isNum(v) ? v : d), cover = clamp01(num(a.cover, 0.3));
+  return { entries, scale: Math.max(0.05, num(a.scale, 1)), cover, threshold: altThreshold(cover), edge: Math.min(0.3, Math.max(0, num(a.edge, 0.04))),
+    size: Math.max(0.5, num(a.size, 6)), tone: Math.max(0.05, num(a.tone, 1)), hue: clamp01(num(a.hue, 0.5)) };
+}
+/** The noise value above which the patch set shows, for a wanted share of the ground (the noise is a 2-octave value noise, mean 0.5, spread about 0.13). */
+export function altThreshold(cover) { return 0.5 + (0.5 - clamp01(cover)) * 0.42; }
 
 /** The tile size in metres a resolved material lays its set at: the catalogue's size times the pack's `scale`. */
 export function tileMetres(spec, entry) { return [entry.tile[0] * spec.scale, entry.tile[1] * spec.scale]; }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCatalogue, resolveDetail, pickRes, detailBudget, setFiles, packOrm, tileMetres } from '../src/materials/catalogue.js';
+import { parseCatalogue, resolveDetail, altThreshold, pickRes, detailBudget, setFiles, packOrm, tileMetres } from '../src/materials/catalogue.js';
 import { patchDetailSource } from '../src/materials/detail.js';
 import { readFileSync } from 'node:fs';
 
@@ -49,7 +49,21 @@ test('the shader patch lands on the library patched source, and refuses an unkno
   const sh = { uniforms: {}, vertexShader: '#include <common>\n#include <project_vertex>', fragmentShader: '#include <common>\n#include <map_fragment>\n#include <roughnessmap_fragment>\n#include <metalnessmap_fragment>\n#include <normal_fragment_maps>\n#include <aomap_fragment>' };
   applyMaterialPatch(sh, {});
   const p = patchDetailSource(sh.fragmentShader);
-  assert.ok(p.ok); assert.ok(p.src.includes('dtSample(dqx') && p.src.includes('slDnX * uDt.y'));
+  assert.ok(p.ok); assert.ok(p.src.includes('dtAxis(dqx') && p.src.includes('SL_DETAIL_ALT') && p.src.includes('slDnX * uDt.y'));
   assert.equal(patchDetailSource('void main(){}').ok, false);
   assert.ok(THREE.REVISION);
+});
+
+test('a patch set (alt): resolved with defaults, clamped, and dropped with a message when unknown', () => {
+  const r = resolveDetail({ materials: {
+    asphalt: { set: 'a', alt: { set: ['nope', 'b'], cover: 0.4, edge: 9, size: 0.1, scale: 2 } },
+    grass: { set: 'a', alt: { set: ['zzz'] } }, plain: { set: 'a' } } }, cat);
+  const a = r.materials.get('asphalt').alt;
+  assert.deepEqual(a.entries.map((e) => e.name), ['b']); assert.equal(a.cover, 0.4); assert.equal(a.edge, 0.3); assert.equal(a.size, 0.5); assert.equal(a.scale, 2);
+  assert.equal(a.tone, 1); assert.equal(a.hue, 0.5);
+  assert.equal(r.materials.get('grass').alt, null); assert.equal(r.materials.get('plain').alt, null);
+  assert.ok(r.problems.some((p) => p.includes('grass.alt')));
+});
+test('the patch threshold falls as the wanted cover grows, and is centred at half cover', () => {
+  assert.equal(altThreshold(0.5), 0.5); assert.ok(altThreshold(0.2) > altThreshold(0.4)); assert.ok(altThreshold(0) < 0.75 && altThreshold(1) > 0.25);
 });
