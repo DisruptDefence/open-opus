@@ -1,6 +1,7 @@
 // What is compared: the metric catalogue, flattening of one image's numbers, the weighted-median reference over a
 // view's photographs, gaps and their plain sentences. Pure.
-import { weightedMedian } from './stats.mjs';
+import { weightedMedian, median, mad, emd, kmeans3w } from './stats.mjs';
+import { hueDeg, labToHex } from './color.mjs';
 
 const get = (o, path) => path.split('.').reduce((a, k) => (a == null ? null : a[k]), o);
 const r2 = (v) => (Number.isFinite(v) ? +v.toFixed(3) : null);
@@ -35,17 +36,93 @@ export const METRICS = [
 ];
 export const METRIC = Object.fromEntries(METRICS.map((m) => [m.key, m]));
 
+// GROUPS. Every measure is in exactly one:
+//   light      what the scene's light settings can move: lightness (L*, p10, p90) of any region, contrast, the shade/sun ratios,
+//              the lightness of the dark and lit parts, and the sky's colour (a*, b*, chroma);
+//   material   what the style work moves (wall and ground materials, colours, detail): a*, b* and chroma of walls and ground,
+//              busyness, colour spread (and the dominant wall colours, compared as `materialMismatch`);
+//   info       the shade and sunlit colour (a*, b* of the dark and lit parts): reported as information, never a rule;
+//   framing    the shares of sky, ground and walls: where the camera points, not a fault.
+export function groupOf(key) {
+  if (key.startsWith('share.')) return 'framing';
+  if (/^surfaces\.(dark|lit)\.[ab]$/.test(key)) return 'info';
+  if (/^(walls|ground)\.(a|b|chroma)$/.test(key) || key.startsWith('busy.') || key.startsWith('colour.')) return 'material';
+  return 'light';
+}
+for (const m of METRICS) m.group = groupOf(m.key);
+/** The light measures the proposal rules act on, and which look key targets which. */
+export const TARGETS = { exposure: ['walls.L', 'ground.L'], saturation: ['walls.chroma'], skySat: ['sky.chroma'], skyTint: ['sky.a', 'sky.b'], env: ['surfaces.ratio'], bounce: ['surfaces.ratio'], curve: ['contrast'] };
+export const LIGHT_ACTED = ['walls.L', 'ground.L', 'sky.chroma', 'sky.a', 'sky.b', 'surfaces.ratio', 'contrast'];
+/** Wall-colour-based measures: a view whose material mismatch is above the threshold is ignored for them by every rule. */
+export const WALL_COLOUR = new Set(['walls.a', 'walls.b', 'walls.chroma']);
+export const MATERIAL_THRESHOLD = 10, MATERIAL_MATTERS = 6;
+
 /** One image's numbers as { metric key: value }. */
 export function flat(numbers) { const o = {}; for (const m of METRICS) o[m.key] = numbers ? r2(get(numbers, m.path)) : null; return o; }
 
 export function photoWeight(entry) { if (entry.excluded) return 0; return entry.numbers && entry.numbers.framing === 'poor framing' ? 0.5 : 1; }
 
-/** Reference of a view: weighted median of each metric over its photographs. */
+/** Weight of a photograph in a reference: 0 when left out, 0.5 for poor framing, halved again when it was set aside for framing unlike the render's (`match === false`). */
+export function photoWeight2(entry, onlyMatched) { const w = photoWeight(entry); return w > 0 && onlyMatched && entry.match === false ? 0 : w > 0 && entry.match === false ? w * 0.5 : w; }
+/**
+ * Does a photograph frame the view like the render? Its sky share and its ground share are each within a factor of 2 of the render's
+ * (shares under 3 % count as 3 %, so a nearly empty region does not make every ratio huge). null when the render has no numbers.
+ */
+export function framingMatch(photoNumbers, renderNumbers, factor = 2, floor = 0.03) {
+  if (!photoNumbers || !renderNumbers) return null;
+  const ok = (a, b) => { const x = Math.max(a, floor), y = Math.max(b, floor); return x / y <= factor && y / x <= factor; };
+  return ok(photoNumbers.shares.sky, renderNumbers.shares.sky) && ok(photoNumbers.shares.ground, renderNumbers.shares.ground);
+}
+/** The photographs a reference is made of, with weights: when at least 2 frame the view like the render only those, else all usable ones (the framing-matched at full weight, the others at half). */
+export function referenceItems(photoEntries) {
+  const usableE = photoEntries.filter((e) => photoWeight(e) > 0), matched = usableE.filter((e) => e.match === true), only = matched.length >= 2;
+  return usableE.map((e) => ({ e, f: flat(e.numbers), w: photoWeight2(e, only) })).filter((i) => i.w > 0);
+}
+/** Reference of a view: weighted median of each metric over the photographs `referenceItems` chooses. */
 export function referenceOf(photoEntries) {
-  const items = photoEntries.map((e) => ({ f: flat(e.numbers), w: photoWeight(e) })).filter((i) => i.w > 0);
+  const items = referenceItems(photoEntries);
   if (!items.length) return null;
   const o = {}; for (const m of METRICS) o[m.key] = r2(weightedMedian(items.map((i) => ({ v: i.f[m.key], w: i.w }))));
-  return { photos: items.length, weight: items.reduce((s, i) => s + i.w, 0), values: o };
+  return { photos: items.length, weight: items.reduce((s, i) => s + i.w, 0), ids: items.map((i) => i.e.id), values: o };
+}
+
+/**
+ * Noise floor of each measure: how much photographs of the SAME view differ from each other. For every view with at least 2
+ * photographs in its reference, the median absolute deviation (about the median) of the measure over those photographs; then the
+ * median of that over views. A gap smaller than this cannot be told from choosing other photographs.
+ */
+export function noiseFloors(views) {
+  const per = {}; for (const m of METRICS) per[m.key] = [];
+  for (const v of views) {
+    const items = referenceItems(v.photos || []); if (items.length < 2) continue;
+    for (const m of METRICS) { const d = mad(items.map((i) => i.f[m.key])); if (Number.isFinite(d)) per[m.key].push(d); }
+  }
+  const out = {}; for (const m of METRICS) { const x = median(per[m.key]); out[m.key] = Number.isFinite(x) ? r2(x) : null; }
+  return out;
+}
+
+const dom = (numbers) => (numbers && numbers.colourfulness ? numbers.colourfulness.dominant : []);
+/**
+ * Material mismatch of one view: the earth mover's distance, in (a*, b*) units only (lightness left out), between the dominant wall
+ * colours of the photographs (pooled over the reference's photographs, each colour weighted by its share times the photograph's weight)
+ * and the render's. 0 = same hues and chromas of wall, large = different walls. null without both.
+ */
+export function materialMismatch(photoEntries, renderNumbers) {
+  const items = referenceItems(photoEntries), rd = dom(renderNumbers); if (!items.length || !rd.length) return null;
+  const pooled = items.flatMap((i) => dom(i.e.numbers).map((c) => ({ ...c, w: c.share * i.w }))); if (!pooled.length) return null;
+  const d = emd(pooled, rd.map((c) => ({ ...c, w: c.share })), (p, q) => Math.hypot(p.a - q.a, p.b - q.b));
+  const merged = kmeans3w(pooled.map((c) => ({ p: [c.L, c.a, c.b], w: c.w })), 5).map((c) => ({ L: r2(c.centre[0]), a: r2(c.centre[1]), b: r2(c.centre[2]), hex: labToHex(...c.centre), share: r2(c.share) }));
+  return { mismatch: r2(d), reference: merged, render: rd.map((c) => ({ L: c.L, a: c.a, b: c.b, hex: c.hex, share: c.share })) };
+}
+const cm = (cs) => { const t = cs.reduce((s, c) => s + c.share, 0) || 1; let a = 0, b = 0, ch = 0; for (const c of cs) { a += c.a * c.share / t; b += c.b * c.share / t; ch += Math.hypot(c.a, c.b) * c.share / t; } return { a, b, chroma: ch }; };
+/** A sentence a person can act on: which way the photographs' walls differ from the render's, with both sets of colours and shares. */
+export function materialSentence(viewId, mat) {
+  const R = cm(mat.reference), D = cm(mat.render), pct = (cs) => cs.map((c) => `${c.hex} (${Math.round(c.share * 100)} %)`).join(', ');
+  const parts = []; const da = R.a - D.a, db = R.b - D.b, dc = R.chroma - D.chroma;
+  if (Math.abs(da) >= 2) parts.push(da > 0 ? 'redder' : 'greener'); if (Math.abs(db) >= 2) parts.push(db > 0 ? 'yellower' : 'bluer');
+  if (Math.abs(dc) >= 2) parts.push(dc > 0 ? 'more saturated' : 'greyer');
+  const how = parts.length ? parts.join(' and ') : 'a different mix of colours (similar mean hue)';
+  return `Walls in the photographs of view ${viewId} are ${how}: dominant colours ${pct(mat.reference)}; the render's: ${pct(mat.render)} (mismatch ${mat.mismatch.toFixed(1)}).`;
 }
 
 /** gap = render - reference, for every metric both have. */
