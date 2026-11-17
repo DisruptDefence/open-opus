@@ -53,8 +53,8 @@ export const SOUP = {
   iron: 'metal|tv',         // lamp posts, rails, bollards: dark iron, tinted
   timber: 'wood|tv',
   lampGlass: 'glass_lamp|n',
-  trunk: 'wood|t',
-  leaves: 'leaves|t',       // `leaves|tv` when a tree is tinted (autumn)
+  trunk: 'wood|tv',      // bark: tinted per vertex (gen/trees.js)
+  leaves: 'leaves|tv',      // crowns: a tint per vertex, dark inside and light on top (gen/trees.js)
   hull: 'stucco|tv',        // the far ring's plain building hulls
 };
 
