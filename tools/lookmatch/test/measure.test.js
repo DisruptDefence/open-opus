@@ -64,6 +64,6 @@ test('usable: scans, night shots and blown pictures are left out', () => {
   assert.equal(usable(measureImage(image(40, 40, (x, y) => [(x + y) * 3, (x + y) * 3, (x + y) * 3]), 40, 40).numbers), 'monochrome');
   assert.equal(usable(measureImage(image(40, 40, () => [20, 25, 40]), 40, 40).numbers), 'too dark');
   assert.equal(usable(measureImage(image(40, 40, () => [250, 245, 235]), 40, 40).numbers), 'washed out');
-  assert.match(usable(measureImage(image(40, 40, (x, y) => [120 + (x % 7) * 15, 90 + (y % 5) * 10, 60]), 40, 40).numbers), /no street/);
+  assert.match(usable(measureImage(image(40, 40, (x, y) => [120 + (x % 7) * 15, 90 + (y % 5) * 10, 60]), 40, 40).numbers), /close-up/);
   assert.equal(usable(measureImage(street(), 80, 60).numbers), null);
 });
