@@ -418,9 +418,11 @@ a walker and a bullet but does not close a nav cell; trees are their trunk. Stai
 in the terrain; the drawn treads stay within one riser of it. A kerb is lower than a step (`STEP = 0.45`).
 
 **Street wear and the ground's image sets** (2026-11-16). `roadRibbons` also lays thin alpha decals (`SOUP.wear`, material `wear`,
-one texture in four bands: grit and leaves against the kerb and the foot of the walls, tyre tracks, asphalt patches with a sealed
-seam, oil stains) and manhole covers, placed by distance along the whole way from numbers drawn from the way's own length, so two
-cells draw one thing; `style.wear` = `{ gutter, tracks, patches, oil, manholes }` scales each (0 = none). The style pack's
+one texture in five bands: grit, leaves and a darker damp strip against the kerb and the foot of the walls, tyre tracks, asphalt
+patches with a sealed seam, oil stains, networks of cracks sealed with tar) and utility covers (round manhole, square valve cover,
+kerb-side drain grate on the low side of the road, each of its own size, angle and spacing), placed by distance along the whole way from numbers drawn from the way's own length, so two
+cells draw one thing; `style.wear` = `{ gutter, tracks, patches, oil, manholes, cracks, covers }` scales each (0 = none). A ground material's uv is in
+metres of its tile (the texture repeats every `tile` m), so the decals are written in metres, not in 0..1. The style pack's
 `client.detail` maps a ground material to a catalogue set (`set`, a fallback list), may add `alt` (a second set that patches the first
 where a slow world noise is high: `cover`, `edge`, `size`, `tone`, `hue`) and `tint` ([r, g, b] to warm or cool the set); the ground
 materials also carry a slow tone drift (`STREET` in `materials/outdoor.js`). A road's `others` argument lets the sidewalk stop at
@@ -1217,3 +1219,14 @@ weathering, stains and decals placed with intent; interiors; vehicles; statues a
 get their massing, not their ornament: the Château's dormers, finials and brickwork are an artist's or a
 licensed model's work, through `models/` of the format); real façade textures (no open street-level imagery
 allows it); people. Each is either artist's work or a licensed asset; none is blocked by the engine.
+
+**Sidewalk slabs, granite kerbs, class edges, rock** (2026-11-16, ground pass 2). A concrete sidewalk (`style.sidewalk.surface`
+`concrete`, a mapped `self` sidewalk of paving or concrete too) is drawn in the soup `SOUP.slab` = `sidewalk_slab|vn`: uv = [metres
+along the whole way x 1.5 / `style.sidewalk.slab`, metres across in the texture], so a tooled joint falls every `slab` m, square to
+the walk on a bend (u is the distance along the centre line segment, the joint at a mitre is where two segments meet), the same
+either side of a cell cut. A walk of 2.4 m or less uses the lower half of the 6 m tile, a wider one the upper half with a long joint
+down it. The colour is the vertex tint `style.sidewalk.color`. Kerb stones, stair treads and door steps are `kerb_granite`
+(`SOUP.kerb`, `SOUP.tread`): a light neutral grey whose tint (`kerbColor`, `treadColor`) is the colour you see. Class edges of the
+terrain (`level/terrain-classes.js`): a terrain triangle whose corners lie in different surface classes is cut in its own plane
+along the raster's contour (cut points found by walking the raster along the edge); a sliver under 30 % of a triangle is not cut.
+`rock` is drawn as wavy strata with crevices and grass on some ledges (the style's `detail.materials.rock` is kept faint).

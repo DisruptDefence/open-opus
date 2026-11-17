@@ -283,7 +283,7 @@ vertices), `"self"` on a way mapped as footway=sidewalk (the way is itself the r
 `lit` 1; `mk` 1 = centre line. New layer `crossings`: `[[x, z, bearingDeg, width], …]`, the bearing of the road there
 (0-179), snapped to a road within 1.5 m. Bare ground is written into `areas` as `{ r, k: "bare", s: "rock" | "grass" }`
 (rectangles of merged 5 m cells that no road, area, building or water covers and whose slope is above 0.6, or 0.25 to
-0.6 outside any green). The client style carries `sidewalk: { width, surface }` and `kerb`.
+0.6 outside any green). The client style carries `sidewalk: { width, surface, slab, color }` (`slab` m between joints, default 1.5; `color` the sidewalk's tint, default `#a9a59c`), `kerb`, `kerbColor`, `treadColor` (the colours the kerb stones and steps show) and `wear: { gutter, tracks, patches, oil, manholes, cracks, covers }` (0 = none).
 
 ### 4.4 Walls and barriers
 
