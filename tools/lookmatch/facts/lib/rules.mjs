@@ -41,8 +41,8 @@ export const RULES = {
     brick: { hue: [20, 65], minChroma: 13, minL: 28, maxL: 68, maxCv: 0.9, minE1: 2.4 },   // red-orange, mid light, regular fine texture
     stone: { maxChroma: 22, minL: 30, maxL: 83, minE1: 2.6 }, // grey to beige, mid light, textured (coarser or less regular than brick)
   },
-  // accents: saturated small clusters just outside opening blobs (trim, shutters, doors); and a smooth wall cluster of chroma over fromWall.minChroma (painted doors and shutters seen as big flat areas) is moved from the walls to the accents, and so is a lit cluster of chroma 40 or more whose hue is outside the brick-to-ochre range 20 to 110 and that is not brick (red and pink roofs seen below the roof band, blue and green paint)
-  accent: { fromWall: { minChroma: 52, maxE1: 2.6, hueFreeMinChroma: 40, hueFree: [20, 110], hueFreeMaxE1: 3.4 }, ring: 7, gap: 2, minChroma: 22, minDeltaE: 16, minShare: 0.004, k: 4, maxCount: 4 },
+  // accents: saturated small clusters just outside opening blobs (trim, shutters, doors); and a smooth wall cluster of chroma over fromWall.minChroma (painted doors and shutters seen as big flat areas) is moved from the walls to the accents, and so is a lit cluster of chroma 22 or more whose hue is outside the brick-to-ochre range 20 to 110 and that is not brick (red and pink roofs seen below the roof band, blue and green paint)
+  accent: { fromWall: { minChroma: 52, maxE1: 2.6, hueFreeMinChroma: 22, hueFree: [20, 110], hueFreeMaxE1: 3.4 }, ring: 7, gap: 2, minChroma: 22, minDeltaE: 16, minShare: 0.004, k: 4, maxCount: 4 },
   // roofs: the strip under the sky edge; copper (green-blue), slate (dark grey), metal (mid grey, blue-grey) when smooth
   roof: { maxE1: 2.2, minShare: 0.05, copper: { hue: [120, 230], minChroma: 5 }, slate: { maxL: 42, maxChroma: 12 }, metal: { minL: 42, maxL: 80, maxChroma: 13 }, k: 3 },
 };
