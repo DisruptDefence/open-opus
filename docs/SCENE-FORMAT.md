@@ -168,6 +168,12 @@ style pack (`docs/plans/SCENE-DETAIL.md` section 2).
 | `style` | the client part of the style pack, verbatim: colour palettes, window and ground-floor proportions, cornice, dormers, chimneys, kerb. `plinth` is `{ height, depth, color }` (`color` a hex colour; a stone house mixes it with its wall tint); an old scene without `color` gets the default `#a39d92`. Optional; the reader has neutral defaults |
 | `style.window.types` | window types a place may use, by name: `w`, `h` (metres; `h` includes an arched head), `sill` (above the floor; default `style.window.sill`), `reveal` (default `style.window.reveal`), `head` `flat` \| `segmental` \| `round`, `glaze` the pane pattern (`casement`, `sash22`, `sash66`, `sash11`, `french`, `single`), `kind: "round"` with `d` for a round window set on the wall. The name `blind` is a bricked-up window (no glass). A name the reader does not know is a `casement`. Objects merge with the reader's neutral types key by key: a pack adds or changes a type by data alone |
 | `style.window.mix` | `{ ground, upper, top }`: for each storey class (`top` is the attic storey of a house of three storeys or more) a table type name to weight. One type is drawn per building and storey from the building's `id`; `blind` is mixed into single bays by its share of the weights. The painted far façade follows the same tables |
+| `style.dressing` | façade dressing of the modelled (near) façade, seeded per building (gen/dressing.js); each number is a chance from 0 to 1, the neutral default is 0 for all and draws nothing. The builder copies the whole block |
+| `style.dressing.signs` | chance per shop (per door, in a house without a shop) of an iron bracket with a hanging board, at most one per 5 m of wall; a plain board, no lettering |
+| `style.dressing.lanterns` | chance per door of a wall lantern on an iron arm beside it |
+| `style.dressing.boxes` | chance per house that every window of its first upper storey has a window box with flowers |
+| `style.dressing.pots` | chance per door (not a big door) of a potted small conifer on each side |
+| `style.dressing.flowers` | list of colours; one is drawn per building for its window-box flowers |
 | `season` | `"summer" \| "autumn" \| "winter" \| "spring"`, from the place file |
 | `ambience` | `{ tod, day, haze, cloud, wet, look }`: the light the place is best seen in. A host's own switches win. `look` is described below |
 | `sources[]` | one entry per source: `name`, `licence`, `licenceUrl`, `attribution`, `layers` it fed (and, for OpenStreetMap, `extract` and `bbox`) |
