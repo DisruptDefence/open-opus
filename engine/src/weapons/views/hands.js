@@ -90,7 +90,7 @@ export function buildHands(THREE, dims) {
     const d = new Vector3(...dir).normalize(), at = (m) => [wrist[0] + d.x * m, wrist[1] + d.y * m, wrist[2] + d.z * m];
     return chain([
       nd(at(0), 0.0250 * k, 0.0215 * k, G.glove), nd(at(0.040), 0.0265 * k, 0.0235 * k, G.glove), nd(at(0.058), 0.0300 * k, 0.0265 * k, G.cuff),
-      nd(at(0.070), 0.0330 * k, 0.0290 * k, G.sleeve), nd(at(0.170), 0.0370 * k, 0.0330 * k, G.sleeve), nd(at(0.300), 0.0400 * k, 0.0360 * k, G.sleeve),
+      nd(at(0.070), 0.0330 * k, 0.0290 * k, G.sleeve), nd(at(0.140), 0.0360 * k, 0.0320 * k, G.sleeve), nd(at(0.240), 0.0380 * k, 0.0340 * k, G.sleeve),
     ], [0, 1, 0]);
   }
 
@@ -105,14 +105,14 @@ export function buildHands(THREE, dims) {
     wrapFinger(-0.0585, +1, 0.0, 1.0), wrapFinger(-0.0765, +1, 0.0, 0.96), wrapFinger(-0.0925, +1, 0.0, 0.88, 0.0078),
     thumb(-0.0225, -0.0215, 0.0040, 0.0330, 0.0600),
     index(curl),
-    forearm([0.0140, -0.0130, 0.0130], [0.20, -1.0, 0.8], 0.8),
+    forearm([0.0140, -0.0130, 0.0130], [0.40, -1.0, 0.50], 0.62),
   ];
   // ---- the support hand -------------------------------------------------------------------------------------------------
   const leftLimbs = () => [
     chain([nd([-0.0215, -0.0430, -0.0100], 0.0125, 0.0225), nd([-0.0235, -0.0650, -0.0090], 0.0125, 0.0230), nd([-0.0200, -0.0850, -0.0020], 0.0110, 0.0200)], [0, 0, -1]),
     wrapFinger(-0.0535, -1, 0.0145, 1.0), wrapFinger(-0.0715, -1, 0.0145, 1.0), wrapFinger(-0.0885, -1, 0.0145, 0.94), wrapFinger(-0.1040, -1, 0.0145, 0.86, 0.0075),
     thumb(-0.0085, -0.0235, 0.0150, 0.0420, 0.0700, 1.05),
-    forearm([-0.0230, -0.0560, 0.0200], [-0.30, -0.50, 1.0], 0.85),
+    forearm([-0.0230, -0.0560, 0.0200], [-0.45, -1.0, 0.50], 0.62),
   ];
 
   // ---- the materials: both hands share the colours; the firing hand's material morphs the trigger finger ----------------

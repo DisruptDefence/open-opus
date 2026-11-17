@@ -34,7 +34,7 @@ export const SIDEARM = Object.freeze({ hipPos: [0.075, -0.112, -0.285], adsDista
   // backstrap) and its rotation [pitch, yaw, roll] in DEGREES (pitch negative = muzzle down, yaw positive = muzzle to
   // the left, roll positive = top of the slide tilted to the left, inboard for a right hand). Tuned by picture at 16:9,
   // 16:10 and 21:9 (engine/tools/sidearm-shot.mjs) so that the slide, sights and muzzle stand above the phone's top edge.
-  phoneReady: Object.freeze({ pos: Object.freeze([0.095, 0.020, -0.32]), rot: Object.freeze([-8, 14, 15]), sway: 0.0025 }),
+  phoneReady: Object.freeze({ pos: Object.freeze([0.095, 0.050, -0.28]), rot: Object.freeze([-3, 12, 15]), sway: 0.0025 }),
   phoneRaise: 0.3, phoneLower: 0.25 });
 
 export function createSidearm(i, weaponId, W, deps = {}) {

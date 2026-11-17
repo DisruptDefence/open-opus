@@ -351,6 +351,8 @@ export function buildPistolView(THREE, opts = {}) {
     fb.add(frontZone(-0.064, -0.090), { ...STIPPLE, crease: 40, name: 'stippleFront' });
     fb.add(backZone(-0.038, -0.078), { ...STIPPLE, crease: 40, name: 'stippleBack' });
 
+    // the slide rails of the frame: a steel strip each side under the slide, from the web to the dust cover
+    for (const side of [-1, 1]) fb.add(box(0.0012, 0.0036, 0.1020, side * 0.0122, -0.0020, -0.0560), { ...STEEL, name: 'slideRail' + side });
     // takedown lever (left, above the trigger): a boss and a short arm
     fb.add(pin(0.0046, 0.0900, -0.0080, -0.0158, -0.0124, 20, 0.0040), { ...STEEL, name: 'takedownBoss' });
     fb.add(sideExtrude([[0.0900, -0.0100], [0.1105, -0.0090], [0.1115, -0.0060], [0.0900, -0.0060]], -0.0158, -0.0136, { bevel: 0.0004 }), { ...STEEL, crease: 40, name: 'takedownArm' });
@@ -412,11 +414,11 @@ export function buildPistolView(THREE, opts = {}) {
     serr(0.0042, 'rearSerr'); serr(0.1165, 'frontSerr');
 
     // sights: rear notch block on a dovetail, front post on a dovetail; three white dots
-    const rf0 = -0.0075, rf1 = 0.0020, sTop = D.sightTop, yD = yT;
+    const rf0 = -0.0075, rf1 = 0.0020, sTop = D.sightTop, rTop = D.sightTop - 0.0012, yD = yT;
     sb.add(box(0.0176, 0.0016, rf1 - rf0 + 0.0010, 0, yD + 0.0004, -(rf1 + rf0 - 0.0010) / 2), { ...STEEL, name: 'rearDovetail' });
-    for (const side of [-1, 1]) sb.add(sideExtrude([[rf0, yD], [rf1, yD], [rf1, sTop], [rf0 + 0.0014, sTop]], side > 0 ? 0.0027 : -0.0078, side > 0 ? 0.0078 : -0.0027, { bevel: 0.0002 }), { ...STEEL, crease: 40, name: 'rearPost' + side });
+    for (const side of [-1, 1]) sb.add(sideExtrude([[rf0, yD], [rf1, yD], [rf1, rTop], [rf0 + 0.0014, rTop]], side > 0 ? 0.0027 : -0.0078, side > 0 ? 0.0078 : -0.0027, { bevel: 0.0002 }), { ...STEEL, crease: 40, name: 'rearPost' + side });
     sb.add(box(0.0054, 0.0036, rf1 - rf0, 0, yD + 0.0018, -(rf0 + rf1) / 2), { ...STEEL, name: 'rearNotchFloor' });
-    for (const side of [-1, 1]) sb.add(disc(0.0016, side * 0.0052, sTop - 0.0040, -rf0 + 0.0002, 1), { ...DOT, solid: false, name: 'rearDot' + side });
+    for (const side of [-1, 1]) sb.add(disc(0.0016, side * 0.0052, rTop - 0.0040, -rf0 + 0.0002, 1), { ...DOT, solid: false, name: 'rearDot' + side });
     sb.add(box(0.0074, 0.0014, 0.0092, 0, yD + 0.0003, -0.1615), { ...STEEL, name: 'frontDovetail' });
     sb.add(sideExtrude([[0.1575, yD], [0.1655, yD], [0.1655, sTop - 0.0007], [0.1633, sTop], [0.1595, sTop]], -0.0017, 0.0017, { bevel: 0.0002 }), { ...STEEL, crease: 40, name: 'frontPost' });
     sb.add(disc(0.0013, 0, sTop - 0.0006, -0.1585 + 0.0003, 1), { ...DOT, solid: false, name: 'frontDot' });
@@ -505,7 +507,7 @@ export function buildPistolView(THREE, opts = {}) {
 
   const sights = new THREE.Object3D(); sights.name = 'sights';
   const front = new THREE.Object3D(); front.name = 'front'; front.position.set(0, D.sightTop, -0.1595);
-  const rear = new THREE.Object3D(); rear.name = 'rear'; rear.position.set(0, D.sightTop - 0.0007, 0.0075);
+  const rear = new THREE.Object3D(); rear.name = 'rear'; rear.position.set(0, D.sightTop - 0.0012 - 0.0017, 0.0075);
   sights.add(front, rear); slide.add(sights);
 
   const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(0, boreY, -D.slideFront); group.add(muzzle);

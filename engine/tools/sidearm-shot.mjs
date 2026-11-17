@@ -56,8 +56,8 @@ try {
     // one round, then the clock nearly stops with the slide at the end of its stroke: the picture shows the recoil
     await G(() => { window.__hold.fire = true; });
     await until('a round', () => window.__g.weapon.ammo < 17, 5);
-    await G(() => { window.__hold.fire = false; window.__g.clock.setScale(0.012); });
-    await page.waitForTimeout(250); await shot('fire'); await G(() => window.__g.clock.setScale(1)); await page.waitForTimeout(600);
+    await G(() => { window.__hold.fire = false; window.__g.clock.setScale(0.03); });
+    await page.waitForTimeout(60); await shot('fire'); await G(() => window.__g.clock.setScale(1)); await page.waitForTimeout(600);
   }
   if (want.includes('locked')) {
     await G(() => { window.__g.weapon.ammo = 1; window.__hold.fire = true; }); await page.waitForTimeout(150); await G(() => { window.__hold.fire = false; });
@@ -74,14 +74,14 @@ try {
       await page.keyboard.press('KeyT'); await page.waitForTimeout(1400);
       report.held = await G(() => window.__OPUS_WORLD.held());
       await shot(`phone-${w}x${h}`);
-      await page.keyboard.press('KeyT'); await page.waitForTimeout(900);
+      await page.keyboard.press('Tab'); await page.waitForTimeout(900); // Tab puts it away whatever is on the glass (a live ATAK takes every other key)
       if (w === sizes[0][0] && h === sizes[0][1]) await shot('phone-lowered');
     }
     await page.setViewportSize({ width: vw, height: vh }); await page.waitForTimeout(500);
   }
   if (want.includes('carbine')) {
     await page.keyboard.press('Digit1'); await page.waitForTimeout(1200); await shot('carbine-hip');
-    await page.keyboard.press('KeyT'); await page.waitForTimeout(1400); await shot('carbine-phone'); await page.keyboard.press('KeyT'); await page.waitForTimeout(800);
+    await page.keyboard.press('KeyT'); await page.waitForTimeout(1400); await shot('carbine-phone'); await page.keyboard.press('Tab'); await page.waitForTimeout(800);
   }
   report.ok = true;
 } catch (e) { report.error = String((e && e.stack) || e); await shot('failed').catch(() => {}); }
