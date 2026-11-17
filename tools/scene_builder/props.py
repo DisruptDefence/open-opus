@@ -11,7 +11,7 @@ from .geom import centroid, inside, num, ring_area, seg_dist
 from .ground import ROAD_WIDTH
 
 BUILT = {"bench_slat", "lamp_lantern", "bollard_iron", "cannon", "flagpole", "plinth", "monument_tall", "pavilion", "planter", "ship_cargo"}
-RIVER_BELOW = 0.8     # ground.py: terrain cells under this height are river (the river is a relation the builder does not read as a polygon)
+WATER_TOL = 0.05      # the river is a relation the builder does not read as a polygon: it is the terrain at or under the water level (the one water sheet the reader draws is hidden by any higher ground)
 COMPASS = {"N": 0, "NNE": 22.5, "NE": 45, "ENE": 67.5, "E": 90, "ESE": 112.5, "SE": 135, "SSE": 157.5, "S": 180, "SSW": 202.5,
            "SW": 225, "WSW": 247.5, "W": 270, "WNW": 292.5, "NW": 315, "NNW": 337.5}
 
@@ -176,11 +176,12 @@ def street_lamps(ctx, items: list, kinds: list, add_item) -> None:
 
 
 def on_water(ctx, x: float, z: float) -> bool:
-    """A mapped water polygon covers the point, or the terrain there is river (below RIVER_BELOW, ground.py)."""
+    """A mapped water polygon covers the point, or the terrain there is at or under the water level (so the reader's water sheet shows)."""
     for w in (getattr(ctx, "features", None) or {}).get("water", []):
         if inside((x, z), w["ring"]):
             return True
-    return ctx.ground is not None and ctx.ground(x, z) < RIVER_BELOW
+    level = float(((getattr(ctx, "layers", None) or {}).get("water") or {}).get("level", 0.0))
+    return ctx.ground is not None and ctx.ground(x, z) <= level + WATER_TOL
 
 
 def place_items(ctx, add_raw) -> int:
@@ -202,7 +203,7 @@ def place_items(ctx, add_raw) -> int:
         y = None
         if sp.get("on") == "water":
             if not on_water(ctx, x, z):
-                raise SystemExit(f"{tag}: `on: water` but the point is not on water (no water polygon, and the terrain there is not below {RIVER_BELOW} m)")
+                raise SystemExit(f"{tag}: `on: water` but the point is not on water (no water polygon, and the terrain there is above the water level by more than {WATER_TOL} m)")
             y = round(level, 2)
         grid = (float(sp["bearing"]) - conv) % 360       # true heading = grid heading + convergence (SCENE-FORMAT 2.2)
         add_raw(kind, x, z, round(grid, 1), int(sp.get("variant", 0)), 3, y)
@@ -263,7 +264,7 @@ def build(ctx) -> dict:
     if placed:
         rules["place_props"] = (f"Props placed by the place file's `props` (source 3): {placed} item(s) at the given lat/lon, the bearing given in degrees true "
                                 "turned to grid by the scene's convergence, whole-metre-tenths position; `on: water` sets the item's own height (a 7th field) to the "
-                                "water level and fails the build where the point is neither inside a water polygon nor on terrain below 0.8 m.")
+                                "water level and fails the build where the point is neither inside a water polygon nor on terrain at or under the water level (+0.05 m).")
     if items:
         rules["props"] = ("Props: OSM nodes whose key=value is in the style pack's `props` (and shelters with a round footprint, as open pavilions) become "
                           "prop items (source 0); direction from the `direction` tag, benches face the nearest terrace balustrade within 14 m; "

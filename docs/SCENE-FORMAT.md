@@ -307,7 +307,7 @@ Props `items` are `[kind index, x, z, yawDeg, variant, source]`; `source` is `0`
 style pack's street rule (`street.lamps`: along the roads of the listed classes, every `spacing` m, `offset` m behind the kerb line).
 `3` an item the place file itself puts on the map (the place file's optional `props`: `[{ "kind", "lat", "lon", "bearing" (degrees true), "variant", "on" }]`;
 the builder converts the position and turns the bearing to grid by the scene's convergence, and fails the build, naming the entry, for an unknown kind, a
-point outside the extent, or `"on": "water"` on a point that is neither inside a water polygon nor on terrain under 0.8 m). An item may carry a **7th field,
+point outside the extent, or `"on": "water"` on a point that is neither inside a water polygon nor on terrain at or under the water level (+0.05 m)). An item may carry a **7th field,
 `y`**: its own height in metres (`on: water` writes the scene's water level); a reader that does not know it uses the ground's height, as for every other item.
 `variant` is the kind's own: for `ship_cargo` it is the hull colour (`variant % 3`: blue-grey, black, oxide red) and, from 3 up, `floor(variant / 3)` is the height
 in metres above the water where its mooring lines end (the wharf's height, which the kind cannot know).

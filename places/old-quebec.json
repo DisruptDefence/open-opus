@@ -34,6 +34,6 @@
     }
   ],
   "props": [
-    { "kind": "ship_cargo", "lat": 46.8116994, "lon": -71.2014886, "bearing": 11.8, "variant": 12, "on": "water" }
+    { "kind": "ship_cargo", "lat": 46.8119998, "lon": -71.2011013, "bearing": 12.4, "variant": 0, "on": "water" }
   ]
 }

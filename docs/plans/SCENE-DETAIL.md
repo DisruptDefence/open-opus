@@ -277,7 +277,7 @@ Collision is derived from the kind (4 below).
 `on: "water"` adds a 7th item field, `y`, the water level, which the mesher and the collision use instead of the ground. `ship_cargo` (`gen/ship.js`, 95 m, three soups,
 about 4 000 triangles, its collider the hull as one box, the deck not walkable) is the first kind that uses it. Found while placing it: Old Quebec's `water` layer holds
 only ponds and fountains, because the St Lawrence is an OpenStreetMap relation the builder does not read; the river exists only as terrain at y = 0 (HRDEM), so `on: water`
-also accepts terrain under 0.8 m. Reading the river relation into the `water` layer would give it a polygon, a level and a renderer surface; that is the builder's next step.
+also accepts terrain at or under the water level (the one water sheet is hidden by any higher ground; the 0.2 to 0.8 m shoal band the builder's cover rule calls river is drawn as sand). Reading the river relation into the `water` layer would give it a polygon, a level and a renderer surface; that is the builder's next step.
 
 ### 3.6 Manifest
 
