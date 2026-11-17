@@ -65,6 +65,57 @@ void surf(vec2 uv){
   emit(col, 1.0, crack * (0.4 + 0.4 * strata + 0.2 * v.z) + grain * 0.1, mix(0.45, 1.0, crack), 0.9, 0.0);
 }`;
 
+// Concrete sidewalk slabs, driven by the geometry (gen/ground.js): uv.x = metres along the walk / (4 slabs), so one tile is
+// four slabs long; uv.y = metres across / 6. Two bands in v: 0..0.5 for a walk narrower than 2.4 m (one slab across), 0.5..1
+// for a wider one (a long joint down the walk at 1.5 m from the kerb edge). In the narrow band the kerb edge is at 0.12 m, in
+// the wide one at 3 m (so the shader knows where the kerb is). The colour is a neutral light grey: the style's sidewalk
+// colour is the vertex tint. Joints, per-slab tone, a few hairline cracks, old and new patches, pale granite flags.
+GENERATORS.sidewalk_slab = `
+void surf(vec2 uv){
+  float su = uv.x * 4.0, k = floor(su), fu = su - k;
+  float vm = uv.y * 6.0, wide = step(0.5, uv.y);
+  float a = vm - mix(0.12, 3.0, wide);
+  float side = wide * step(4.5, vm), row = wide * 2.0 + side;
+  vec3 r = h3(vec2(k, row), vec2(4.0, 4.0), 201.0), r2 = h3(vec2(k, row), vec2(4.0, 4.0), 202.0);
+  float mid = fbm(uv, vec2(10.0), 4, 206.0), fine = fbm(uv, vec2(220.0), 3, 204.0), chipn = fbm(uv, vec2(60.0), 3, 203.0);
+  vec4 ag = vor(uv * 500.0, vec2(500.0), 205.0); float stone = smoothstep(0.38, 0.2, ag.x) * step(ag.z, 0.55);
+  float jd = min(min(fu, 1.0 - fu) * 1.5, wide > 0.5 ? abs(vm - 4.5) : 9.0) + (chipn - 0.5) * 0.007;
+  float joint = smoothstep(0.0150, 0.0070, jd), lip = smoothstep(0.045, 0.0, jd);
+  vec2 wu = uv + (vec2(fbm(uv, vec2(7.0), 3, 207.0), fbm(uv, vec2(7.0), 3, 208.0)) - 0.5) * 0.02;
+  vec4 cw = vor(wu * 6.0, vec2(6.0), 209.0);
+  float crack = smoothstep(0.006, 0.0015, cw.y - cw.x) * step(0.9, r2.y) * step(0.01, a);
+  float tone = 1.0 + (r.x - 0.5) * 0.14 + (fu - 0.5) * (r2.x - 0.5) * 0.05;
+  float old = step(0.8, r.y), flag = step(0.93, r.z);
+  vec3 col = L(0.80, 0.80, 0.78) * tone * (0.86 + 0.3 * mid) * (0.9 + 0.2 * fine);
+  col *= mix(1.0, 0.9, old);
+  col = mix(col, col * (0.65 + 0.7 * ag.w), stone * 0.45);
+  col = mix(col, L(0.99, 0.985, 0.97) * (0.88 + 0.2 * fine) * (1.0 - stone * 0.3 * ag.w), flag * 0.75);
+  float kb = smoothstep(0.3, 0.0, a) * step(-0.2, a);
+  col *= 1.0 - kb * (0.1 + 0.12 * fine);
+  col *= 1.0 - lip * 0.1;
+  col = mix(col, L(0.3, 0.3, 0.29), crack * 0.7);
+  col = mix(col, L(0.26, 0.26, 0.25), joint);
+  float h = 0.62 + (mid - 0.5) * 0.1 + (fine - 0.5) * 0.08 + (fu - 0.5) * (r2.x - 0.5) * 0.12 - lip * 0.04 - joint * 0.5 - crack * 0.18;
+  float rough = 0.9 - 0.08 * fine + old * 0.05 - flag * 0.12;
+  emit(col, 1.0, h, 1.0 - joint * 0.6 - crack * 0.35, rough, 0.0);
+}`;
+
+// Sawn light grey granite for kerb stones, stair treads and door steps (SOUP.kerb, SOUP.tread). The albedo is a light neutral
+// grey with a fine salt-and-pepper speckle: the style's kerbColor / treadColor (vertex tint) IS the colour you see. The library's
+// `concrete` is a mid grey (0.5) and, tinted by a mid grey too, came out nearly black.
+GENERATORS.kerb_granite = `
+void surf(vec2 uv){
+  float mid = fbm(uv, vec2(9.0), 4, 301.0), fine = fbm(uv, vec2(160.0), 3, 302.0), saw = fbm(uv * vec2(1.0, 0.3), vec2(40.0, 12.0), 3, 303.0), big = fbm(uv, vec2(3.0), 3, 304.0);
+  vec4 sp = vor(uv * 420.0, vec2(420.0), 305.0), sp2 = vor(uv * 160.0, vec2(160.0), 306.0);
+  float dark = smoothstep(0.34, 0.12, sp.x) * step(sp.z, 0.42), pale = smoothstep(0.3, 0.1, sp2.x) * step(0.72, sp2.z);
+  vec3 col = L(0.94, 0.94, 0.92) * (0.9 + 0.14 * mid) * (0.92 + 0.12 * fine) * (0.94 + 0.1 * big);
+  col *= 1.0 - dark * 0.38 * (0.5 + sp.w * 0.5);
+  col = mix(col, L(1.0, 0.99, 0.97), pale * 0.5);
+  col *= 1.0 - smoothstep(0.55, 0.85, saw) * 0.06;
+  float h = 0.55 + (mid - 0.5) * 0.1 + (fine - 0.5) * 0.14 - dark * 0.1 + (saw - 0.5) * 0.06;
+  emit(col, 1.0, h, 1.0 - dark * 0.2, 0.78 + 0.1 * fine, 0.0);
+}`;
+
 // uP.x: 0 = dirt, 1 = gravel, 2 = sand
 GENERATORS.dirt = `
 void surf(vec2 uv){
@@ -209,6 +260,8 @@ Object.assign(SETS, {
   roof_membrane: { fn: 'roof', size: 0.5, tile: 3, bump: 1.5, p: [2], seed: 4 },
   leaves: { fn: 'leaves', size: 0.5, tile: 3, bump: 6 },
   wear: { fn: 'wear', size: 1, tile: 4, bump: 0 },
+  sidewalk_slab: { fn: 'sidewalk_slab', size: 1, tile: 6, bump: 2.5 },
+  kerb_granite: { fn: 'kerb_granite', size: 1, tile: 1.5, bump: 2 },
 });
 
 // wet: how rain changes a surface; macro: large-scale variation. The numbers follow the library's own entries
@@ -231,6 +284,8 @@ Object.assign(MATERIALS, {
   roof_copper: def('roof_copper', { wet: SEALED, macro: MACRO }),
   roof_membrane: def('roof_membrane', { wet: SEALED, macro: MACRO }),
   leaves: def('leaves', { wet: [0.1, 0.3, 0.4, 0], macro: [0.3, 0.25, 0.3, 0.7] }),
+  sidewalk_slab: def('sidewalk_slab', { wet: [0.35, 0.45, 0.55, 0.1], macro: [0.14, 0.1, 0.35, 0.3] }),
+  kerb_granite: def('kerb_granite', { wet: [0.3, 0.4, 0.55, 0], macro: [0.1, 0.1, 0.35, 0.2] }),
   wear: def('wear', { tint: 3, transparent: true, wet: [0, 1, 0, 0], macro: [0, 0, 1, 0] }),
 });
 

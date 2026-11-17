@@ -46,10 +46,11 @@ export const SOUP = {
   door: 'door|v',           // uv 0..1 one door; tinted with the door colour
   shutter: 'wood|tvn',
   awning: 'tarp|vd',
-  kerb: 'concrete|tvn',     // kerb stones and kerb faces: sawn grey, triplanar, tinted (style.kerbColor), no shadow
+  kerb: 'kerb_granite|tvn', // kerb stones and kerb faces: sawn light grey granite, triplanar, tinted (style.kerbColor is the colour you see), no shadow
   paint: 'paint_white|tn',  // road markings
   wear: 'wear|n',           // street wear decals (gutter grit, tyre tracks, asphalt patches, oil): alpha-blended, uv = [along, across] in the wear texture's four bands
-  tread: 'concrete|tv',     // stair treads, stringers and door steps: grey stone or concrete, tinted (style.treadColor)
+  slab: 'sidewalk_slab|vn', // concrete sidewalk slabs: uv = [metres along / (4 slab), metres across / 6] (gen/ground.js), tinted (style.sidewalk.color), no shadow
+  tread: 'kerb_granite|tv', // stair treads, stringers and door steps: the same sawn granite, tinted (style.treadColor is the colour you see)
   iron: 'metal|tv',         // lamp posts, rails, bollards: dark iron, tinted
   timber: 'wood|tv',
   lampGlass: 'glass_lamp|n',
@@ -114,7 +115,7 @@ export const DEFAULT_STYLE = {
   cornice: { depth: 0.2, height: 0.25 }, plinth: { height: 0.4, depth: 0.04, color: '#a39d92' },
   dormers: { mansard: 1.0, gabled: 0.25, width: 1.1, height: 1.4 },
   chimneys: { perBuilding: [0, 1], width: 0.8, depth: 0.6, above: 1.0 },
-  sidewalk: { width: 1.6, surface: 'concrete' },
+  sidewalk: { width: 1.6, surface: 'concrete', slab: 1.5, color: '#a9a59c' },
   kerb: 0.14, kerbColor: '#8d8a84', treadColor: '#9a968e', season: 'summer',
   // street wear (gen/ground.js): how much of each kind a street gets, 0 = none, 1 = the usual; all drawn near only
   wear: { gutter: 1, tracks: 1, patches: 1, oil: 1, manholes: 1 },
@@ -151,4 +152,5 @@ export function paletteColor(list, index, fallback = [0.8, 0.8, 0.8]) {
 
 /** The tints of the kerb stones and of stair treads and door steps: the style's colours, linear; the defaults for an old scene without them. */
 export function kerbTint(style) { return parseColor(style && style.kerbColor) || parseColor(DEFAULT_STYLE.kerbColor); }
+export function sidewalkTint(style) { return parseColor(style && style.sidewalk && style.sidewalk.color) || parseColor(DEFAULT_STYLE.sidewalk.color); }
 export function treadTint(style) { return parseColor(style && style.treadColor) || parseColor(DEFAULT_STYLE.treadColor); }

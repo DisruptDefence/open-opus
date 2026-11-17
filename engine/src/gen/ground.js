@@ -55,7 +55,7 @@
 //   Must not  read the DOM or three.js, or draw outside what the record says (no invented streets).
 
 
-import { SOUP, GROUND_SOUP, SURFACE_NAMES, kerbTint, treadTint } from './style.js';
+import { SOUP, GROUND_SOUP, SURFACE_NAMES, kerbTint, treadTint, sidewalkTint } from './style.js';
 import { tri, quad, prism, rng, linear, shade, seedOf } from './soup.js';
 
 const LIFT_ROAD = 0.03, LIFT_MARK = 0.04, LIFT_MARGIN = 0.02, MARGIN = 0.6, KERB_STONE = 0.15;
@@ -220,7 +220,7 @@ function sidewalkStrips(road, style, others) {
       if (sb - sa < 0.4) continue;
       const M = sa === 0 && sb === plen ? P : between(P, cum, sa, sb), inner = offsetLine(M, side * hw), outer = offsetLine(M, side * (hw + width));
       const a = M[0], b = M[1], el = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-      out.push({ side, inner, outer, quads: stripQuads(inner, outer), stone: stripQuads(inner, offsetLine(M, side * (hw + Math.min(KERB_STONE, width)))), want: [side * (b[1] - a[1]) / el, -side * (b[0] - a[0]) / el], s: [sa, sb], cut: [sa > 0.001, sb < plen - 0.001] });
+      out.push({ side, inner, outer, quads: stripQuads(inner, outer), stone: stripQuads(inner, offsetLine(M, side * (hw + Math.min(KERB_STONE, width)))), want: [side * (b[1] - a[1]) / el, -side * (b[0] - a[0]) / el], s: [sa, sb], cut: [sa > 0.001, sb < plen - 0.001], cum: cumulative(M), M, sAbs: (road.s0 || 0) + sa });
     }
   }
   return out;
@@ -248,6 +248,43 @@ function wallAlong(soup, L, tile, y0, y1, want, tint = null) {
       const A = [p[0], hp + y0, p[1]], B = [q[0], hq + y0, q[1]], C = [q[0], hq + y1, q[1]], D = [p[0], hp + y1, p[1]];
       if (nrm < 0) quad(soup, A, B, C, D, tint); else quad(soup, B, A, D, C, tint);
     }
+  }
+}
+
+// ---- sidewalk slabs ------------------------------------------------------------------------------------------------
+// uv = [metres along the whole way x 1.5 / slab, metres across in the texture] for materials/outdoor.js `sidewalk_slab` (a
+// ground material's uv is in metres of its 6 m tile, so one tile is four slabs along): the joints are made by the geometry's
+// own coordinates, so they stay square to the walk on a bend. Narrow walks (< 2.4 m) use the lower half of the tile (kerb
+// edge at 0.12 m of 6), wide ones the upper half (kerb edge at 3 m, a long joint at 4.5).
+const SLAB_WIDE = 2.4;
+export function slabV(across, width) {
+  if (width <= SLAB_WIDE) return 0.12 + across;
+  return 3 + across * Math.min(1, 3 / width);
+}
+/** (s, t) in 0..1 of the point (x, z) inside the plan quad q = [p0, p1, p2, p3] (p0 to p1 along, p0 to p3 across), the bilinear map inverted. */
+function invBilinear(q, x, z) {
+  const [p0, p1, p2, p3] = q, ax = p1[0] - p0[0], az = p1[1] - p0[1], bx = p3[0] - p0[0], bz = p3[1] - p0[1];
+  const cx = p0[0] - p1[0] + p2[0] - p3[0], cz = p0[1] - p1[1] + p2[1] - p3[1];
+  const det0 = ax * bz - az * bx; let s = 0.5, t = 0.5;
+  if (Math.abs(det0) > 1e-12) { s = ((x - p0[0]) * bz - (z - p0[1]) * bx) / det0; t = ((z - p0[1]) * ax - (x - p0[0]) * az) / det0; }
+  for (let it = 0; it < 4; it++) {
+    const fx = p0[0] + ax * s + bx * t + cx * s * t - x, fz = p0[1] + az * s + bz * t + cz * s * t - z;
+    const jxs = ax + cx * t, jxt = bx + cx * s, jzs = az + cz * t, jzt = bz + cz * s, d = jxs * jzt - jxt * jzs;
+    if (Math.abs(d) < 1e-12) break;
+    s -= (fx * jzt - fz * jxt) / d; t -= (jxs * fz - jzs * fx) / d;
+  }
+  return [s, t];
+}
+/**
+ * One quad of a sidewalk strip into the slab soup: u0 = metres along the whole way at the centre line point `m0`, `d` its
+ * unit direction. A point's u is u0 plus its distance along `d`, so a slab is `slab` metres long however the quad is mitred, and
+ * its joint is square to the walk; v comes from how far across the strip the point is.
+ */
+function laySlab(soup, q, u0, m0, d, width, tile, lift, tint, slab) {
+  const k = 1.5 / slab;
+  for (let m = 1; m + 1 < 4; m++) for (const t of drape([q[0], q[m], q[m + 1]], tile)) {
+    const uv = t.map((p) => [(u0 + (p[0] - m0[0]) * d[0] + (p[2] - m0[1]) * d[1]) * k, slabV(invBilinear(q, p[0], p[2])[1] * width, width)]);
+    tri(soup, [t[0][0], t[0][1] + lift, t[0][2]], [t[1][0], t[1][1] + lift, t[1][2]], [t[2][0], t[2][1] + lift, t[2][2]], tint, uv[0], uv[1], uv[2]);
   }
 }
 
@@ -368,7 +405,11 @@ export function roadRibbons(soups, road, tile, style, others = null) {
   const hw = road.width / 2, road_ = soupOf(soups, surfaceSoup(road.surface)), L = offsetLine(P, hw), R = offsetLine(P, -hw);
   if (road.sidewalk === 'self') { // a way that is itself a sidewalk: raised by the kerb, with a kerb face on both edges and at both ends
     const stone = soupOf(soups, SOUP.kerb), kerb = style.kerb, kt = kerbTint(style);
-    for (const q of stripQuads(L, R)) lay(road_, q, tile, kerb);
+    const swc = style.sidewalk, slabbed = swc.surface === 'concrete' && (road.surface === 2 || road.surface === 4 || !road.surface); // a mapped sidewalk of paving or concrete is drawn as the style's slabs
+    if (slabbed) {
+      const cum = cumulative(P), wt = sidewalkTint(style), sl = Math.max(0.5, +swc.slab || 1.5), sg = soupOf(soups, SOUP.slab);
+      stripQuads(L, R).forEach((q, i) => { const a = P[i], l = cum[i + 1] - cum[i] || 1; laySlab(sg, q, (road.s0 || 0) + cum[i], a, [(P[i + 1][0] - a[0]) / l, (P[i + 1][1] - a[1]) / l], road.width, tile, kerb, wt, sl); });
+    } else for (const q of stripQuads(L, R)) lay(road_, q, tile, kerb);
     const out = (A) => [A[0][0] - P[0][0], A[0][1] - P[0][1]];
     wallAlong(stone, L, tile, 0, kerb, out(L), kt); wallAlong(stone, R, tile, 0, kerb, out(R), kt);
     const n = P.length - 1, dir = (a, b) => [b[0] - a[0], b[1] - a[1]];
@@ -382,12 +423,14 @@ export function roadRibbons(soups, road, tile, style, others = null) {
     for (const side of [1, -1]) if (!have.has(side)) for (const q of stripQuads(side > 0 ? L : R, offsetLine(P, side * (hw + MARGIN)))) lay(pave, q, tile, LIFT_MARGIN);
   }
   if (strips.length) {
-    const walk = soupOf(soups, GROUND_SOUP[Math.max(1, SURFACE_NAMES.indexOf(sw.surface))] || GROUND_SOUP[2]), stone = soupOf(soups, SOUP.kerb), kt = kerbTint(style);
+    const slabbed = sw.surface === 'concrete', slabLen = Math.max(0.5, +sw.slab || 1.5), wt = sidewalkTint(style);
+    const walk = slabbed ? soupOf(soups, SOUP.slab) : soupOf(soups, GROUND_SOUP[Math.max(1, SURFACE_NAMES.indexOf(sw.surface))] || GROUND_SOUP[2]), stone = soupOf(soups, SOUP.kerb), kt = kerbTint(style);
     for (const t of strips) {
-      for (const q of t.quads) lay(walk, q, tile, kerb);
+      if (slabbed && t.cum) t.quads.forEach((q, i) => { const a = t.M[i], l = t.cum[i + 1] - t.cum[i] || 1; laySlab(walk, q, t.sAbs + t.cum[i], a, [(t.M[i + 1][0] - a[0]) / l, (t.M[i + 1][1] - a[1]) / l], sw.width, tile, kerb, wt, slabLen); });
+      else for (const q of t.quads) lay(walk, q, tile, kerb);
       for (const q of t.stone) lay(stone, q, tile, kerb + 0.01, shade(kt, 1 + (rng(seedOf(q[0][0], q[0][1]))() * 2 - 1) * 0.06)); // each kerb stone its own tone, seeded by where it lies
       wallAlong(stone, t.inner, tile, LIFT_ROAD, kerb + 0.01, [-t.want[0], -t.want[1]], kt); // faces the carriageway axis
-      wallAlong(walk, t.outer, tile, 0, kerb, t.want); // faces away from it
+      wallAlong(walk, t.outer, tile, 0, kerb, t.want, slabbed ? wt : null); // faces away from it
       for (const k of [0, 1]) if (t.cut && t.cut[k]) { // where a mouth cuts the strip: a kerb face at that end, looking along the road, away from the strip
         const i = k ? t.inner.length - 1 : 0, j = k ? i - 1 : 1, o = t.outer.length - 1;
         wallAlong(stone, [t.inner[i], t.outer[k ? o : 0]], tile, 0, kerb + 0.01, [t.inner[i][0] - t.inner[j][0], t.inner[i][1] - t.inner[j][1]], kt);
