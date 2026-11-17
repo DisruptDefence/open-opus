@@ -21,6 +21,10 @@
 //                   viewer stands at (-ez, ex)), length, eave height y, rise over run of the slope above it, the
 //                   ring edge number. Empty when the roof takes none.
 //           ridge   where chimneys go: [{ x, z, y }]. Empty for flat roofs.
+//                   Additive: each slot also has `run` (horizontal run of its slope, eave to the top of that plane) and `hip`
+//                   (1 when the ends of the roof slope at the same pitch, else 0), for the landmark dormer tiers.
+//           top     only when the roof ends lower than hRoof says (a landmark's fallback hip): its height
+//           planes  ONLY for a building with a `look`: the roof planes as convex 3-D polygons [[x, y, z], ...] (landmark seams, rolls).
 //           parapet metres the outer wall rises above the eave (flat roofs with a parapet; else 0). The façade
 //                   generators raise their wall by it.
 //
@@ -38,11 +42,18 @@ import { ROOF_SOUP, ROOF_TINT_SOUP, WALL_SOUP } from './style.js';
 import { signedArea, centroid, pointInRing, obb, clip, inset, triangulate, ringsCross } from './poly.js';
 
 const PARAPET = 0.45, RAD = Math.PI / 180;
+/** The bell-cast profile of a conical roof: [fraction of the height, share of the flare still out]; straight above the last. */
+export const BELL = [[0, 1], [0.1, 0.3], [0.2, 0]];
 
 /** A triangle that faces up whatever order it was given in. */
 function upTri(s, a, b, c, tint) {
   const ny = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
   if (ny >= 0) tri(s, a, b, c, tint); else tri(s, a, c, b, tint);
+}
+/** A triangle that faces down whatever order it was given in (the underside of an overhang). */
+function downTri(s, a, b, c, tint) {
+  const ny = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+  if (ny <= 0) tri(s, a, b, c, tint); else tri(s, a, c, b, tint);
 }
 function isConvex(r) {
   let sign = 0; const n = r.length / 2;
@@ -78,7 +89,10 @@ function pieces(ring, holes, cuts, hfn) {
   }
   return list;
 }
-const liftPiece = (s, p, hfn, e, tint) => { const pts = []; for (let i = 0; i < p.length; i += 2) pts.push([p[i], e + hfn(p[i], p[i + 1]), p[i + 1]]); for (let i = 1; i + 1 < pts.length; i++) upTri(s, pts[0], pts[i], pts[i + 1], tint); };
+// the roof planes of a landmark (a building with a `look`), recorded as 3-D polygons for gen/landmark_roof.js; null otherwise
+let PLANES = null;
+const plane = (pts) => { if (PLANES) PLANES.push(pts); };
+const liftPiece = (s, p, hfn, e, tint) => { const pts = []; for (let i = 0; i < p.length; i += 2) pts.push([p[i], e + hfn(p[i], p[i + 1]), p[i + 1]]); plane(pts); for (let i = 1; i + 1 < pts.length; i++) upTri(s, pts[0], pts[i], pts[i + 1], tint); };
 
 /** The wall between the eave and a roof profile, along each edge of a ring; flip for a hole (its wall faces into the hole). */
 function profileWalls(ws, ring, flip, hfn, lines, e, tint) {
@@ -111,7 +125,7 @@ function strip(s, A, yA, B, yB, tint) {
   const n = A.length / 2;
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n, a = [A[i * 2], yA, A[i * 2 + 1]], b = [A[j * 2], yA, A[j * 2 + 1]], c = [B[j * 2], yB, B[j * 2 + 1]], d = [B[i * 2], yB, B[i * 2 + 1]];
-    upTri(s, a, b, c, tint); upTri(s, a, c, d, tint);
+    plane([a, b, c, d]); upTri(s, a, b, c, tint); upTri(s, a, c, d, tint);
   }
 }
 /** The ring and its holes moved in by d (holes grow); null when any of them fails. */
@@ -138,10 +152,10 @@ function slotsOf(ring, e, slopeOf, want) {
   return slots;
 }
 
-export function roof(soups, b, style) { // eslint-disable-line no-unused-vars
+export function roof(soups, b, style) {
   const tmp = createSoups();
   let info;
-  try { info = build(tmp, b); } catch (err) { // never throw: a flat cap, counted in roof.failures (a scene-wide test keeps it at 0)
+  try { info = build(tmp, b, style); } catch (err) { // never throw: a flat cap, counted in roof.failures (a scene-wide test keeps it at 0)
     roof.failures++; roof.lastError = err;
     const t = createSoups(); t.get(soupKey(b)); info = { slots: [], ridge: [], parapet: 0 };
     const s = t.get(soupKey(b)); cap(s, b.ring, b.holes || [], b.yBase + b.hEave, b.roofColor); soups.add(t); return info;
@@ -152,9 +166,10 @@ export function roof(soups, b, style) { // eslint-disable-line no-unused-vars
 roof.failures = 0;
 const soupKey = (b) => { const tab = b.roofColor ? ROOF_TINT_SOUP : ROOF_SOUP; return tab[b.roofMat] || tab[1]; };
 
-function build(soups, b) {
+function build(soups, b, style) {
   const tint = b.roofColor || null, s = soups.get(soupKey(b)), ws = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[1]), wtint = b.tint || null;
   const e = b.yBase + b.hEave, H = b.hRoof, ring = b.ring, holes = b.holes || [], info = { slots: [], ridge: [], parapet: 0 };
+  PLANES = b.look ? (info.planes = []) : null;
   const shape = H >= 0.2 ? b.roofShape : 0;
   const flat = () => {
     const inn = holes.length ? null : inset(ring, 0.3);
@@ -164,11 +179,14 @@ function build(soups, b) {
   };
   const top = e + H;
   const hippedIrregular = () => {
-    for (const d of [H, H / 2, H / 4]) {
+    // a landmark whose footprint no steep hip fits (the inset fails) gets a lower, steeper hip rather than a flat lid: `info.top` says where it ends
+    const tries = [[H, H], [H / 2, H], [H / 4, H]]; if (b.look) for (const d of [3, 2.5, 2, 1.5, 1, 0.5]) tries.push([d, Math.min(H, d * 3.2)]);
+    for (const [d, h] of tries) {
       const set = insetSet(ring, holes, d); if (!set) continue;
-      strip(s, ring, e, set.ring, top, tint); holes.forEach((h, k) => strip(s, h, e, set.holes[k], top, tint));
-      cap(s, set.ring, set.holes, top, tint);
-      const [cx, cz] = centroid(set.ring); if (pointInRing(cx, cz, set.ring)) info.ridge.push({ x: cx, z: cz, y: top });
+      const ty = e + h; if (h < H) info.top = ty;
+      strip(s, ring, e, set.ring, ty, tint); holes.forEach((hh, k) => strip(s, hh, e, set.holes[k], ty, tint));
+      cap(s, set.ring, set.holes, ty, tint);
+      const [cx, cz] = centroid(set.ring); if (pointInRing(cx, cz, set.ring)) info.ridge.push({ x: cx, z: cz, y: ty });
       return info;
     }
     return flat();
@@ -203,6 +221,7 @@ function build(soups, b) {
     }
     const slope = shape === 1 ? H / W : (0.6 * H) / (0.4 * W);
     info.slots = slotsOf(ring, e, () => slope, (i, len, x0, z0, x1, z1) => len >= 1.5 && Math.abs(((x1 - x0) * ux + (z1 - z0) * uz) / len) >= Math.cos(12 * RAD) && Math.abs(sf(x0, z0)) >= W - 0.3 && Math.abs(sf(x1, z1)) >= W - 0.3);
+    for (const sl of info.slots) { sl.run = shape === 1 ? W : 0.4 * W; sl.hip = 0; }
     return info;
   }
 
@@ -217,6 +236,7 @@ function build(soups, b) {
       profileWalls(ws, ring, false, hfn, lines, e, wtint);
       if (L - W > 0.3) info.ridge.push({ x: cx + ux * (L - W), z: cz + uz * (L - W), y: top }, { x: cx - ux * (L - W), z: cz - uz * (L - W), y: top }); else info.ridge.push({ x: cx, z: cz, y: top });
       info.slots = slotsOf(ring, e, () => H / W, (i, len, x0, z0, x1, z1) => len >= 1.5 && Math.abs(((x1 - x0) * ux + (z1 - z0) * uz) / len) >= Math.cos(12 * RAD) && Math.abs(sf(x0, z0)) >= W - 0.3 && Math.abs(sf(x1, z1)) >= W - 0.3);
+      for (const sl of info.slots) { sl.run = W; sl.hip = 1; }
       return info;
     }
     return hippedIrregular();
@@ -234,6 +254,7 @@ function build(soups, b) {
     cap(s, deck.ring, deck.holes, yd, tint);
     const nv = deck.ring.length / 2; for (let i = 0; i < nv && i < 8; i++) info.ridge.push({ x: deck.ring[i * 2], z: deck.ring[i * 2 + 1], y: yd });
     info.slots = slotsOf(ring, e, () => (0.8 * H) / a, (i, len) => len >= 2.5 && !(b.blind && b.blind.has(i)));
+    for (const sl of info.slots) { sl.run = a; sl.hip = 1; }
     return info;
   }
 
@@ -242,7 +263,17 @@ function build(soups, b) {
     let ok = !holes.length && pointInRing(cx, cz, ring);
     for (let i = 0; i < n && ok; i++) { const j = (i + 1) % n; if (((ring[i * 2] - cx) * (ring[j * 2 + 1] - cz) - (ring[i * 2 + 1] - cz) * (ring[j * 2] - cx)) * sa <= 0) ok = false; }
     if (!ok) return hippedIrregular();
-    for (let i = 0; i < n; i++) { const j = (i + 1) % n; upTri(s, [ring[i * 2], e, ring[i * 2 + 1]], [ring[j * 2], e, ring[j * 2 + 1]], [cx, top, cz], tint); }
+    const lk = b.look && style && style.looks && style.looks[b.look], bell = shape === 7 && lk && lk.turret && lk.turret.bellcast > 0 ? lk.turret.bellcast : 0;
+    let first = ring, y0 = e;
+    if (bell) { // bell-cast: the lowest fifth flares out to an eave `bell` m past the wall, three rings on a concave profile
+      let rm = 0; for (let i = 0; i < n; i++) rm += Math.hypot(ring[i * 2] - cx, ring[i * 2 + 1] - cz); rm /= n;
+      const rings = BELL.map(([t, k]) => { const sc = 1 - t + (bell * k) / rm, o = []; for (let i = 0; i < n; i++) o.push(cx + (ring[i * 2] - cx) * sc, cz + (ring[i * 2 + 1] - cz) * sc); return { o, y: e + H * t }; });
+      for (let k = 0; k + 1 < rings.length; k++) strip(s, rings[k].o, rings[k].y, rings[k + 1].o, rings[k + 1].y, tint);
+      const soffit = soups.get(WALL_SOUP[b.facade] || WALL_SOUP[1]); // the underside of the flared eave, in the wall's own soup
+      for (let i = 0; i < n; i++) { const j = (i + 1) % n, o = rings[0].o; const a = [ring[i * 2], e, ring[i * 2 + 1]], c = [ring[j * 2], e, ring[j * 2 + 1]], d = [o[j * 2], e, o[j * 2 + 1]], f = [o[i * 2], e, o[i * 2 + 1]]; downTri(soffit, a, f, d, wtint); downTri(soffit, a, d, c, wtint); }
+      first = rings[rings.length - 1].o; y0 = rings[rings.length - 1].y;
+    }
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n, A = [first[i * 2], y0, first[i * 2 + 1]], B = [first[j * 2], y0, first[j * 2 + 1]], C = [cx, top, cz]; plane([A, B, C]); upTri(s, A, B, C, tint); }
     info.ridge.push({ x: cx, z: cz, y: top });
     return info;
   }

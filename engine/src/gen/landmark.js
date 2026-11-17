@@ -18,11 +18,16 @@
 //   flag    { above, h, w, colors }                      a flagpole on the ridge of a building whose top is `above` m over its ground
 //   wall    [colours]                                    the wall colour of the building (one per building by its id), instead of the façade palette
 //   window  { bay: [lo, hi] }, dormers, chimneys         laid over the style's own for this building's façade
+// The château keys, each drawn only when present (landmark_roof.js describes them): base { storeys, material, color, dado },
+//   roof { seams, battens, ridgeDark, streaks }, dormers { tiers, spacing, width, height, gable, finial }, stacks { count,
+//   height, width, depth, capColor }, turret { bellcast, finial, eaveBand }, crown { corbel, parapetTurrets, cresting, above }.
 // Soups: SOUP.trim (stone dressing), SOUP.window (glass), ROOF_SOUP copper (caps), SOUP.iron (cresting). Budget: <= 9 000
 // triangles for a building of 40 edges and 8 storeys; near only for courses, oriels, windows.
 import { quad, tri, frame, rect, slab, box, shade } from './soup.js';
 import { SOUP, ROOF_SOUP, ROOF_TINT_SOUP, parseColor, paletteColor } from './style.js';
 import { signedArea } from './poly.js';
+import { bays } from './facade.js';
+import { roofSeams, stacks, dormerTiers, bartizans, hasCrown, ball } from './landmark_roof.js';
 
 const IRON = [0.03, 0.033, 0.036];
 export const lookOf = (style, b) => (b && b.look && style.looks && style.looks[b.look]) || null;
@@ -30,9 +35,15 @@ export const lookOf = (style, b) => (b && b.look && style.looks && style.looks[b
 const styled = new WeakMap();
 /** The style a landmark façade is drawn with: the look's `window`, `dormers`, `chimneys` laid over the pack's (cached per look). */
 export function lookStyle(style, look) {
-  if (!look || (!look.window && !look.dormers && !look.chimneys)) return style;
+  if (!look || (!look.window && !look.dormers && !look.chimneys && !look.stacks)) return style;
   let per = styled.get(style); if (!per) styled.set(style, (per = new Map()));
-  let s = per.get(look); if (!s) { s = { ...style }; for (const k of ['window', 'dormers', 'chimneys']) if (look[k]) s[k] = { ...style[k], ...look[k] }; per.set(look, s); }
+  let s = per.get(look);
+  if (!s) {
+    s = { ...style }; for (const k of ['window', 'dormers', 'chimneys']) if (look[k]) s[k] = { ...style[k], ...look[k] };
+    if (look.dormers && look.dormers.tiers > 0) s.dormers = { ...s.dormers, mansard: 0, gabled: 0 };   // the tiers below replace the façade's single row
+    if (look.stacks) s.chimneys = { ...s.chimneys, perBuilding: [0, 0] };                            // the stacks on the ridge replace the façade's chimneys
+    per.set(look, s);
+  }
   return s;
 }
 
@@ -57,12 +68,19 @@ export function landmarkNear(soups, b, groundAt, style, info) { // eslint-disabl
   const look = lookOf(style, b); if (!look) return;
   const T = soups.get(SOUP.trim), G = soups.get(SOUP.window), eave = b.yBase + b.hEave, lv = Math.max(1, b.levels || Math.round(b.hEave / 3.1));
   const stone = tintOf(style, look.course && look.course.tint), cb = look.corbel, co = look.course, ori = look.oriel, sl = look.slits;
-  const cap = soups.get(ROOF_SOUP[2] || ROOF_SOUP[0]), frameC = paletteColor(style.frames, 0);
+  const cap = soups.get(ROOF_SOUP[2] || ROOF_SOUP[0]), frameC = paletteColor(style.frames, 0), bs = look.base, tur = look.turret, crown = hasCrown(b, look);
   for (const e of edgesOf(b.ring, false)) {
     if (b.blind && b.blind.has(e.i)) continue;
     const base = baseOf(e, groundAt), sh = (eave - base) / lv, f = e.f, len = e.len; if (sh < 2 || len < 0.4) continue;
-    if (co) for (let s = Math.max(1, co.from || 1); s < lv; s += Math.max(1, co.every || 1)) slab(T, f, 0, len, base + s * sh - co.h / 2, base + s * sh + co.h / 2, 0, co.out, stone, 'fbt');
-    if (cb) {
+    if (bs) stoneBase(soups, e, b, look, style, base, sh);
+    if (co) for (let s = Math.max(1, co.from || 1, bs ? (bs.storeys || 1) + 1 : 0); s < lv; s += Math.max(1, co.every || 1)) slab(T, f, 0, len, base + s * sh - co.h / 2, base + s * sh + co.h / 2, 0, co.out, stone, 'fbt');
+    if (crown && len > 1) crownCorbel(soups, f, len, eave, look.crown, stone);
+    if (tur && tur.eaveBand && b.roofShape === 7 && len < 3) { // a band of small windows under the eave of a round turret
+      const wy = eave - (cb ? cb.h : 0.8) - 0.75, ww = Math.min(0.4, len * 0.45);
+      rect(G, f, len / 2 - ww / 2, len / 2 + ww / 2, wy, wy + 0.55, 0.02, null, [0, 0, 1, 1]);
+      slab(T, f, len / 2 - ww / 2 - 0.06, len / 2 + ww / 2 + 0.06, wy - 0.06, wy, 0, 0.07, stone, 'fbt'); slab(T, f, len / 2 - ww / 2 - 0.06, len / 2 + ww / 2 + 0.06, wy + 0.55, wy + 0.65, 0, 0.07, stone, 'fb');
+    }
+    if (cb && !crown) {
       const steps = cb.steps || 3, step = cb.h / steps;
       for (let k = 0; k < steps; k++) slab(T, f, 0, len, eave - cb.h + k * step, eave - cb.h + (k + 1) * step, 0, cb.out * ((k + 1) / steps), tintOf(style, cb.tint, stone), k === 0 ? 'fb' : 'fb');
     }
@@ -99,6 +117,29 @@ export function landmarkNear(soups, b, groundAt, style, info) { // eslint-disabl
     }
   }
   if (look.canopy) for (const pa of b.passages || []) canopy(soups, b, pa, groundAt, look.canopy, stone);
+  dormerTiers(soups, b, look, info, stone);
+}
+
+/** The ground storeys in rough stone (the plinth's own stone soup, so no new draw call per cell; `material` only chooses nothing yet): a dado under the windows, a stone pier on every bay line and a projecting band on top. A thin facing 0.06 m proud of the wall, so the façade generator is not touched. */
+function stoneBase(soups, e, b, look, style, base, sh) {
+  const bs = look.base, f = e.f, len = e.len, S = soups.get(SOUP.plinth), col = parseColor(bs.color) || [0.3, 0.29, 0.27];
+  const top = base + (bs.storeys || 1) * sh, front = b.front && b.front.has(e.i), round = len < 3, by = bays(len, lookStyle(style, look), b.id);
+  const blind = b.blind && b.blind.has(e.i), whole = blind || by.n === 0 || sh < 2.3, dado = bs.dado || 0.72, wmax = (style.window.width || 1) * 1.3 + 0.3;
+  if (whole) { slab(S, f, 0, len, base, top, 0, 0.06, col, 'ft'); }
+  else {
+    if (!front) slab(S, f, 0, len, base, base + dado, 0, 0.06, col, 'ft');
+    if (!round) for (let k = 0; k <= by.n; k++) {
+      const ub = by.start + k * by.width, p = (by.width - wmax) / 2; if (p < 0.25) continue;
+      const u0 = k === 0 ? 0 : ub - p, u1 = k === by.n ? len : ub + p; slab(S, f, u0, u1, base, top, 0, 0.06, col, 'flrt');
+    }
+  }
+  if (!round) slab(S, f, 0, len, top - 0.15, top + 0.15, 0, 0.16, col, 'fbt');
+}
+/** Heavy corbelling under the roof of a tall part: three courses stepping out to `corbel` m, and a bracket under every metre. */
+function crownCorbel(soups, f, len, eave, c, stone) {
+  const T = soups.get(SOUP.trim), out = c.corbel || 0.6;
+  for (let k = 0; k < 3; k++) slab(T, f, 0, len, eave - 0.9 + k * 0.3, eave - 0.6 + k * 0.3, 0, (out * (k + 1)) / 3, stone, 'fbt');
+  for (let u = 0.5; u < len - 0.3; u += 1.0) slab(T, f, u - 0.17, u + 0.17, eave - 1.7, eave - 0.9, 0, out * 0.6, shade(stone, 0.9), 'flrf');
 }
 
 /** A porte-cochere canopy over each end of a passage through the building: two stone piers, a deep stone beam and a copper-covered top. */
@@ -119,18 +160,22 @@ function canopy(soups, b, pa, groundAt, c, stone) {
 /** Ridge cresting and finials: drawn in `base` because they show against the sky from across the river. */
 export function landmarkBase(soups, b, style, info) {
   const look = lookOf(style, b); if (!look || !info) return;
-  const I = soups.get(SOUP.iron), top = b.yBase + b.hEave + b.hRoof, cr = look.crest, fi = look.finial, ridge = info.ridge || [];
+  const I = soups.get(SOUP.iron), top = info.top ?? b.yBase + b.hEave + b.hRoof, cr = look.crest || (look.crown && look.crown.cresting && hasCrown(b, look) ? { h: 0.6, w: 0.18 } : null), fi = look.finial, ridge = info.ridge || [];
   if (cr && ridge.length === 2 && Math.abs(ridge[0].y - ridge[1].y) < 0.05) {
     const [p, q] = ridge, l = Math.hypot(q.x - p.x, q.z - p.z);
     if (l > 1) box(I, (p.x + q.x) / 2, (p.z + q.z) / 2, (q.x - p.x) / l, (q.z - p.z) / l, l / 2, cr.w / 2, top - 0.05, top + cr.h, IRON, true);
   }
+  roofSeams(soups, b, look, info); stacks(soups, b, look, info, style); bartizans(soups, b, look);
   const fl = look.flag;
   if (fl && ridge.length && top - b.yBase >= fl.above) { // a flagpole on the highest ridge of a tall building; flags are plain colours, no emblem
     const p = ridge[0], F = soups.get(SOUP.awning), tops = fl.colors || ['#7a1620'], c = parseColor(tops[(b.id >>> 3) % tops.length]) || [0.5, 0.05, 0.05];
     box(I, p.x, p.z, 1, 0, 0.07, 0.07, top - 0.1, top + fl.h, IRON, true);
     quad(F, [p.x + 0.08, top + fl.h - 0.2, p.z], [p.x + fl.w, top + fl.h - 0.2, p.z], [p.x + fl.w, top + fl.h - fl.w * 0.55 - 0.2, p.z], [p.x + 0.08, top + fl.h - fl.w * 0.55 - 0.2, p.z], c, [0, 0, 1, 1]);
   }
-  if (fi) {
+  const tf = look.turret && look.turret.finial;
+  if (tf && b.roofShape === 7 && ridge.length) { // a tall finial with a ball on a cone
+    const p = ridge[0]; box(I, p.x, p.z, 1, 0, 0.05, 0.05, top - 0.15, top + tf, IRON, true); ball(I, p.x, top + tf + 0.12, p.z, 0.17, IRON);
+  } else if (fi) {
     const pts = b.roofShape === 7 || b.roofShape === 4 ? ridge.slice(0, 1) : ridge.length === 2 ? ridge : [];
     for (const p of pts) {
       box(I, p.x, p.z, 1, 0, fi.w / 2, fi.w / 2, top - 0.1, top + fi.h * 0.55, IRON, true);

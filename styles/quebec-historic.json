@@ -70,22 +70,30 @@
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
     "looks": {
       "chateau": {
-        "wall": ["#dcb98a", "#d2a97a", "#e0c093"],
+        "wall": ["#d6a878", "#c68c60", "#b98258"],
         "course": { "from": 1, "every": 1, "h": 0.32, "out": 0.12, "tint": "#d2c8ae" },
         "corbel": { "h": 0.85, "out": 0.42, "steps": 3, "tint": "#d2c8ae" },
         "oriel": { "every": 16, "w": 2.6, "depth": 0.95, "from": 2, "floors": 2, "rise": 2.6, "minEdge": 14 },
         "crest": { "h": 0.6, "w": 0.18 }, "finial": { "h": 2.4, "w": 0.3 },
         "canopy": { "depth": 2.6, "rise": 0.9 }, "flag": { "above": 55, "h": 9, "w": 3.6, "colors": ["#7a1620", "#243a5a", "#e8e4da"] },
         "window": { "bay": [3.0, 3.5] },
-        "dormers": { "mansard": 1.0, "gabled": 1.0, "width": 1.5, "height": 2.4 },
-        "chimneys": { "perBuilding": [2, 4], "width": 1.5, "depth": 1.0, "above": 3.2 }
+        "dormers": { "mansard": 1.0, "gabled": 1.0, "width": 1.3, "height": 2.2, "tiers": 2, "spacing": 3.2, "gable": "steep", "finial": true },
+        "chimneys": { "perBuilding": [2, 4], "width": 1.5, "depth": 1.0, "above": 3.2 },
+        "base": { "storeys": 1, "material": "stone_rubble", "color": "#b3ad9f", "dado": 0.72 },
+        "roof": { "seams": 0.6, "battens": true, "ridgeDark": 0.25, "streaks": 0.3 },
+        "stacks": { "count": [6, 10], "height": 4.5, "width": 1.4, "depth": 0.9, "capColor": "#a9a498" },
+        "turret": { "bellcast": 0.35, "finial": 1.2, "eaveBand": true },
+        "crown": { "corbel": 0.6, "parapetTurrets": 4, "cresting": true, "above": 60 }
       },
       "turret": {
-        "wall": ["#dcb98a", "#d2a97a"],
+        "wall": ["#d6a878", "#c68c60"],
         "course": { "from": 1, "every": 2, "h": 0.28, "out": 0.1, "tint": "#d2c8ae" },
         "corbel": { "h": 0.8, "out": 0.4, "steps": 3, "tint": "#d2c8ae" },
         "slits": { "w": 0.6, "h": 1.5, "sill": 0.9, "every": 2 },
-        "finial": { "h": 3.2, "w": 0.28 }
+        "finial": { "h": 3.2, "w": 0.28 },
+        "base": { "storeys": 1, "material": "stone_rubble", "color": "#b3ad9f", "dado": 0.8 },
+        "roof": { "seams": 0.5, "battens": true, "ridgeDark": 0.2, "streaks": 0.3 },
+        "turret": { "bellcast": 0.35, "finial": 1.2, "eaveBand": true }
       }
     },
     "kerb": 0.14, "kerbColor": "#928e88", "treadColor": "#9a968e", "season": "summer",

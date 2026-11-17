@@ -1253,3 +1253,9 @@ v up). The row is the room behind the glass (dark, curtains, blind lowered 55 %,
 triangles added per window); the sheet keeps only the glazing bars and the reflection. Shop panes use columns 1 and 7 over the whole height of the
 sheet. Known gaps: goods in shop windows are simple silhouettes; no shutters of their own colour logic changes; glass has no extra environment
 reflection (the material library gives `envMapIntensity` to transparent materials only).
+allows it); people. Each is either artist's work or a licensed asset; none is blocked by the engine.
+
+**Landmark château keys (2026-11-16).** A look can now carry `base`, `roof`, `dormers` (tiers), `stacks`, `turret` and `crown` (docs/SCENE-FORMAT.md,
+`style.looks`; `gen/landmark_roof.js`). `roof.js` returns, additively and only for a building with a look, `planes` (the roof planes as 3-D polygons),
+`top` (where a fallback hip ends) and a `run`/`hip` on each slot. A landmark part whose footprint no steep hip fits now gets a lower, steeper hip instead of
+a flat lid. Still open: coplanar roof pieces are cut at the centre lines, so dormer rows and rolls restart there; a real straight-skeleton roof would end it.
