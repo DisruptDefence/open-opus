@@ -1,23 +1,66 @@
 /* The phone a player raises with T: a rugged handset held sideways, rising from the bottom of the view.
    What is on the glass belongs to the screen (stream-screen.js); this file draws the device around it. */
 .opus-phone {
-  --w: min(58vw, 118vh); position: absolute; left: 50%; bottom: 3vh; width: var(--w); margin-left: calc(var(--w) / -2); z-index: 60;
-  padding: calc(var(--w) * .03) calc(var(--w) * .045); border-radius: calc(var(--w) * .045);
-  background: linear-gradient(180deg, #34373a, #1d1f21 55%, #141516);
-  box-shadow: 0 0 0 1px #08090a, inset 0 0 0 calc(var(--w) * .006) #101112, 0 calc(var(--w) * .03) calc(var(--w) * .08) rgba(0, 0, 0, .75);
+  --w: min(58vw, 118vh); --c: calc(var(--w) * .022); position: absolute; left: 50%; bottom: 3vh; width: var(--w); margin-left: calc(var(--w) / -2); z-index: 60;
+  padding: calc(var(--w) * .03) calc(var(--w) * .045);
+  filter: drop-shadow(0 calc(var(--w) * .02) calc(var(--w) * .03) rgba(0, 0, 0, .5)) drop-shadow(0 calc(var(--w) * .004) calc(var(--w) * .006) rgba(0, 0, 0, .5));
   transform: translateY(130%) rotate(-4deg); transition: transform .32s cubic-bezier(.2, .75, .25, 1); pointer-events: auto;
 }
 .opus-phone.on { transform: none; }
 .opus-phone[hidden] { display: none; }
-/* grips on the short edges */
-.opus-phone::before, .opus-phone::after { content: ''; position: absolute; top: 12%; bottom: 12%; width: 2.2%; border-radius: 99px;
-  background: repeating-linear-gradient(180deg, #0c0d0e 0 3px, #2a2c2e 3px 6px); opacity: .8; }
-.opus-phone::before { left: 1.1%; } .opus-phone::after { right: 1.1%; }
+/* The bumper shell: matte dark-earth polymer, 45 degree chamfered corners, a fine texture of two crossed gradients */
+.opus-phone::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #6a6253, #5b5346 45%, #463f35);
+  box-shadow: inset 0 1px 0 rgba(255, 245, 220, .38), inset 0 -1px 0 rgba(0, 0, 0, .55), inset 1px 0 0 rgba(255, 245, 220, .12), inset -1px 0 0 rgba(0, 0, 0, .3); }
+/* moulded relief: a pale rim just inside the frame and a shaded step down to the gasket */
+.opus-phone::after { content: ''; position: absolute; inset: calc(var(--w) * .006); pointer-events: none;
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), inset 0 calc(var(--w) * .004) calc(var(--w) * .006) rgba(255, 245, 220, .07); }
+.opus-phone-deco { position: absolute; display: block; pointer-events: none; }
+/* corner guards: raised, darker, each with one recessed screw head */
+.opus-phone-deco.guard { width: calc(var(--w) * .055); height: calc(var(--w) * .043); --s: calc(var(--w) * .0075);
+  background: radial-gradient(circle at var(--sx) var(--sy), #14110d 0 calc(var(--s) * .45), #8b826f calc(var(--s) * .62) calc(var(--s) * .95), transparent calc(var(--s) * 1.05)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 3px),
+    linear-gradient(145deg, #50483c, #2f2a23);
+  box-shadow: inset 0 1px 0 rgba(255, 245, 220, .3), inset 0 -2px 0 rgba(0, 0, 0, .55), inset -2px 0 0 rgba(0, 0, 0, .25), inset 2px 0 0 rgba(255, 245, 220, .08); }
+.guard.tl { left: 0; top: 0; --sx: 58%; --sy: 55%; clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+.guard.tr { right: 0; top: 0; --sx: 42%; --sy: 55%; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.guard.bl { left: 0; bottom: 0; --sx: 58%; --sy: 45%; clip-path: polygon(0 0, 100% 0, 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.guard.br { right: 0; bottom: 0; --sx: 42%; --sy: 45%; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%); }
+/* side keys on the top edge: raised rubber pads in cut-outs */
+.opus-phone-deco.key { top: calc(var(--w) * -.007); height: calc(var(--w) * .014); border-radius: calc(var(--w) * .004);
+  background: linear-gradient(180deg, #4a463f, #25231f); box-shadow: 0 0 0 calc(var(--w) * .0025) #17150f, inset 0 1px 0 rgba(255, 255, 255, .2); }
+.key.vol { left: 56%; width: calc(var(--w) * .11); } .key.pwr { left: 74%; width: calc(var(--w) * .05); }
+/* cable port on the left short side, with strain relief and a cable that fades away */
+.opus-phone-deco.port { left: calc(var(--w) * .006); top: 50%; width: calc(var(--w) * .03); height: calc(var(--w) * .07); margin-top: calc(var(--w) * -.035); border-radius: calc(var(--w) * .004);
+  background: repeating-linear-gradient(0deg, #1b1a17 0 calc(var(--w) * .003), #3e3b34 calc(var(--w) * .003) calc(var(--w) * .006)); box-shadow: 0 0 0 1px #0d0c0a, inset 0 0 0 1px rgba(255, 255, 255, .06); }
+.opus-phone-deco.cable { left: calc(var(--w) * -.13); top: 50%; width: calc(var(--w) * .14); height: calc(var(--w) * .022); margin-top: calc(var(--w) * -.011); border-radius: calc(var(--w) * .011) 0 0 calc(var(--w) * .011);
+  background: linear-gradient(180deg, #55524a, #1b1a17 55%, #0e0d0b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%); }
+.opus-phone-deco.cable::after { content: ''; position: absolute; right: 0; top: -22%; bottom: -22%; width: 20%; border-radius: calc(var(--w) * .006) 0 0 calc(var(--w) * .006); background: linear-gradient(180deg, #4a463f, #1c1b18); }
+/* lanyard loop on the right short side */
+.opus-phone-deco.lanyard { right: calc(var(--w) * -.02); top: 42%; width: calc(var(--w) * .04); height: calc(var(--w) * .05); border-radius: calc(var(--w) * .02);
+  border: calc(var(--w) * .0045) solid #2b2a25; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 1px 2px rgba(0, 0, 0, .5); }
+/* mount hint: the plate the case folds down from on a chest rig */
+.opus-phone-deco.hinge { left: 50%; width: calc(var(--w) * .4); margin-left: calc(var(--w) * -.2); bottom: calc(var(--w) * -.012); height: calc(var(--w) * .02);
+  border-radius: calc(var(--w) * .003); background: linear-gradient(180deg, #4d4639, #342f27); box-shadow: 0 0 0 1px #17150f, inset 0 1px 0 rgba(255, 245, 220, .3), 0 2px 3px rgba(0, 0, 0, .45); }
+.opus-phone-deco.knuckle { bottom: calc(var(--w) * -.014); width: calc(var(--w) * .035); height: calc(var(--w) * .024); border-radius: calc(var(--w) * .006);
+  background: linear-gradient(90deg, #2a2721, #6a6253 40%, #2a2721); box-shadow: 0 0 0 1px #15130f, 0 2px 3px rgba(0, 0, 0, .45); }
+.knuckle.l { left: 38%; } .knuckle.r { right: 38%; }
+/* the inner lip: a black rubber gasket, then the phone's own thin black bezel */
 .opus-phone-body { position: relative; padding: calc(var(--w) * .01) calc(var(--w) * .012) calc(var(--w) * .01) calc(var(--w) * .03);
-  border-radius: calc(var(--w) * .02); background: #040405; box-shadow: 0 0 0 1px #2c2e31, inset 0 0 0 1px #1a1b1d; }
+  border-radius: calc(var(--w) * .02); background: #040405; box-shadow: 0 0 0 calc(var(--w) * .005) #0b0b0a, 0 0 0 calc(var(--w) * .0055) #2a2822, inset 0 0 0 1px #1a1b1d; }
 .opus-phone-cam { position: absolute; left: calc(var(--w) * .011); top: 50%; width: calc(var(--w) * .01); height: calc(var(--w) * .01);
-  margin-top: calc(var(--w) * -.005); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2c3654, #05060a 60%); }
+  margin-top: calc(var(--w) * -.005); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(190, 200, 255, .55) 0 8%, transparent 16%), radial-gradient(circle, #05060a 0 38%, #3a3470 55%, #12122a 70%, #020203 100%); }
 .opus-phone-glass { position: relative; aspect-ratio: 1068 / 476; overflow: hidden; border-radius: calc(var(--w) * .006); background: #000; }
+/* a hairline dark edge and a faint diagonal reflection over the glass; neither takes a touch or a click */
+.opus-phone-glass::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .75); }
+.opus-phone-glass::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: .03;
+  background: linear-gradient(115deg, #fff 0 24%, transparent 24.4% 44%, #fff 44.4% 50%, transparent 50.4%); }
 
 /* what the game does while the phone is up, and the screen's own extra buttons */
 .opus-phone-bar { position: absolute; left: 50%; top: -34px; transform: translateX(-50%); display: flex; border: 1px solid rgba(255, 255, 255, .28);

@@ -10,11 +10,19 @@ import { createPhoneCore } from './core.js';
 
 const TYPING = /^(INPUT|TEXTAREA|SELECT)$/;
 
+// Purely decorative parts of the rugged case (phone.css draws them): four corner guards, two side keys, the cable port and
+// its cable, the lanyard loop, the mount hinge and its two knuckles. Hidden from assistive tech, never focusable, never hit.
+const DECO = ['guard tl', 'guard tr', 'guard bl', 'guard br', 'key vol', 'key pwr', 'port', 'cable', 'lanyard', 'hinge', 'knuckle l', 'knuckle r']
+  .map((c) => `<i class="opus-phone-deco ${c}" aria-hidden="true"></i>`).join('');
+// The phone's markup (the picture tool phone/tools/case-shot.mjs builds the same DOM from this).
+export const PHONE_HTML = DECO
+  + '<div class="opus-phone-bar"><button type="button" data-m="pause">Paused</button><button type="button" data-m="slow">Slow motion</button></div>'
+  + '<div class="opus-phone-body"><i class="opus-phone-cam"></i><div class="opus-phone-glass"></div></div>';
+
 export function createPhoneHost(world, screen, { mount = document.body, storage = safeStorage(), keys = true } = {}) {
   const frame = document.createElement('div'), launch = document.createElement('button');
   frame.className = 'opus-phone'; frame.hidden = true;
-  frame.innerHTML = '<div class="opus-phone-bar"><button type="button" data-m="pause">Paused</button><button type="button" data-m="slow">Slow motion</button></div>'
-    + '<div class="opus-phone-body"><i class="opus-phone-cam"></i><div class="opus-phone-glass"></div></div>';
+  frame.innerHTML = PHONE_HTML;
   launch.className = 'opus-phone-launch'; launch.type = 'button'; launch.hidden = true;
   launch.innerHTML = '<span></span><kbd>T</kbd>'; launch.firstChild.textContent = screen.title || 'Phone'; launch.title = `Raise the phone (T)`;
   mount.append(frame, launch);
