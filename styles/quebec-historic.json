@@ -17,7 +17,7 @@
   ],
   "roofPitchDeg": { "gabled": 45, "hipped": 32, "mansard": 70, "skillion": 15, "pyramidal": 50 },
   "street": {
-    "sidewalk": { "width": 1.6, "kerb": 0.14, "surface": "paving",
+    "sidewalk": { "width": 1.6, "kerb": 0.14, "surface": "concrete",
                   "on": ["primary", "secondary", "tertiary", "residential", "unclassified"] },
     "surface": { "pedestrian": "cobble", "living_street": "cobble", "footway": "paving", "steps": "rock",
                  "residential": "asphalt", "service": "asphalt", "path": "gravel" },
@@ -89,10 +89,14 @@
     "detail": {
       "default": { "strength": 0.85, "normal": 1, "rough": 1, "ao": 0.8, "hue": 0.1, "base": 0.3, "far": 60 },
       "materials": {
-        "stone": { "set": ["bricks076a", "medieval_blocks_05"], "scale": 1 },
-        "rubble": { "set": ["bricks102", "old_stone_wall"], "scale": 1 },
-        "brick": { "set": ["bricks003", "brick_wall_006"], "scale": 1 },
-        "stucco": { "set": ["plaster003", "worn_plaster_wall"], "scale": 1, "strength": 0.7 },
+        "stone": { "set": ["bricks076a", "medieval_blocks_05"], "scale": 0.6, "hue": 0.5 },
+        "rubble": { "set": ["bricks102", "old_stone_wall"], "scale": 0.8, "hue": 0.45 },
+        "brick": { "set": ["bricks003", "brick_wall_006"], "scale": 1, "hue": 0.35, "base": 0.36 },
+        "stucco": { "set": ["plaster003", "worn_plaster_wall"], "scale": 1, "strength": 1 },
+        "wall_stone": { "set": ["medieval_blocks_05", "bricks076a"], "scale": 0.8, "hue": 0.3, "strength": 1 },
+        "wall_rubble": { "set": ["old_stone_wall", "bricks102"], "scale": 0.7, "hue": 0.3, "strength": 1 },
+        "wall_brick": { "set": ["bricks003", "brick_wall_006"], "scale": 1, "hue": 0.4, "strength": 1 },
+        "wall_stucco": { "set": ["plaster003"], "scale": 1, "strength": 0.35 },
         "cobble": { "set": ["pavingstones119", "pavingstones046"], "scale": 1, "hue": 1, "base": 0.16, "alt": { "set": ["pavingstones131"], "cover": 0.25, "edge": 0.08, "size": 7, "tone": 0.9, "hue": 1 }, "tint": [1.06, 1.02, 0.95] },
         "asphalt": { "set": ["asphalt022", "asphalt_02"], "scale": 1, "hue": 1, "base": 0.09, "alt": { "set": ["asphalt_01"], "cover": 0.3, "edge": 0.03, "size": 5, "tone": 0.85, "hue": 0.15 } },
         "paving": { "set": ["pavingstones108", "pavement_01"], "scale": 1, "hue": 1, "base": 0.15, "alt": { "set": ["concrete_pavement_02"], "cover": 0.25, "edge": 0.03, "size": 4, "tone": 0.92, "hue": 0.3 } },
