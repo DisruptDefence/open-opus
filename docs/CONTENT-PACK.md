@@ -19,7 +19,7 @@ const world = openWorld({ source, content: myPack });   // an object, or a promi
 | `id` | the pack's name |
 | `threats` | archetypes by id: body, senses, weapon, behaviour table. The vocabulary is described at the top of `default.js` |
 | `threatTuning` | how many threats shoot at once, burst gap, how aim improves, wreck and bolt limits (`maxTokens`, `tokenGap`, …) |
-| `weapons` | by id: `name`, `magSize`, `reserve`, `rpm`, `damage`, `range`, `weakMultiplier`, `view` |
+| `weapons` | by id: `name`, `magSize`, `reserve`, `rpm`, `damage`, `range`, `weakMultiplier`, `view`, `auto` |
 | `loadout` | weapon ids the player carries, in order |
 | `player` | overrides of the player's tuning by key (`walk`, `sprint`, …); empty means the engine's |
 | `sounds.threats` | per archetype id, else per class (`ground` \| `air`): `fire`, `step`, `die`, `loop`, `voice`, and for people `pain`, `death`, `callout` |
@@ -50,12 +50,18 @@ Neither argument is modified.
 <!-- weapon: item D -->
 ## Weapons
 
-The player's weapon is `weapons[loadout[0]]`; `weapons/weapon.js` reads `name`, `magSize`, `reserve`, `rpm`,
-`damage` and `range` from it (the view model stays the engine's carbine; `view` is carried, not read). The
-snapshot's `self.weapon.id` is the pack key and `name` is the pack's name. A weapon without `reserve` has 0 and
-without `range` 300 m. `weakMultiplier` is **not read yet**: `combat.js` takes 2.2 as a literal. Only the first
-weapon of the loadout is used; several weapons and switching are not built. The engraving plate on the view
-model is blank.
+`weapons` holds the kinds by id; `loadout` lists the ids the player carries (the default pack: `['carbine', 'pistol']`).
+`weapons/weapon.js` reads `name`, `magSize`, `reserve`, `rpm`, `damage` and `range` from the entry. A weapon without
+`reserve` has 0 and without `range` 300 m. `auto`: `false` = one shot per trigger press, default `true` (hold to
+fire). `view` names the view model (`carbine`, `pistol`; the engine draws the stand-in's carbine for any other). The
+snapshot's `self.weapon.id` is the pack key and `name` is the pack's name. `weakMultiplier` is **not read yet**:
+`combat.js` takes 2.2 as a literal. The engraving plates on the view models are blank.
+
+The player carries the weapons of `loadout`, one in the hands (`weapons/carry.js`). Keys `1` and `2` (actions `weapon1`,
+`weapon2`) take the first or second; the swap lowers one and raises the other in 0.35 s, is refused during a reload, and each
+weapon keeps its own magazine and reserve. The HUD and the world API's `self.weapon` show the weapon in the hands. The
+sidearm (`view: 'pistol'`, `weapons/sidearm.js`, model `weapons/views/pistol.js`) fires once per press unless `auto` is
+true. The shot sound, the dry click and the reload sounds are still the carbine's.
 <!-- /weapon -->
 
 <!-- sound: item E -->

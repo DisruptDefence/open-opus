@@ -32,3 +32,21 @@ test('a product changes the weapon in its pack, and the merged pack is valid', (
   assert.equal(p.weapons.carbine.magSize, 20);
   assert.equal(DEFAULT_PACK.weapons.carbine.magSize, 30);
 });
+
+test('the default pack has a sidearm as the second weapon, fired once per press, and validates', () => {
+  assert.deepEqual(DEFAULT_PACK.loadout, ['carbine', 'pistol']);
+  const w = DEFAULT_PACK.weapons.pistol;
+  assert.deepEqual({ name: w.name, magSize: w.magSize, reserve: w.reserve, rpm: w.rpm, damage: w.damage, range: w.range, view: w.view, auto: w.auto },
+    { name: 'P320', magSize: 17, reserve: 51, rpm: 400, damage: 18, range: 50, view: 'pistol', auto: false });
+  assert.deepEqual(validatePack(DEFAULT_PACK), []);
+});
+
+test('`auto`, when a weapon has it, must be true or false', () => {
+  const bad = JSON.parse(JSON.stringify(DEFAULT_PACK));
+  bad.weapons.pistol.auto = 'no';
+  const e = validatePack(bad);
+  assert.equal(e.length, 1, e.join(' | '));
+  assert.match(e[0], /pistol.*auto/);
+  const ok = JSON.parse(JSON.stringify(DEFAULT_PACK)); delete ok.weapons.pistol.auto;
+  assert.deepEqual(validatePack(ok), []);
+});

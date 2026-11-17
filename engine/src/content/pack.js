@@ -25,6 +25,7 @@ export function validatePack(pack, { validateBehaviour } = {}) {
     if (!plain(pack.weapons)) errors.push('weapons: not an object');
     else for (const [id, w] of Object.entries(pack.weapons)) {
       for (const k of ['magSize', 'rpm', 'damage']) if (!plain(w) || !(w[k] > 0)) errors.push(`weapon "${id}": ${k} must be a positive number`);
+      if (plain(w) && w.auto !== undefined && typeof w.auto !== 'boolean') errors.push(`weapon "${id}": auto must be true or false`);
     }
   }
   if (pack.loadout !== undefined) {
