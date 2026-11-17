@@ -57,8 +57,11 @@ fire). `view` names the view model (`carbine`, `pistol`; the engine draws the st
 snapshot's `self.weapon.id` is the pack key and `name` is the pack's name. `weakMultiplier` is **not read yet**:
 `combat.js` takes 2.2 as a literal. The engraving plates on the view models are blank.
 
-Status of the sidearm (`pistol`, a 9 mm striker-fired service pistol, the view model in `weapons/views/pistol.js`): the
-pack entry and the model exist; see the engine notes for whether `weapon.js` draws it and switches to it.
+The player carries the weapons of `loadout`, one in the hands (`weapons/carry.js`). Keys `1` and `2` (actions `weapon1`,
+`weapon2`) take the first or second; the swap lowers one and raises the other in 0.35 s, is refused during a reload, and each
+weapon keeps its own magazine and reserve. The HUD and the world API's `self.weapon` show the weapon in the hands. The
+sidearm (`view: 'pistol'`, `weapons/sidearm.js`, model `weapons/views/pistol.js`) fires once per press unless `auto` is
+true. The shot sound, the dry click and the reload sounds are still the carbine's.
 <!-- /weapon -->
 
 <!-- sound: item E -->

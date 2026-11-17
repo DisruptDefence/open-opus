@@ -29,7 +29,10 @@ const views = {
   grip: { pos: [-0.30, -0.10, 0.12], at: [0, -0.07, -0.02], fov: 22 },
   fpv: { pos: [0, 0.0355 + 0.06, -0.012 + 0.45], at: [0, 0.0135, -0.5], fov: 28 },
 };
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+// GPU=1 draws on the graphics card (run it as `GPU=1 GALLIUM_DRIVER=d3d12 flock ...`); otherwise software WebGL
+const browser = await chromium.launch(process.env.GPU
+  ? { channel: 'chromium', headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--window-position=4000,4000', '--window-size=1280,720'] }
+  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const log = []; page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') log.push(`[${m.type()}] ${m.text().slice(0, 400)}`); }); page.on('pageerror', (e) => log.push('[pageerror] ' + String(e.stack || e).slice(0, 600)));
 const report = { url, pictures: [], ok: false };

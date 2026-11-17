@@ -23,6 +23,8 @@ import {
   Vector3,
 } from '../../vendor/three.module.js';
 import { Fn, Ii, SKY, SUN, Wi, clamp, damp, lerp, saturate, zc } from '../shared/lifted.js';
+import { createSidearm } from './sidearm.js'; // OPUS
+import { createCarry } from './carry.js'; // OPUS
 
 export var im = (i, e, t) => {
     let n = Math.sin(i * 12.9898 + e * 78.233 + t * 37.719) * 43758.5453;
@@ -2257,10 +2259,23 @@ export function ma(i, e, t) {
   return i.x;
 }
 export var i0 = (i, e, t, n = 'XYZ') => new fm().setFromEuler(new Euler(i, e, t, n));
+/**
+ * OPUS: the player's weapons, by the pack's `loadout`. Each id is built by its entry's `view`: 'pistol' is the sidearm
+ * (sidearm.js), anything else the carbine below. One weapon: that weapon alone, as before. Several: carry.js, which is a
+ * weapon object itself and switches between them.
+ */
 export async function createWeapon(i) {
+  const ids = i.content.loadout.length ? i.content.loadout : [undefined];
+  const weapons = [];
+  for (const id of ids) {
+    const W = { reserve: 0, range: 300, ...i.content.weapons[id] };
+    weapons.push(W.view === 'pistol' ? createSidearm(i, id, W, { flash: N_ }) : await createCarbine(i, id));
+  }
+  return weapons.length === 1 ? weapons[0] : createCarry(i, weapons);
+}
+async function createCarbine(i, weaponId = i.content.loadout[0]) {
   // OPUS: the weapon's numbers and name come from the content pack (docs/CONTENT-PACK.md), not from this file
-  const weaponId = i.content.loadout[0],
-    W = { reserve: 0, range: 300, ...i.content.weapons[weaponId] }; // the pack validator requires only magSize, rpm and damage
+  const W = { reserve: 0, range: 300, ...i.content.weapons[weaponId] }; // the pack validator requires only magSize, rpm and damage
   let e = new Group();
   e.name = 'viewmodel-carbine';
   let t = w_(),
