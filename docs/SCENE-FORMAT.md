@@ -314,6 +314,13 @@ point outside the extent, or `"on": "water"` on a point that is neither inside a
 `y`**: its own height in metres (`on: water` writes the scene's water level); a reader that does not know it uses the ground's height, as for every other item.
 `variant` is the kind's own: for `ship_cargo` it is the hull colour (`variant % 3`: blue-grey, black, oxide red) and, from 3 up, `floor(variant / 3)` is the height
 in metres above the water where its mooring lines end (the wharf's height, which the kind cannot know).
+`4` is a parked vehicle placed by the style pack's street rule (`street.parking`) and `5` a bystander placed by `street.people` (`tools/scene_builder/streetlife.py`,
+appended to the same layer after `props.py`). Kinds: `car_hatch`, `car_sedan`, `car_suv`, `van_delivery`, `bicycle` (variant 0 to 7 = the paint) and `person_stand`
+(variant: pose = variant mod 5, everything else from variant div 5). They are static scenery: nothing moves, a vehicle stops walkers and bullets, a bystander is a
+prop with a collider and is never a threat or a scoring target. Style keys, both optional (a pack without them places none):
+`street.parking = { on: [highway classes], share, minWidth, kinds: { kind: weight }, bikes, max (250) }` (one side of the road by the way id's parity, parallel to the kerb,
+6 m slots each filled with chance `share`, never within 8 m of a junction, crossing, road end, steps, tunnel or bridge) and
+`street.people = { density (groups per 100 m of sidewalk), squares (groups per 1 000 m2 of pedestrian area), groups: [sizes drawn from], max (300 people) }`.
 
 ### 4.5 Vegetation
 

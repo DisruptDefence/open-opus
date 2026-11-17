@@ -34,6 +34,9 @@ export const PROP_KIT = {};
 import { box, tri, triN, quad, fan, shade } from './soup.js';
 import { SOUP, ROOF_SOUP } from './style.js';
 import { PROP_SHIP_CARGO } from './ship.js';
+import { VEHICLE_KIT } from './vehicles.js';
+import { PERSON_KIT } from './bystander.js';
+Object.assign(PROP_KIT, VEHICLE_KIT, PERSON_KIT);
 
 const IRON = [0.03, 0.033, 0.036], GREEN_PAINT = [0.02, 0.1, 0.05], STONE = [0.42, 0.4, 0.36], BRONZE = [0.2, 0.36, 0.28], WHITE = [0.8, 0.78, 0.72];
 // a prop's own frame: right, up, forward (the facing), at the plan point (x, z) turned by yaw

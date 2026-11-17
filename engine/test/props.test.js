@@ -12,13 +12,13 @@ import { vertices } from './helpers.js';
 
 const style = resolveStyle();
 
-test('every prop in the kit: stands on its ground, fills its collider and no more, turns with yaw, 30 to 250 triangles', () => {
+test('every prop in the kit: stands on its ground, fills its collider and no more, turns with yaw, 30 to 250 triangles (a kind may declare a larger maxTriangles)', () => {
   for (const [kind, kit] of Object.entries(PROP_KIT)) {
     assert.equal(typeof kit.build, 'function', kind); assert.ok(kit.collider === null || typeof kit.collider.h === 'number', `${kind}: collider is null or has a height`);
     const at = (yaw) => { const soups = createSoups(); kit.build(soups, 100, 20, -50, yaw, 0, style); return soups; };
     const a = at(0), b = at(-Math.PI / 2), va = vertices(a), vb = vertices(b);
     const big = kit.big, below = big ? big.below : 0;   // a hull in the water (gen/ship.js: tests/ship.test.js holds its own checks)
-    assert.ok(big ? a.triangles() <= big.maxTriangles : a.triangles() >= 30 && a.triangles() <= 250, `${kind}: ${a.triangles()} triangles`); assert.ok(a.map.size <= 3, `${kind}: at most three soups`);
+    assert.ok(big ? a.triangles() <= big.maxTriangles : a.triangles() >= 30 && a.triangles() <= (kit.maxTriangles ?? 250), `${kind}: ${a.triangles()} triangles`); assert.ok(a.map.size <= 3, `${kind}: at most three soups`);
     assert.ok(Math.abs(Math.min(...va.map((v) => v[1])) - (20 - below)) <= 0.02, `${kind}: stands on the ground`);
     // facing east is the model facing north turned a quarter: (dx, dz) -> (-dz, dx)
     const key = (v) => v.map((n) => n.toFixed(4)).join(), turned = new Set(va.map(([x, y, z]) => key([100 - (z + 50), y, -50 + (x - 100)])));
