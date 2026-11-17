@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pistol shot</title>
+<style>html,body{margin:0;background:#8a8d91;overflow:hidden}canvas{display:block}</style></head>
+<body>
+<script type="module">
+// A standalone page for pictures of the pistol view model (tools/pistol-shot.mjs). Not the game: one key light, one
+// fill, a neutral environment, a mid-grey background.
+import * as THREE from '../vendor/three.module.js';
+import { buildPistolView } from '../src/weapons/views/pistol.js';
+
+const W = 1280, H = 720;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#8a8d91');
+// neutral environment: a grey room of three tones, baked once, so steel has something to reflect
+const env = new THREE.Scene();
+env.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: '#a0a4a9', side: THREE.BackSide })));
+const panel = (c, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); env.add(m); };
+panel('#ffffff', 0, 4.8, 0, 6, 0.2, 6); panel('#d8dadd', -4.8, 1, 1, 0.2, 4, 5); panel('#5a5d61', 0, -4.8, 0, 9, 0.2, 9); panel('#b0b3b7', 3, 1, -4.8, 4, 3, 0.2);
+const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, 0.02).texture; scene.environmentIntensity = 1.8;
+const key = new THREE.DirectionalLight('#fff4e6', 3.0); key.position.set(0.5, 1.0, 0.6); scene.add(key);
+const fill = new THREE.DirectionalLight('#cfe0ff', 0.7); fill.position.set(-0.8, 0.2, 0.4); scene.add(fill);
+
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.005, 5); scene.add(cam);
+let view = null;
+const parts = () => view.parts;
+window.build = (frameColor, pose = {}) => {
+  if (view) { scene.remove(view.group); }
+  view = buildPistolView(THREE, { frameColor });
+  scene.add(view.group);
+  const p = view.parts, A = view.dims.anim;
+  p.slide.position.z = pose.slide ? A.slideTravel : 0;
+  p.barrel.rotation.x = pose.slide ? A.barrelTilt : 0;
+  p.trigger.rotation.x = pose.pull ? A.triggerPull : 0;
+  p.slideStop.rotation.x = pose.slide ? -0.1 : 0;
+  p.magazine.position.copy(A.magAxis).multiplyScalar(pose.mag || 0);
+  return { triangles: view.dims.triangles, dims: { drawCalls: view.dims.drawCalls } };
+};
+// look: camera position and target in group space (metres), fov in degrees
+window.shoot = ({ pos, at, fov = 30, up = [0, 1, 0] }) => {
+  cam.fov = fov; cam.up.set(...up); cam.position.set(...pos); cam.lookAt(...at); cam.updateProjectionMatrix();
+  renderer.render(scene, cam);
+  return renderer.info.render.calls;
+};
+window.__ready = true;
+</script>
+</body></html>
