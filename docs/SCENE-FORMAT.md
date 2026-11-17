@@ -198,6 +198,9 @@ style pack (`docs/plans/SCENE-DETAIL.md` section 2).
 | `vignette`, `ca`, `grain`, `sharpen` | vignette, chromatic aberration, film grain, sharpening | `0.12`, `0.0004`, `0.02`, `0.3` |
 | `bloom`, `agx` | bloom strength; share of the AgX curve against ACES | `0.065`, `0.25` |
 | `farHaze`, `fogSigma` | volumetric haze: far-distance share and density | `0.42`, `0.0034` |
+| `cloudScale`, `cloudSharp`, `cloudHigh` | the sky's cumulus field: size (1 = about 450 m across on a layer 1 500 m up), edge hardness 0 to 1, opacity of the thin high streak layer 0 to 1. Cover itself is `ambience.cloud` (0 clear, 1 overcast) | `1`, `0.5`, `0.25` |
+| `sunGlow`, `horizonBand` | strength of the sun's aureole (0 none); width of the pale horizon band and the ground haze line, 0 to 1 | `1`, `0.6` |
+| `windDir`, `windSpeed` | the way clouds drift: degrees clockwise from grid north (towards), and metres per second | `250`, `6` |
 
 ## 4. Layers
 

@@ -56,6 +56,9 @@ export const DEFAULT_LOOK = {
   vignette: 0.12, ca: 0.0004, grain: 0.02, sharpen: 0.3,
   bloom: 0.065, agx: 0.25,
   farHaze: 0.42, fogSigma: 0.0034, // volumetric haze
+  cloudScale: 1, cloudSharp: 0.5, cloudHigh: 0.25, // cumulus size (x), edge hardness 0..1, opacity of the high streak layer 0..1
+  sunGlow: 1, horizonBand: 0.6, // strength of the sun's aureole; width of the pale horizon band and ground haze 0..1
+  windDir: 250, windSpeed: 6, // the way the clouds drift (degrees clockwise from grid north, towards) and how fast (m/s)
 };
 
 const copyLook = (o) => { const r = {}; for (const k in o) r[k] = Array.isArray(o[k]) ? o[k].slice() : o[k]; return r; };
