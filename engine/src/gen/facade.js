@@ -143,7 +143,8 @@ function pickWeighted(table, r) {
   let x = r * total; for (const k in table) if (table[k] > 0) { x -= table[k]; if (x <= 0) return k; }
   return null;
 }
-/** The state of the room behind a window = the row of the window sheet (v up: row r is v r/4 .. (r+1)/4). */
+/** The state of the room behind a window = the row of the window sheet. The sheet is 8 x 4 tiles and a mesh's uv counts tiles (the material
+ *  repeats 1/8 x 1/4): row r is v r .. r + 1, a quarter of the sheet; v 0 is the bottom (the sill) of the pane, v up. */
 export const WINDOW_STATES = ['dark', 'curtains', 'blind', 'lit'], DEFAULT_STATES = { dark: 3, curtains: 3, blind: 2, lit: 0.6 };
 /** One draw of the building's window stream -> a row 0..3 by the weights of style.window.states (neutral default). */
 function stateRow(wd, r) {
@@ -152,8 +153,10 @@ function stateRow(wd, r) {
   let a = x; for (let i = 0; i < 4; i++) { const v = w[WINDOW_STATES[i]] > 0 ? w[WINDOW_STATES[i]] : 0; if (v > 0) { a -= v; if (a <= 0) return i; } }
   return 3;
 }
-/** Glass uv of a panel in a row: u panel .. panel + 1, v a quarter of the sheet. */
-const glassUV = (panel, row) => [panel, row / 4, panel + 1, (row + 1) / 4];
+/** Glass uv of a panel in a row: u panel .. panel + 1, v row .. row + 1 (a quarter of the sheet). */
+const glassUV = (panel, row) => [panel, row, panel + 1, row + 1];
+/** Which of the two shop displays (sheet columns 1 and 7) a shop bay shows: a hash of the building and the bay, no stream drawn. */
+const shopPanel = (id, k) => (Math.imul(((id | 0) ^ 0x3c6ef372) + k * 40503, 2654435761) >>> 16) & 1 ? 7 : 1;
 /** One type per storey of a building (seeded), `blind` mixed in per bay by its share of the weights. */
 function storeyType(wd, cls, id, s) {
   const mix = (wd.mix && (wd.mix[cls] || wd.mix.upper)) || {}, r = rng(((id | 0) * 2654435761 + s * 40503 + 17) >>> 0), plain = {}; let blind = 0, all = 0;
@@ -194,7 +197,7 @@ function spandrels(w, f, o, tint) {
 }
 /** The glass of an arched opening: the rectangle up to the springing and the segment above it, uv = the panel over the whole height. */
 function archGlass(G, f, o, d, panel, row, tint) {
-  const w = o.u1 - o.u0, h = o.yTop - o.ys, uv = (u, y) => [panel + (u - o.u0) / w, (row + (y - o.ys) / h) / 4], P = (u, y) => f.at(u, y, d), hint = [f.nx, 0, f.nz];
+  const w = o.u1 - o.u0, h = o.yTop - o.ys, uv = (u, y) => [panel + (u - o.u0) / w, row + (y - o.ys) / h], P = (u, y) => f.at(u, y, d), hint = [f.nx, 0, f.nz];
   const ring = [[o.u0, o.ys], [o.u1, o.ys], ...o.arc.pts.slice().reverse()], cu = (o.u0 + o.u1) / 2, cy = (o.ys + o.yh) / 2, C = P(cu, cy);
   for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; facingUV(G, P(a[0], a[1]), P(b[0], b[1]), C, tint || null, hint, uv(a[0], a[1]), uv(b[0], b[1]), uv(cu, cy)); }
 }
@@ -230,7 +233,7 @@ function roundel(soups, f, rd, y0, lk, tint) {
   const G = soups.get(SOUP.window), T = soups.get(SOUP.trim), n = 12, hint = [f.nx, 0, f.nz], P = (a, k, d) => f.at(rd.c + Math.cos(a) * k, rd.y + Math.sin(a) * k, d), C = f.at(rd.c, rd.y, 0.04);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2, uvOf = (ang) => [6 + 0.5 + Math.cos(ang) * 0.45, 0.5 + Math.sin(ang) * 0.45];
-    facingUV(G, P(a, rd.rad, 0.04), P(b, rd.rad, 0.04), C, null, hint, uvOf(a), uvOf(b), [6.5, ((rd.row || 0) + 0.5) / 4]);
+    facingUV(G, P(a, rd.rad, 0.04), P(b, rd.rad, 0.04), C, null, hint, uvOf(a), uvOf(b), [6.5, (rd.row || 0) + 0.5]);
     const A = P(a, rd.rad, 0.05), B = P(b, rd.rad, 0.05), A2 = P(a, rd.rad + 0.09, 0.05), B2 = P(b, rd.rad + 0.09, 0.05); facing(T, A, B, B2, lk.trim, hint); facing(T, A, B2, A2, lk.trim, hint);
   }
   void tint; void y0;
@@ -330,7 +333,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
       const c = centre(k), isDoor = ground && doors.has(k);
       if (ground && front && b.groundFloor === 1 && !isDoor) { // a shop window
         const hw = by.width / 2 - gfl.shopPier / 2, top = y0 + sh - gfl.fascia - 0.12;
-        ops.push({ kind: 'shop', u0: c - hw, u1: c + hw, ys: y0 + gfl.shopSill, yh: top, r: 0.16 });
+        ops.push({ kind: 'shop', u0: c - hw, u1: c + hw, ys: y0 + gfl.shopSill, yh: top, r: 0.16, panel: shopPanel(b.id, k) });
       } else if (isDoor) {
         const dw = b.groundFloor === 2 ? 2.6 : door.w, dh = b.groundFloor === 2 ? Math.min(2.4, sh - 0.3) : door.h;
         ops.push({ kind: 'door', u0: c - dw / 2, u1: c + dw / 2, ys: y0, yh: y0 + dh, r: lk.recess, big: b.groundFloor === 2 });
@@ -361,7 +364,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         if (lk.shutters && !o.blind) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [o.panel, 0, o.panel + 1, 4]); // a shop pane uses the whole height of its column border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
         const pw = o.u1 - o.u0, nl = Math.max(2, Math.round(pw / 1.1)), yt = o.yh - 0.5;
         if (pw > 1.7) for (let k = 1; k < nl; k++) { const um = o.u0 + k * pw / nl; rect(T, f, um - 0.035, um + 0.035, o.ys + 0.08, o.yh - 0.08, -o.r + 0.04, lk.shopC); }
         if (o.yh - o.ys > 1.9) rect(T, f, o.u0 + 0.08, o.u1 - 0.08, yt - 0.03, yt + 0.03, -o.r + 0.04, lk.shopC);

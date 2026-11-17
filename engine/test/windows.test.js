@@ -18,7 +18,7 @@ test('the room behind the glass: all four states occur at the shares of the weig
   const count = [0, 0, 0, 0]; let n = 0;
   for (let id = 1; id <= 40; id++) {
     const q = glassQuads(near(wallOnly({ id })));
-    for (const g of q) { const row = Math.round(g.v0 * 4); assert.ok(Math.abs(g.v0 * 4 - row) < 1e-9 && Math.abs((g.v1 - g.v0) - 0.25) < 1e-9, 'v spans exactly a quarter'); assert.ok(row >= 0 && row <= 3); count[row]++; n++; }
+    for (const g of q) { const row = Math.round(g.v0); assert.ok(Math.abs(g.v0 - row) < 1e-9 && Math.abs(g.v1 - g.v0 - 1) < 1e-9, 'v spans exactly one tile = a quarter of the sheet'); assert.ok(row >= 0 && row <= 3); count[row]++; n++; }
     assert.deepEqual(glassQuads(near(wallOnly({ id }))), q, 'the same building twice');
   }
   assert.ok(n >= 200, `windows ${n}`);
@@ -27,7 +27,7 @@ test('the room behind the glass: all four states occur at the shares of the weig
 });
 test('window states come from style.window.states; a style without the key draws with the defaults', () => {
   const lit = { ...fixed, window: { ...fixed.window, states: { dark: 0, curtains: 0, blind: 0, lit: 1 } } };
-  assert.ok(glassQuads(near(wallOnly({ id: 5 }), lit)).every((g) => Math.round(g.v0 * 4) === 3));
+  assert.ok(glassQuads(near(wallOnly({ id: 5 }), lit)).every((g) => Math.round(g.v0) === 3));
   const old = { ...fixed, window: { ...fixed.window } }; delete old.window.states;
   assert.ok(glassQuads(near(wallOnly({ id: 5 }), old)).length === 9);
 });
@@ -74,4 +74,14 @@ test('an arched window has its frame too: trim 0.05 to 0.08 in front of the glas
   const glass = -Math.max(...[...g.pos].filter((_, i) => i % 3 === 2));
   const front = tris(soups.map.get(SOUP.trim), (p) => p.every((v) => Math.abs(-v[2] - (glass + 0.06)) < 1e-6) && p.every((v) => Math.abs(v[0] - 5) < 0.6));
   assert.ok(front.length >= 20, `frame triangles on the centre bays: ${front.length}`);
+});
+
+test('shop panes: two displays by seed (sheet columns 1 and 7), each over the whole height of its column, the same building the same panes', () => {
+  const cols = new Set(); let total = 0;
+  for (let id = 1; id <= 30; id++) {
+    const b = () => wallOnly({ id, front: new Set([0]), groundFloor: 1 }), q = glassQuads(near(b()));
+    assert.deepEqual(glassQuads(near(b())), q);
+    for (const g of q) if (g.u0 === 1 || g.u0 === 7) { cols.add(g.u0); total++; assert.equal(g.v0, 0); assert.equal(g.v1, 4, 'the whole height of the column'); }
+  }
+  assert.deepEqual([...cols].sort(), [1, 7]); assert.ok(total >= 30);
 });
