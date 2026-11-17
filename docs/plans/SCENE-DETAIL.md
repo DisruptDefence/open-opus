@@ -273,6 +273,12 @@ and assumption can be told apart, as `hs` does for heights). An unknown kind is 
 chunk: fixed records `kind uint8, x, z float32, yaw uint8 (2° steps), variant uint8, flags uint8`.
 Collision is derived from the kind (4 below).
 
+**Place-file props and ships (source 3).** A place file's `props` list puts a prop at a lat/lon with a true bearing (`props.py`, `test_place_props.py`);
+`on: "water"` adds a 7th item field, `y`, the water level, which the mesher and the collision use instead of the ground. `ship_cargo` (`gen/ship.js`, 95 m, three soups,
+about 4 000 triangles, its collider the hull as one box, the deck not walkable) is the first kind that uses it. Found while placing it: Old Quebec's `water` layer holds
+only ponds and fountains, because the St Lawrence is an OpenStreetMap relation the builder does not read; the river exists only as terrain at y = 0 (HRDEM), so `on: water`
+also accepts terrain under 0.8 m. Reading the river relation into the `water` layer would give it a polygon, a level and a renderer surface; that is the builder's next step.
+
 ### 3.6 Manifest
 
 | Key | Meaning |

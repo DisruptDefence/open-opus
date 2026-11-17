@@ -1,7 +1,8 @@
 """Street furniture as a prop layer: item 8 of docs/plans/SCENE-DETAIL.md (the kinds the landmark rules and the terraces need; the
 rest of the plan's table waits). Mapped nodes (and round shelters, as pavilions) whose `key=value` is in the style pack's `props`
 become items with source 0; the lamps a terrace rule asks for, source 1. A place's landmark rule may name a node by `match` and give it
-a `prop` (kind, variant) of its own: that is how one monument is a tall one while the rest are plain plinths."""
+a `prop` (kind, variant) of its own: that is how one monument is a tall one while the rest are plain plinths. A place file's own `props`
+([{kind, lat, lon, bearing, variant, on}]) become items with source 3; `on: "water"` also gives the item the height of the water."""
 from __future__ import annotations
 
 import math
@@ -9,7 +10,8 @@ import math
 from .geom import centroid, inside, num, ring_area, seg_dist
 from .ground import ROAD_WIDTH
 
-BUILT = {"bench_slat", "lamp_lantern", "bollard_iron", "cannon", "flagpole", "plinth", "monument_tall", "pavilion", "planter"}
+BUILT = {"bench_slat", "lamp_lantern", "bollard_iron", "cannon", "flagpole", "plinth", "monument_tall", "pavilion", "planter", "ship_cargo"}
+RIVER_BELOW = 0.8     # ground.py: terrain cells under this height are river (the river is a relation the builder does not read as a polygon)
 COMPASS = {"N": 0, "NNE": 22.5, "NE": 45, "ENE": 67.5, "E": 90, "ESE": 112.5, "SE": 135, "SSE": 157.5, "S": 180, "SSW": 202.5,
            "SW": 225, "WSW": 247.5, "W": 270, "WNW": 292.5, "NW": 315, "NNW": 337.5}
 
@@ -173,6 +175,40 @@ def street_lamps(ctx, items: list, kinds: list, add_item) -> None:
                                  f"{placed} placed, dropped: {d_build} inside a building, {d_close} too close to another lamp, {d_out} outside the extent.")
 
 
+def on_water(ctx, x: float, z: float) -> bool:
+    """A mapped water polygon covers the point, or the terrain there is river (below RIVER_BELOW, ground.py)."""
+    for w in (getattr(ctx, "features", None) or {}).get("water", []):
+        if inside((x, z), w["ring"]):
+            return True
+    return ctx.ground is not None and ctx.ground(x, z) < RIVER_BELOW
+
+
+def place_items(ctx, add_raw) -> int:
+    """The place file's `props` as items (source 3). Fails the build, saying which entry and why, instead of dropping one."""
+    pl = getattr(ctx, "place", None)
+    specs = getattr(pl, "props", None) or []
+    if not specs:
+        return 0
+    conv = pl.georef()["convergence_deg"]
+    ext = ctx.ext
+    level = float(((getattr(ctx, "layers", None) or {}).get("water") or {}).get("level", 0.0))
+    for i, sp in enumerate(specs):
+        kind, tag = sp["kind"], f"place props[{i}] ({sp['kind']} at {sp['lat']}, {sp['lon']})"
+        if kind not in BUILT:
+            raise SystemExit(f"{tag}: kind `{kind}` is not built (the prop kit has: {', '.join(sorted(BUILT))})")
+        x, z = ctx.game(sp["lat"], sp["lon"])
+        if not (ext["minX"] <= x <= ext["maxX"] and ext["minZ"] <= z <= ext["maxZ"]):
+            raise SystemExit(f"{tag}: the point is outside the scene's extent")
+        y = None
+        if sp.get("on") == "water":
+            if not on_water(ctx, x, z):
+                raise SystemExit(f"{tag}: `on: water` but the point is not on water (no water polygon, and the terrain there is not below {RIVER_BELOW} m)")
+            y = round(level, 2)
+        grid = (float(sp["bearing"]) - conv) % 360       # true heading = grid heading + convergence (SCENE-FORMAT 2.2)
+        add_raw(kind, x, z, round(grid, 1), int(sp.get("variant", 0)), 3, y)
+    return len(specs)
+
+
 def build(ctx) -> dict:
     table = ctx.style.pack.get("props", {})
     ext, edges = ctx.ext, getattr(ctx, "terrace_edges", [])
@@ -185,6 +221,14 @@ def build(ctx) -> dict:
         if kind not in kinds:
             kinds.append(kind)
         items.append([kinds.index(kind), round(x, 1), round(z, 1), int(round(yaw)) % 360, variant, source])
+
+    def add_raw(kind, x, z, yaw, variant, source, y):
+        if kind not in kinds:
+            kinds.append(kind)
+        item = [kinds.index(kind), round(x, 1), round(z, 1), yaw, variant, source]
+        if y is not None:
+            item.append(y)                                 # the item's own height (a ship on the water); else the reader uses the ground
+        items.append(item)
 
     for el in ctx.osm:
         t = el.get("tags") or {}
@@ -214,9 +258,14 @@ def build(ctx) -> dict:
     for kind, x, z, bearing in getattr(ctx, "terrace_lamps", []):
         add(kind, x, z, bearing, 0, 1)
     street_lamps(ctx, items, kinds, add)
+    placed = place_items(ctx, add_raw)
     rules = ctx.rules
+    if placed:
+        rules["place_props"] = (f"Props placed by the place file's `props` (source 3): {placed} item(s) at the given lat/lon, the bearing given in degrees true "
+                                "turned to grid by the scene's convergence, whole-metre-tenths position; `on: water` sets the item's own height (a 7th field) to the "
+                                "water level and fails the build where the point is neither inside a water polygon nor on terrain below 0.8 m.")
     if items:
         rules["props"] = ("Props: OSM nodes whose key=value is in the style pack's `props` (and shelters with a round footprint, as open pavilions) become "
                           "prop items (source 0); direction from the `direction` tag, benches face the nearest terrace balustrade within 14 m; "
-                          f"terrace lamps (source 1) stand on the rail line every rule spacing, street lamps (source 2) along the roads. {sum(1 for i in items if i[5])} items are placed by rule.")
+                          f"terrace lamps (source 1) stand on the rail line every rule spacing, street lamps (source 2) along the roads, the place file's own props are source 3. {sum(1 for i in items if i[5])} items are placed by rule or by the place file.")
     return {"props": {"kinds": kinds, "items": items}} if items else {}

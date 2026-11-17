@@ -31,6 +31,7 @@ class Place:
     vertical: dict = field(default_factory=dict)
     ambience: dict | None = None
     enrichers: list = field(default_factory=list)
+    props: list = field(default_factory=list)      # props the place file puts on the map by hand (docs/SCENE-FORMAT.md 4.4)
 
     def game(self, lat: float, lon: float) -> tuple[float, float]:
         e, n = geo.to_utm(lat, lon, self.zone)
@@ -41,6 +42,24 @@ class Place:
 
     def georef(self) -> dict:
         return geo.georef_block(self.e0, self.n0, self.zone, self.play, self.ext, self.vertical)
+
+
+PROP_ON = ("water",)
+
+
+def place_props(raw: dict) -> list:
+    """The place file's optional `props`: [{kind, lat, lon, bearing (degrees true), variant?, on?}], checked for shape only."""
+    out = raw.get("props") or []
+    if not isinstance(out, list):
+        raise SystemExit("place: `props` must be a list")
+    for i, p in enumerate(out):
+        if not isinstance(p, dict) or not all(isinstance(p.get(k), (int, float)) and not isinstance(p.get(k), bool) for k in ("lat", "lon", "bearing")):
+            raise SystemExit(f"place: props[{i}] needs numeric lat, lon and bearing (degrees true)")
+        if not isinstance(p.get("kind"), str) or not p["kind"]:
+            raise SystemExit(f"place: props[{i}] needs a `kind`")
+        if p.get("on") is not None and p["on"] not in PROP_ON:
+            raise SystemExit(f"place: props[{i}] `on` must be one of {', '.join(PROP_ON)}")
+    return out
 
 
 def from_dict(raw: dict) -> Place:
@@ -66,7 +85,7 @@ def from_dict(raw: dict) -> Place:
     return Place(raw=raw, zone=zone, band=geo.band_of(lat0), e0=e0, n0=n0, lat0=lat0, lon0=lon0, play=play, ext=ext,
                  id=raw["id"], name=raw["name"], style=raw["style"], season=raw.get("season", "summer"),
                  cell=float(t.get("cell", 2.5)), vertical=raw["vertical"], ambience=raw.get("ambience"),
-                 enrichers=list(raw.get("enrichers", [])))
+                 enrichers=list(raw.get("enrichers", [])), props=place_props(raw))
 
 
 def load(path: Path) -> Place:
