@@ -72,6 +72,8 @@ export const DEFAULT_STYLE = {
   // window.mix: per storey class (ground, upper, top = the attic storey of a house of 3 storeys or more) the weight of each type; one
   // type is drawn per building and storey from the building's id, and `blind` is mixed into single bays by its share of the weights.
   window: { bay: [2.8, 3.4], width: 1.0, height: 1.5, sill: 0.9, reveal: 0.12, shutters: 0, panes: [2, 2],
+    // window.states: weights of the room behind a modelled window (a row of the window sheet): dark, curtains, blind (lowered 55 %), lit
+    states: { dark: 3, curtains: 3, blind: 2, lit: 0.6 },
     types: {
       casement: { w: 1.0, h: 1.5, glaze: 'casement' }, sash22: { w: 0.95, h: 1.6, glaze: 'sash22' }, sash66: { w: 1.0, h: 1.75, glaze: 'sash66' },
       sash11: { w: 0.9, h: 1.5, glaze: 'sash11' }, arched: { w: 0.95, h: 2.0, glaze: 'sash66', head: 'segmental' }, arch_round: { w: 0.9, h: 2.2, glaze: 'sash22', head: 'round' },
