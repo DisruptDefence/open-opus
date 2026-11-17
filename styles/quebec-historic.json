@@ -106,7 +106,7 @@
         "roof_zinc": { "set": ["metal019"], "scale": 1, "strength": 0.5, "normal": 0.4 },
         "roof_copper": { "set": ["metal035"], "scale": 1, "strength": 0.5, "normal": 0.4 },
         "grass": { "set": ["grass004", "grass003"], "scale": 1, "hue": 1, "base": 0.1, "rough": 0, "normal": 0.5, "alt": { "set": ["withered_grass"], "cover": 0.22, "edge": 0.1, "size": 8, "tone": 0.55, "hue": 1 } },
-        "rock": { "set": ["rock041"], "scale": 1, "hue": 1, "base": 0.22, "alt": { "set": ["rock045"], "cover": 0.35, "edge": 0.1, "size": 9, "tone": 0.8, "hue": 1 } },
+        "rock": { "set": ["rock041"], "scale": 1, "hue": 0.25, "strength": 0.4, "base": 0.4, "alt": { "set": ["rock045"], "cover": 0.35, "edge": 0.1, "size": 9, "tone": 0.8, "hue": 1 } },
         "dirt": { "set": ["ground015"], "scale": 1, "hue": 1, "base": 0.14, "alt": { "set": ["stony_dirt_path"], "cover": 0.3, "edge": 0.1, "size": 6, "tone": 2.5, "hue": 1 } },
         "gravel": { "set": ["gravel013"], "scale": 1, "hue": 1, "base": 0.14, "alt": { "set": ["gravel_road"], "cover": 0.3, "edge": 0.08, "size": 6, "tone": 1.2, "hue": 1 } }
       }

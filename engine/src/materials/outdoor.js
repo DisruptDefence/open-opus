@@ -51,18 +51,32 @@ void surf(vec2 uv){
   emit(col * (0.7 + 0.6 * fine), 1.0, mix(0.3 + blade * 0.5 + fine * 0.2, 0.2, bare), 0.75 + 0.25 * blade, 0.93, 0.0);
 }`;
 
+// Rock. Seen from the side (the cliff) uv.y is height: wavy horizontal strata, each its own tone, a dark crevice where one
+// ends, now and then a ledge with a fringe of grass, vertical water stains and a few cracks. Seen from above it is a plain
+// rough rock with moss.
 GENERATORS.rock = `
 void surf(vec2 uv){
-  vec4 v = vor(uv * 5.0 + fbm(uv, vec2(4.0), 3, 31.0) * 1.2, vec2(5.0), 32.0);
-  float crack = smoothstep(0.0, 0.07, v.y - v.x);
-  float strata = fbm(uv * vec2(1.0, 6.0), vec2(3.0, 18.0), 4, 33.0);
-  float grain = fbm(uv, vec2(110.0), 3, 34.0), big = fbm(uv, vec2(2.0), 3, 35.0);
-  vec3 col = mix(L(0.30, 0.29, 0.28), L(0.50, 0.46, 0.41), strata);
-  col = mix(col, L(0.36, 0.30, 0.24), smoothstep(0.5, 0.8, big) * 0.6);
-  col *= (0.7 + 0.5 * grain) * mix(0.45, 1.0, crack);
-  float moss = smoothstep(0.62, 0.8, fbm(uv + 0.7, vec2(7.0), 4, 36.0)) * 0.6;
-  col = mix(col, L(0.20, 0.26, 0.11), moss);
-  emit(col, 1.0, crack * (0.4 + 0.4 * strata + 0.2 * v.z) + grain * 0.1, mix(0.45, 1.0, crack), 0.9, 0.0);
+  float warp = fbm(vec2(uv.x, 0.37), vec2(3.0, 1.0), 4, 37.0), warp2 = fbm(uv, vec2(5.0), 4, 38.0);
+  float yy = uv.y * 8.0 + (warp - 0.5) * 2.2 + (warp2 - 0.5) * 0.5, b = floor(yy), f = yy - b;
+  vec3 rb = h3(vec2(b, 3.0), vec2(8.0, 8.0), 39.0), rb2 = h3(vec2(b, 5.0), vec2(8.0, 8.0), 40.0);
+  vec4 v = vor(uv * 6.0 + (vec2(warp, warp2) - 0.5) * 0.9, vec2(6.0), 32.0);
+  float crack = smoothstep(0.0, 0.05, v.y - v.x);
+  float grain = fbm(uv, vec2(110.0), 3, 34.0), big = fbm(uv, vec2(2.0), 3, 35.0), mid = fbm(uv, vec2(16.0), 4, 41.0);
+  float stain = smoothstep(0.55, 0.85, fbm(uv * vec2(1.0, 0.12), vec2(18.0, 2.0), 3, 42.0));
+  vec3 tone = mix(L(0.24, 0.235, 0.23), L(0.40, 0.375, 0.34), rb.x);
+  tone = mix(tone, L(0.34, 0.27, 0.21), step(0.72, rb.y) * 0.6);
+  vec3 col = tone * (0.74 + 0.4 * grain) * (0.85 + 0.3 * mid) * mix(0.55, 1.0, crack);
+  col *= 1.0 - stain * 0.35;
+  float crev = smoothstep(0.1, 0.0, f) * (0.5 + 0.5 * rb2.x);
+  col *= 1.0 - crev * 0.7;
+  float lip = smoothstep(0.8, 1.0, f) * 0.35; col *= 1.0 + lip * 0.4;
+  float ledge = step(0.55, rb2.y) * smoothstep(0.82, 0.97, f) * smoothstep(0.35, 0.65, fbm(uv + vec2(b * 0.13, 0.0), vec2(14.0, 3.0), 3, 43.0 + b));
+  vec3 gcol = mix(L(0.15, 0.26, 0.08), L(0.28, 0.36, 0.12), mid);
+  col = mix(col, gcol, ledge * 0.9);
+  float moss = smoothstep(0.66, 0.84, fbm(uv + 0.7, vec2(7.0), 4, 36.0)) * 0.45;
+  col = mix(col, L(0.18, 0.24, 0.10), moss);
+  float h = 0.35 + f * 0.35 * (0.6 + 0.6 * rb.z) + crack * 0.25 + grain * 0.1 - crev * 0.3 + ledge * 0.1;
+  emit(col, 1.0, h, mix(0.4, 1.0, crack) * (1.0 - crev * 0.5), mix(0.93, 0.82, ledge) , 0.0);
 }`;
 
 // Concrete sidewalk slabs, driven by the geometry (gen/ground.js): uv.x = metres along the walk / (4 slabs), so one tile is
