@@ -61,7 +61,7 @@ vec4 reflection(float row, vec2 q, float panel, float fine){
 // a shop window: a low platform, goods in the lower 60 % in three cells across (bottles, boxes, hanging things, a lamp), a dark ceiling,
 // the transom band and the signboard zone above clean. variant 0 = column 1, variant 1 = column 7 (more hanging goods, cloth bolts).
 float rbox(vec2 p, vec2 c, vec2 h){ vec2 d = abs(p - c) - h; return 1.0 - smoothstep(0.0, 0.006, max(d.x, d.y)); }
-float rdisc(vec2 p, vec2 c, float r){ return 1.0 - smoothstep(r - 0.006, r, length((p - c) * vec2(1.0, 0.5))); }
+float rdisc(vec2 p, vec2 c, float r){ return 1.0 - smoothstep(r - 0.006, r, length((p - c) * vec2(1.0, 2.75))); }
 vec3 shopDisplay(vec2 q, float variant, float fine){
   float cells = 3.0, id = floor(q.x * cells), h = fract(sin((id + 1.0 + variant * 7.0) * 78.233) * 43758.5453);
   vec2 p = vec2(fract(q.x * cells), q.y);
@@ -77,10 +77,10 @@ vec3 shopDisplay(vec2 q, float variant, float fine){
     float b1 = rbox(p, vec2(0.30, 0.17), vec2(0.22, 0.07)), b2 = rbox(p, vec2(0.34, 0.31), vec2(0.16, 0.07)), b3 = rbox(p, vec2(0.78, 0.2), vec2(0.14, 0.10));
     goods = L(0.48, 0.33, 0.20) * b1 + L(0.60, 0.50, 0.34) * b2 + L(0.38, 0.28, 0.2) * b3; cover = max(b1, max(b2, b3));
     goods /= max(cover, 0.001);
-  } else if (kind < 2.5) {                                                                 // things hanging from the transom
-    for (int i = 0; i < 3; i++) { float x = 0.18 + 0.32 * float(i), l = 0.62 + 0.1 * fract(h * (5.0 + float(i)));
-      float cord = rbox(p, vec2(x, (l + 0.8) * 0.5), vec2(0.004, (0.8 - l) * 0.5)), it = rdisc(p, vec2(x, l - 0.05), 0.07) + rbox(p, vec2(x, l - 0.16), vec2(0.03, 0.09));
-      goods = mix(goods, i == 1 ? L(0.55, 0.20, 0.14) : L(0.58, 0.48, 0.30), min(it + cord * 0.6, 1.0)); cover = max(cover, min(it + cord * 0.6, 1.0)); }
+  } else if (kind < 2.5) {                                                                 // lanterns, pans and hams hanging from the transom
+    for (int i = 0; i < 3; i++) { float x = 0.18 + 0.32 * float(i), l = 0.56 + 0.08 * fract(h * (5.0 + float(i)));
+      float cord = rbox(p, vec2(x, (l + 0.8) * 0.5), vec2(0.004, (0.8 - l) * 0.5)), it = rdisc(p, vec2(x, l - 0.02), 0.11);
+      goods = mix(goods, i == 1 ? L(0.60, 0.22, 0.15) : L(0.66, 0.52, 0.30), min(it + cord * 0.5, 1.0)); cover = max(cover, min(it + cord * 0.5, 1.0)); }
   } else {                                                                                 // a lamp on a stand with its glow
     float stem = rbox(p, vec2(0.5, 0.3), vec2(0.012, 0.2)), base = rbox(p, vec2(0.5, 0.11), vec2(0.09, 0.02)), shade = rdisc(p, vec2(0.5, 0.56), 0.12);
     float glow = exp(-pow(length((p - vec2(0.5, 0.55)) * vec2(1.0, 0.7)) * 3.2, 2.0));
