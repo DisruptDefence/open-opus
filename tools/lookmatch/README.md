@@ -69,3 +69,48 @@ Reading per-building facts (storeys, window rhythm, wall and roof colours) from 
 - Photographs differ from a render in lens and field of view, time of day, season, weather, grading by the photographer and sensor processing; the sky and the sun's strength differ most. A gap is a hint to look at, not proof of a fault.
 - The proposal changes global light settings only; it cannot see geometry, texture or colour of single buildings.
 - Measures run on 320-px images, so fine detail (the busyness measure) is coarse.
+
+## facts: palette zones from photographs, and (unrun) one façade from posed imagery
+
+Part 2 of the look work: take FACTS about buildings (wall material and colour, trim, roofs) from the photographs and give them to the scene as an
+optional enricher, so the town's colours follow the real ones where there is evidence. Code in `tools/lookmatch/facts/` (own tests in
+`facts/test/`); the builder side is `tools/scene_builder/facade_facts.py` (enricher kind `facades`, `docs/SCENE-FORMAT.md` 4.2). Nothing here names a place.
+
+```
+node tools/lookmatch/lookmatch.mjs facts --scene scenes/<id>.json --views engine/tools/viewpoints/<id>.json --work .lookmatch/<id> --offline \
+     [--out <file>] [--radius 80] [--min-photos 3] [--grid yes] [--only <photo ids>] [--overlays none] [--posed yes --hfov 75 --eye 1.6]
+```
+It works from the photographs already in the work folder (`fetch` first); it never goes to the network. Output: `<work>/facts/palette-zones.json` (or `--out`),
+`<work>/facts/overlays/<photo id>.png` (the picture and, beside it, every pixel painted by what it was taken for and every wall pixel by its cluster colour, with the
+label and the numbers under it), and `<work>/facts/photos-analysis.json` (every photograph's clusters).
+
+### Stage A: local palettes from Commons photographs (run)
+
+A zone is a disc (default 80 m) round a viewpoint or, with `--grid`, round a cluster of three or more photograph positions (densest first, 80 m from any other centre).
+A photograph belongs to every zone whose disc holds its position. A zone with fewer than 3 usable photographs (the tool's own `usable()` and weight: 0.5 for poor framing) is dropped.
+
+Per photograph (rules and every threshold in one table, `facts/lib/rules.mjs` `RULES`; each rule has a unit test with a synthetic patch):
+1. Read at 960 px. The tool's region split (320 px) says sky / ground / wall; three corrections are made at working size: pale stone the split took for overcast
+   sky (textured and not blue) is wall again; deep blue the split did not call sky is sky (flood from the sky and the top row through blue pixels); under the ground region's top edge, and grey pixels in the
+   lowest 38 % of the picture, are pavement and foreground.
+2. Not wall: leaves (a* <= -6, b* >= 5), glass or sky in a window (blue, b* <= -6, L* >= 42), openings (darker than the mean of the 49 x 49 px window by 14 L*, blobs of 14 px or more, grown by 1 px) and the roof band (7 % of the height under the sky edge).
+3. The wall pixels are clustered in CIELAB (k-means, k = 6, seeded). Sun and shade of one paint are merged afterwards (same hue within 14 degrees, same chroma-to-lightness ratio within 0.1, L* ratio 0.55 to 0.97, chroma at least 6) and the merged cluster's colour is its sunlit part. A global lightening of the shaded half was tried and dropped: it turned dark brick into pale salmon. White paint is written with L* at least 88 (white is white in shade; the engine lights it again). Greys are never merged (a dark grey is not the shade of a white).
+4. Material of a cluster from its colour and the texture of its own pixels (`e1`: mean |dL*| between neighbours; `e4`: four pixels apart; `cv`: spread of `e1` over 24 px blocks): `render` (e1 under 1.6, or last rule: lit, smooth, matched nothing else), `painted_white` (very light and colourless; or light grey in shade with little texture), `brick` (hue 20 to 65, chroma 13 or more, L* 28 to 68, e1 2.4 or more, cv under 0.9), `stone` (chroma under 22, L* 30 to 83, e1 2.6 or more), else `unknown`. A smooth cluster with chroma over 52 (painted doors and shutters) is moved from the walls to the accents.
+5. Accents: saturated pixels (chroma 22 or more) in a ring round the opening blobs that are not the colour of a main wall cluster. Roofs: the band under the sky edge, smooth clusters read as `copper` (green-blue), `slate` (dark grey) or `metal` (mid grey), always flagged confidence `low`.
+
+Per zone: the photographs' clusters merged by material and colour (CIELAB distance under 13), weighted by photograph weight times cluster share; a colour needs 2 photographs in a zone of 4 or more and 5 % of the classified wall; unknown, very dark (L* under 24), dark colourless (chroma under 6 and L* under 45: shade), over-saturated and smooth grey clusters are counted as `unclassifiedShare` and left out. Confidence `high` (6+ photographs and the top colour in 60 % of them), `medium` (4+ and 40 %), else `low`.
+
+**Output format** `opus-facade-facts/1`: `{ format, note, zones: [{ id, centre: [lat, lon], radius, walls: [{ material, colour, share, photographs }], accents: [{ colour, share, photographs }], roofs: [...], photographs, confidence, unclassifiedShare, photos: [ids] }], buildings: [], sources: [{ id, title, author, licence, licenceUrl, url }] }`. `material` is `brick | stone | render | painted_white`. The scene builder maps brick to brick, stone to the style's own stone class, render and painted_white to stucco. A copy is committed under `places/enrichers/`.
+
+**How good are the labels.** Checked by eye on the overlays (see the run report for counts): the wall material label of the large clusters is often right for brick, ochre render and fieldstone, and wrong or doubtful for: mid and dark greys (pavement, tarmac, shadow and wet stone cannot be told from grey render or white paint by colour and 960 px texture), red and white painted roofs and doors read as brick or render, wall below the pavement line is lost, and a pale stone wall in shade reads as white. Overcast and sunny photographs of one street disagree on lightness; the zone median hides that, it does not remove it. This is a rough reading of a few photographs per zone, not a survey.
+
+**Licences.** The file holds numbers and attributions only: sRGB hex of cluster medians, shares, counts. No photograph, crop or pixel-derived texture is stored or shipped. Every photograph that contributed to a zone is listed in `sources` with title, author, licence and page URL (needed for CC BY and CC BY-SA). The sources include CC BY-SA photographs; because only derived numbers are stored, the position taken here is that no share-alike material is redistributed. That is a statement for the maintainer to confirm, not legal advice.
+
+### Stage B: one building, one façade, from posed imagery (written and tested on fixtures; NEVER RUN ON REAL IMAGERY)
+
+With a source that gives camera position and compass angle (Mapillary, `MAPILLARY_TOKEN`, `lib/sources/mapillary.mjs`; no token has been available, so none of this has ever seen a real image), a façade can be tied to one building. `facts/lib/posed.mjs`:
+- a pinhole camera from position, heading (compass angle minus the scene's grid convergence), an ASSUMED horizontal field of view (default 75 degrees; Mapillary does not always give intrinsics: `--hfov`) and eye height (default 1.6 m: `--eye`), no pitch, no roll;
+- every front edge of every building within 60 m that faces the camera is projected into columns; per column the nearest edge wins (a farther wall behind a nearer one loses those columns; trees and cars are not modelled); a wall behind the camera is rejected;
+- the strip a façade owns (columns x rows between the eave and the ground) is cropped and analysed as in stage A (clusters, material, accents), openings are counted into rows and columns (storeys, windows per storey, rough);
+- per building `{ buildingId, material, colour, accents, storeys, windowsPerStorey, confidence, sources }` into the file's `buildings` list; the builder lets them win over zones (confidence 0.4 or more) and uses material, colour and accents; storeys and windows are reported only.
+Tests (`facts/test/posed.test.js`) cover the projection (a camera facing a known wall puts its corners in the right columns), rejection of a wall behind the camera, occlusion, strip sampling and counting on hand-written fixtures, and `test_facade_facts.py` the precedence. Run it with `--posed yes` on photographs whose records carry a `heading`.
