@@ -18,7 +18,7 @@
  * @returns { byClass: Map(name -> index array), extraPos: number[], extraNrm: number[] } indices >= m * m name extra vertices
  *          (index - m * m) * 3 into extraPos / extraNrm
  */
-export function classTriangles({ m, pos, nrm, classAt, rockCell }) {
+export function classTriangles({ m, pos, nrm, classAt, rockCell, snap = 0 }) {
   const byClass = new Map(), extraPos = [], extraNrm = [], cuts = new Map(), base = m * m;
   const out = (cls) => { let a = byClass.get(cls); if (!a) byClass.set(cls, (a = [])); return a; };
   const vcls = new Array(m * m);
@@ -48,6 +48,11 @@ export function classTriangles({ m, pos, nrm, classAt, rockCell }) {
       return;
     }
     const odd = c[0] === c[1] ? 2 : c[0] === c[2] ? 1 : 0, x = v[odd], y = v[(odd + 1) % 3], z = v[(odd + 2) % 3], cy = cut(x, y), cz = cut(x, z);
+    if (snap > 0) { // a sliver of one class is not worth three triangles: the whole triangle takes the class that covers the rest
+      const fy = Math.hypot(...P(cy).map((q, k) => q - P(x)[k])) / Math.hypot(...P(y).map((q, k) => q - P(x)[k])), fz = Math.hypot(...P(cz).map((q, k) => q - P(x)[k])) / Math.hypot(...P(z).map((q, k) => q - P(x)[k])), share = fy * fz;
+      if (share < snap) { out(c[(odd + 1) % 3]).push(a, d, b); return; }
+      if (share > 1 - snap) { out(c[odd]).push(a, d, b); return; }
+    }
     out(c[odd]).push(x, cy, cz);                                 // the odd corner's own small triangle
     out(c[(odd + 1) % 3]).push(y, z, cz, y, cz, cy);             // the others: the quad y z cz cy
   };

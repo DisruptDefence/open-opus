@@ -65,7 +65,7 @@ export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
     return SURFACE_MATERIAL[c.surface[sj * sn + si]] || 'paving';
   };
   // the edge between two classes follows the raster's contour (level/terrain-classes.js) instead of the grid's cells
-  const { byClass, extraPos, extraNrm } = classTriangles({ m, pos, nrm, classAt, rockCell });
+  const { byClass, extraPos, extraNrm } = classTriangles({ m, pos, nrm, classAt, rockCell, snap: 0.3 }); // snap: a sliver under 30 % of a triangle is not cut out (the budget: 25 % more ground triangles)
   if (extraPos.length) { const p2 = new Float32Array(pos.length + extraPos.length), n2 = new Float32Array(nrm.length + extraNrm.length); p2.set(pos); p2.set(extraPos, pos.length); n2.set(nrm); n2.set(extraNrm, nrm.length); pos = p2; nrm = n2; }
   const nv = pos.length / 3;
   const group = new Group(); group.name = `terrain ${c.ce},${c.cn}`;

@@ -9,7 +9,7 @@ function grid() {
   for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) { const k = (j * M + i) * 3; pos[k] = i * STEP; pos[k + 1] = h(i * STEP, j * STEP); pos[k + 2] = j * STEP; nrm[k + 1] = 1; }
   return { pos, nrm };
 }
-const run = (classAt, rockCell = () => false) => { const g = grid(), r = classTriangles({ m: M, ...g, classAt, rockCell }); return { ...g, ...r }; };
+const run = (classAt, rockCell = () => false, snap = 0) => { const g = grid(), r = classTriangles({ m: M, ...g, classAt, rockCell, snap }); return { ...g, ...r }; };
 const at = (r, v) => (v < M * M ? [r.pos[v * 3], r.pos[v * 3 + 1], r.pos[v * 3 + 2]] : [r.extraPos[(v - M * M) * 3], r.extraPos[(v - M * M) * 3 + 1], r.extraPos[(v - M * M) * 3 + 2]]);
 const area = (a, b, c) => Math.abs((b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2])) / 2;
 const planeY = (x, z) => { // the drawn height: the plane of the terrain triangle under (x, z), from the samples
@@ -41,4 +41,12 @@ test('the cut points lie on the contour of the raster, not on the grid', () => {
 test('rock cells are rock whole, and a uniform raster adds no vertex and no triangle', () => {
   const r = run(() => 'paving', (i, j) => i === 3 && j === 4);
   assert.equal(r.extraPos.length, 0); assert.equal(r.byClass.get('rock').length, 6); assert.equal(r.byClass.get('paving').length, ((M - 1) * (M - 1) - 1) * 6);
+});
+test('snap: slivers are not cut out (fewer triangles), nothing is lost, and a triangle is only drawn whole in a class its corners do not share when the odd corner is under the snap share', () => {
+  const edge = (x, z) => (x + 0.35 * z < 11.3 ? 'grass' : 'paving');
+  const full = run(edge), snapped = run(edge, () => false, 0.3), count = (r) => { let n = 0; for (const a of r.byClass.values()) n += a.length / 3; return n; };
+  assert.ok(count(snapped) < count(full), `${count(snapped)} < ${count(full)}`);
+  let total = 0, wrong = 0;
+  for (const [cls, idx] of snapped.byClass) for (let t = 0; t < idx.length; t += 3) { const P = [0, 1, 2].map((k) => at(snapped, idx[t + k])), a = area(...P); total += a; const cx = (P[0][0] + P[1][0] + P[2][0]) / 3, cz = (P[0][2] + P[1][2] + P[2][2]) / 3; if (edge(cx, cz) !== cls) wrong += a; }
+  assert.ok(Math.abs(total - (M - 1) * (M - 1) * STEP * STEP) < 1e-6, 'area unchanged'); assert.ok(wrong < 0.1 * total, `misassigned area ${wrong} of ${total}`);
 });
