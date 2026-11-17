@@ -15,6 +15,7 @@ import { cellSoups } from '../gen/mesher.js';
 import { createSoups, prism, cap } from '../gen/soup.js';
 import { SOUP } from '../gen/style.js';
 import { leafMatrix } from '../gen/vestibule.js';
+import { classTriangles } from './terrain-classes.js';
 
 const ROCK_SLOPE = 1.05; // ground steeper than this is drawn as rock whatever the raster says
 
@@ -49,7 +50,7 @@ const mesh = (geo, mat, cast = true) => { const m = new Mesh(geo, mat); m.castSh
 export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
   const n = c.n, step = c.step * stride, m = Math.floor((n - 1) / stride) + 1, ox = c.hx0, oz = c.hz0;
   const H = (i, j) => c.heights[Math.min(n - 1, j * stride) * n + Math.min(n - 1, i * stride)];
-  const pos = new Float32Array(m * m * 3), nrm = new Float32Array(m * m * 3);
+  let pos = new Float32Array(m * m * 3), nrm = new Float32Array(m * m * 3);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) {
     const k = (j * m + i) * 3;
     pos[k] = ox + i * step; pos[k + 1] = H(i, j); pos[k + 2] = oz + j * step;
@@ -58,25 +59,22 @@ export function buildTerrain(G, c, { stride = 1, skirt = 4 } = {}) {
     const l = Math.hypot(sx, 1, sz); nrm[k] = -sx / l; nrm[k + 1] = 1 / l; nrm[k + 2] = -sz / l;
   }
   const sn = c.surface ? c.sn : 0;
-  const classOf = (i, j) => {
-    const h00 = H(i, j), h10 = H(i + 1, j), h01 = H(i, j + 1), h11 = H(i + 1, j + 1);
-    if (Math.max(Math.abs(h10 - h00), Math.abs(h01 - h00), Math.abs(h11 - h10), Math.abs(h11 - h01)) / step > ROCK_SLOPE) return 'rock';
+  const rockCell = (i, j) => Math.max(Math.abs(H(i + 1, j) - H(i, j)), Math.abs(H(i, j + 1) - H(i, j)), Math.abs(H(i + 1, j + 1) - H(i + 1, j)), Math.abs(H(i + 1, j + 1) - H(i, j + 1))) / step > ROCK_SLOPE;
+  const classAt = (x, z) => { // the surface raster under a point (1 m cells), as a material name
     if (!sn) return 'grass';
-    const si = Math.min(sn - 1, Math.floor(((i + 0.5) * step) / c.surfaceStep)), sj = Math.min(sn - 1, Math.floor(((j + 0.5) * step) / c.surfaceStep));
+    const si = Math.min(sn - 1, Math.max(0, Math.floor((x - ox) / c.surfaceStep))), sj = Math.min(sn - 1, Math.max(0, Math.floor((z - oz) / c.surfaceStep)));
     return SURFACE_MATERIAL[c.surface[sj * sn + si]] || 'paving';
   };
-  const byClass = new Map();
-  for (let j = 0; j < m - 1; j++) for (let i = 0; i < m - 1; i++) {
-    const cls = classOf(i, j); let idx = byClass.get(cls); if (!idx) byClass.set(cls, (idx = []));
-    const a = j * m + i, b = a + 1, d = a + m, e = d + 1;
-    idx.push(a, d, b, b, d, e);
-  }
+  // the edge between two classes follows the raster's contour (level/terrain-classes.js) instead of the grid's cells
+  const { byClass, extraPos, extraNrm } = classTriangles({ m, pos, nrm, classAt, rockCell, snap: 0.3 }); // snap: a sliver under 30 % of a triangle is not cut out (the budget: 25 % more ground triangles)
+  if (extraPos.length) { const p2 = new Float32Array(pos.length + extraPos.length), n2 = new Float32Array(nrm.length + extraNrm.length); p2.set(pos); p2.set(extraPos, pos.length); n2.set(nrm); n2.set(extraNrm, nrm.length); pos = p2; nrm = n2; }
+  const nv = pos.length / 3;
   const group = new Group(); group.name = `terrain ${c.ce},${c.cn}`;
   const pAttr = new BufferAttribute(pos, 3), nAttr = new BufferAttribute(nrm, 3);
   let tris = 0;
   for (const [cls, idx] of byClass) {
     const g = new BufferGeometry(); g.setAttribute('position', pAttr); g.setAttribute('normal', nAttr);
-    g.setIndex(idx.length > 65535 || m * m > 65535 ? new BufferAttribute(new Uint32Array(idx), 1) : new BufferAttribute(new Uint16Array(idx), 1));
+    g.setIndex(idx.length > 65535 || nv > 65535 ? new BufferAttribute(new Uint32Array(idx), 1) : new BufferAttribute(new Uint16Array(idx), 1));
     g.computeBoundingSphere(); g.computeBoundingBox();
     group.add(mesh(g, G.mats.get(cls, { triplanar: true }), false)); tris += idx.length / 3;
   }

@@ -96,8 +96,9 @@
         "turret": { "bellcast": 0.35, "finial": 1.2, "eaveBand": true }
       }
     },
-    "kerb": 0.14, "kerbColor": "#928e88", "treadColor": "#9a968e", "season": "summer",
-    "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6 },
+    "kerb": 0.14, "kerbColor": "#8a8680", "treadColor": "#9a968e", "season": "summer",
+    "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6, "cracks": 0.8, "covers": 1 },
+    "sidewalk": { "width": 1.6, "surface": "concrete", "slab": 1.5, "color": "#a8a39a" },
     "dressing": { "signs": 0.45, "lanterns": 0.5, "boxes": 0.3, "pots": 0.3, "flowers": ["#c8323c", "#d9507a", "#e8c23a", "#f2f0ea"] },
     "vestibule": { "depth": 1.4, "height": 2.5, "walls": ["#cfc6b4", "#b9c0b6", "#c9b8a6", "#bfb7c2"], "floors": ["timber", "stone"] },
     "detail": {
@@ -118,7 +119,7 @@
         "roof_zinc": { "set": ["metal019"], "scale": 1, "strength": 0.5, "normal": 0.4 },
         "roof_copper": { "set": ["metal035"], "scale": 1, "strength": 0.5, "normal": 0.4 },
         "grass": { "set": ["grass004", "grass003"], "scale": 1, "hue": 1, "base": 0.1, "rough": 0, "normal": 0.5, "alt": { "set": ["withered_grass"], "cover": 0.22, "edge": 0.1, "size": 8, "tone": 0.55, "hue": 1 } },
-        "rock": { "set": ["rock041"], "scale": 1, "hue": 1, "base": 0.22, "alt": { "set": ["rock045"], "cover": 0.35, "edge": 0.1, "size": 9, "tone": 0.8, "hue": 1 } },
+        "rock": { "set": ["rock041"], "scale": 1, "hue": 0.25, "strength": 0.4, "base": 0.4, "alt": { "set": ["rock045"], "cover": 0.35, "edge": 0.1, "size": 9, "tone": 0.8, "hue": 1 } },
         "dirt": { "set": ["ground015"], "scale": 1, "hue": 1, "base": 0.14, "alt": { "set": ["stony_dirt_path"], "cover": 0.3, "edge": 0.1, "size": 6, "tone": 2.5, "hue": 1 } },
         "gravel": { "set": ["gravel013"], "scale": 1, "hue": 1, "base": 0.14, "alt": { "set": ["gravel_road"], "cover": 0.3, "edge": 0.08, "size": 6, "tone": 1.2, "hue": 1 } }
       }

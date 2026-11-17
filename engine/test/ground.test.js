@@ -2,7 +2,7 @@
 // that keeps the contract; item 6 adds the plan's tests of drape, ribbons, the lift raster, steps and crossings.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { drape, roadRibbons, steps, crossing, liftRaster } from '../src/gen/ground.js';
+import { drape, slabV, roadRibbons, steps, crossing, liftRaster } from '../src/gen/ground.js';
 import { cellSoups } from '../src/gen/mesher.js';
 import { jsonSource } from '../src/scene/source.js';
 import { fixture, installAll, vertices, planArea, walk } from './helpers.js';
@@ -60,7 +60,7 @@ test('drape: flat tile, ramp, bumpy tile: every vertex on the terrain triangle u
 });
 test('a 20 x 6 road with sidewalks both sides: areas 120 and 64, sidewalk top at 0.14, vertical kerbs 0.11 high', () => {
   const tile = tileOf(() => 0), s = createSoups(); roadRibbons(s, road({ sidewalk: 'both', pts: [-10, 0, 10, 0], s0: 0, len: 20 }), tile, STYLE);
-  const carriage = s.map.get('asphalt|tn'), walk = s.map.get('concrete|tn'), stone = s.map.get(SOUP.kerb);
+  const carriage = s.map.get('asphalt|tn'), walk = s.map.get(SOUP.slab), stone = s.map.get(SOUP.kerb);
   assert.ok(Math.abs(upArea(carriage) - 120) < 1.2, `carriageway ${upArea(carriage)}`); assert.ok(Math.abs(upArea(walk) - 64) < 0.64, `sidewalks ${upArea(walk)}`);
   for (const t of upTris(walk)) for (const v of t) assert.ok(Math.abs(v[1] - 0.14) < 1e-9, 'every sidewalk top vertex at the kerb height');
   const faces = []; for (let i = 0; i < stone.pos.length; i += 9) if (Math.abs(stone.nrm[i + 1]) < 1e-6) faces.push([stone.pos[i + 1], stone.pos[i + 4], stone.pos[i + 7]]);
@@ -71,11 +71,11 @@ test('liftRaster: 14 in the sidewalk strip, 0 on the carriageway and beyond; ter
   const r = road({ sidewalk: 'both', pts: [-10, 0, 10, 0] }), x0 = -15, z0 = -15, n = 30, lift = liftRaster([r], x0, z0, n, STYLE), at = (x, z) => lift[(Math.floor(z - z0)) * n + Math.floor(x - x0)];
   assert.equal(at(0, 3.5), 14); assert.equal(at(0, -3.5), 14); assert.equal(at(0, 1), 0); assert.equal(at(0, 6), 0); assert.equal(at(0, -6), 0); assert.equal(liftRaster([road()], x0, z0, n, STYLE), null);
   const tile = tileOf(() => 0, { lift, minX: x0, minZ: z0, n: 13, cell: 2.5 }), s = createSoups(); roadRibbons(s, r, tile, STYLE);
-  for (const t of upTris(s.map.get('concrete|tn'))) for (const v of t) if (Math.abs(v[0]) < 8 && Math.abs(Math.abs(v[2]) - 3.8) < 0.5) assert.ok(Math.abs(tile.height(v[0], v[2]) - v[1]) < 1e-9, 'the walker stands on the drawn top');
+  for (const t of upTris(s.map.get(SOUP.slab))) for (const v of t) if (Math.abs(v[0]) < 8 && Math.abs(Math.abs(v[2]) - 3.8) < 0.5) assert.ok(Math.abs(tile.height(v[0], v[2]) - v[1]) < 1e-9, 'the walker stands on the drawn top');
 });
 test('a way that is itself a sidewalk (sw "self") is raised by the kerb, with faces on its edges and ends, and lifts the walker', () => {
   const tile = tileOf(() => 0), r = road({ kind: 'footway', cls: 8, surface: 2, width: 1.6, sidewalk: 'self', pts: [-10, 0, 10, 0], len: 20 }), s = createSoups(); roadRibbons(s, r, tile, STYLE);
-  const top = s.map.get('concrete|tn'); assert.ok(Math.abs(upArea(top) - 32) < 0.3); for (const t of upTris(top)) for (const v of t) assert.ok(Math.abs(v[1] - 0.14) < 1e-9);
+  const top = s.map.get(SOUP.slab); assert.ok(Math.abs(upArea(top) - 32) < 0.3); for (const t of upTris(top)) for (const v of t) assert.ok(Math.abs(v[1] - 0.14) < 1e-9);
   const faces = s.map.get(SOUP.kerb); let n = 0; for (let i = 0; i < faces.pos.length; i += 9) if (Math.abs(faces.nrm[i + 1]) < 1e-6) n++; assert.ok(n >= 8, `faces ${n}`);
   const lift = liftRaster([r], -15, -15, 30, STYLE); assert.equal(lift[15 * 30 + 15], 14); assert.equal(lift[12 * 30 + 15], 0);
 });
@@ -129,9 +129,9 @@ test('street wear: decals on a street, none off it, the same either side of a ce
   assert.ok(wa && wa.pos.length > 0, 'a street gets wear'); const moments = (sp) => { let A = 0, U = 0, V = 0; for (let i = 0, t = 0; i < sp.pos.length; i += 9, t++) { const T = [0, 3, 6].map((k) => [sp.pos[i + k], 0, sp.pos[i + k + 2]]), a = area2d(T); A += a; U += a * (sp.uv[t * 6] + sp.uv[t * 6 + 2] + sp.uv[t * 6 + 4]) / 3; V += a * (sp.uv[t * 6 + 1] + sp.uv[t * 6 + 3] + sp.uv[t * 6 + 5]) / 3; } return [A, U, V]; };
   for (const [x, y] of moments(wa).map((v, i) => [v, moments(wb)[i]])) assert.ok(Math.abs(x - y) < 1e-6 * Math.max(1, Math.abs(x)), 'both pieces draw the same wear: same area, same texture coordinates');
   for (const k of ['metal|tv', 'paint_white|tn']) if (a.map.get(k) || b.map.get(k)) assert.deepEqual(key(a.map.get(k)), key(b.map.get(k)));
-  for (let i = 0; i < wa.uv.length; i += 2) { const v = wa.uv[i + 1] % 1; assert.ok(wa.uv[i + 1] >= 0 && wa.uv[i + 1] <= 1 && v >= 0, 'v is within the wear texture'); }
+  for (let i = 0; i < wa.uv.length; i += 2) { const v = wa.uv[i + 1] % 1; assert.ok(wa.uv[i + 1] >= 0 && wa.uv[i + 1] <= 4 && v >= 0, 'v is within the wear texture (metres of its 4 m tile)'); }
   for (let i = 0; i < wa.pos.length; i += 3) assert.ok(Math.abs(wa.pos[i + 1] - (wa.pos[i] * 0.02)) < 0.3 && wa.pos[i + 1] > wa.pos[i] * 0.02 - 0.01, 'on the ground');
-  const off = make(A, resolveStyle({ wear: { gutter: 0, tracks: 0, patches: 0, oil: 0, manholes: 0 } }));
+  const off = make(A, resolveStyle({ wear: { gutter: 0, tracks: 0, patches: 0, oil: 0, manholes: 0, cracks: 0, covers: 0 } }));
   const has = (m, k) => !!(m.map.get(k) && m.map.get(k).pos.length);
   assert.ok(!has(off, 'wear|n') && !has(off, 'metal|tv'), 'all kinds can be switched off');
   const foot = make(road({ pts: [0, 0, 100, 0], len: 230, kind: 'footway', cls: 8, width: 2.6, surface: 4 }));
@@ -159,15 +159,15 @@ test('junctions: a street ending on another cuts its sidewalk across the mouth, 
   assert.equal(lift(tee, 0.5, 4.5), 0, 'a main street split at the node: the stem still clears the mouth'); assert.equal(lift(tee, -10.5, 4.5), 14); assert.equal(lift(tee, 0.5, -4.5), 14, 'and the far side runs through');
   const s = createSoups(); roadRibbons(s, main, tile, STYLE, [main, stem]);
   const without = createSoups(); roadRibbons(without, main, tile, STYLE);
-  assert.ok(upArea(s.map.get('concrete|tn')) < upArea(without.map.get('concrete|tn')) - 10, 'the drawn sidewalk loses the mouth');
+  assert.ok(upArea(s.map.get(SOUP.slab)) < upArea(without.map.get(SOUP.slab)) - 10, 'the drawn sidewalk loses the mouth');
 });
 
 const meanCol = (sp) => { const m = [0, 0, 0], n = sp.col.length / 3; for (let i = 0; i < sp.col.length; i++) m[i % 3] += sp.col[i] / n; return m; };
 const closeTo = (m, c, tol) => m.every((v, k) => Math.abs(v - c[k]) <= c[k] * tol + 1e-9);
 test('kerb stones carry one tint per vertex, near the style kerbColor (default without the key), varied by at most 6 %', () => {
-  for (const [st, hex] of [[STYLE, '#8d8a84'], [resolveStyle({ kerbColor: '#928e88' }), '#928e88']]) {
+  for (const [st, hex] of [[STYLE, '#8d8a84'], [resolveStyle({ kerbColor: "#928e88" }), "#928e88"]]) {
     const s = createSoups(); roadRibbons(s, road({ sidewalk: 'both', pts: [-10, 0, 10, 0], s0: 0, len: 20 }), tileOf(() => 0), st);
-    assert.ok(s.map.has(SOUP.kerb)); assert.equal(SOUP.kerb, 'concrete|tvn'); const sp = s.map.get(SOUP.kerb);
+    assert.ok(s.map.has(SOUP.kerb)); assert.equal(SOUP.kerb, 'kerb_granite|tvn'); const sp = s.map.get(SOUP.kerb);
     assert.equal(sp.col.length, sp.pos.length); assert.ok(sp.col.every((v) => Number.isFinite(v)));
     const c = parseColor(hex); assert.ok(closeTo(meanCol(sp), c, 0.06), 'mean colour is the kerb colour');
     for (let i = 0; i < sp.col.length; i += 3) assert.ok(closeTo([sp.col[i], sp.col[i + 1], sp.col[i + 2]], c, 0.0601), 'each tone within 6 %');
@@ -176,7 +176,71 @@ test('kerb stones carry one tint per vertex, near the style kerbColor (default w
 test('stair treads carry treadColor per vertex, the default without the key', () => {
   for (const [st, hex] of [[STYLE, '#9a968e'], [resolveStyle({ treadColor: '#807a70' }), '#807a70']]) {
     const s = createSoups(); steps(s, road({ pts: [0, 0, 12, 0], kind: 'steps', steps: { count: 14, handrail: 0 }, width: 3, len: 12 }), () => 0, st);
-    const sp = s.map.get(SOUP.tread); assert.equal(SOUP.tread, 'concrete|tv'); assert.equal(sp.col.length, sp.pos.length); assert.ok(sp.col.every((v) => Number.isFinite(v)));
+    const sp = s.map.get(SOUP.tread); assert.equal(SOUP.tread, 'kerb_granite|tv'); assert.equal(sp.col.length, sp.pos.length); assert.ok(sp.col.every((v) => Number.isFinite(v)));
     assert.ok(closeTo(meanCol(sp), parseColor(hex), 0.06));
   }
+});
+
+
+// ---- sidewalk slabs -------------------------------------------------------------------------------------------------------
+const slabUV = (sp) => { const o = []; for (let i = 0; i < sp.pos.length / 3; i++) if (sp.nrm[i * 3 + 1] > 0.9) o.push({ x: sp.pos[i * 3], z: sp.pos[i * 3 + 2], u: sp.uv[i * 2], v: sp.uv[i * 2 + 1] }); return o; };
+test('sidewalk slabs: on a straight walk u is metres of the 6 m tile (four slabs of 1.5), so a joint falls every `slab` metres', () => {
+  for (const slab of [1.5, 1.2]) {
+    const tile = tileOf(() => 0), s = createSoups(), st = resolveStyle({ sidewalk: { slab } });
+    roadRibbons(s, road({ sidewalk: 'both', pts: [-10, 0, 10, 0], s0: 7, len: 40 }), tile, st);
+    const pts = slabUV(s.map.get(SOUP.slab)).filter((p) => Math.abs(Math.abs(p.z) - 4.6) < 0.5);
+    assert.ok(pts.length > 6);
+    for (const p of pts) assert.ok(Math.abs(p.u * slab / 1.5 - (p.x + 10 + 7)) < 1e-6, `u at x=${p.x}: ${p.u}`); // metres along the whole way (s0 = 7), 1.5 / slab of them per metre of tile
+    // the joints (u * 4 integer) are 'slab' metres apart: the x where u * 4 is an integer
+    const us = pts.map((p) => p.u / 1.5), x = (u) => { const q = pts.find((p) => Math.abs(p.u / 1.5 - u) < 1e-9); return q ? q.x : null; };
+    const lo = Math.ceil(Math.min(...us) + 1e-9), a = x(lo), b = x(lo + 1); if (a !== null && b !== null) assert.ok(Math.abs(b - a - slab) < 1e-6);
+  }
+});
+test('sidewalk slabs: on a bend u follows the walk\'s own length and the joints stay across it; the same on both sides of a cell cut', () => {
+  const tile = tileOf(() => 0, { n: 81, minX: -50, minZ: -50 }), pts = [-20, 0, 0, 0, 0, 20], s = createSoups();
+  roadRibbons(s, road({ sidewalk: 'right', pts, len: 40, s0: 0 }), tile, STYLE);
+  const all = slabUV(s.map.get(SOUP.slab));
+  // along the second leg (x about 0) u grows with z; along the first with x
+  for (const p of all) { if (p.x < -8) assert.ok(Math.abs(p.u - (p.x + 20)) < 1e-5); else if (p.z > 8) assert.ok(Math.abs(p.u - (20 + p.z)) < 1e-5); }
+  // a curved walk: an arc of radius 30 m, u follows the arc length of the centre line (joints radial), with a small mitre error
+  const R = 30, arc = []; for (let i = 0; i <= 48; i++) { const th = (i / 48) * (Math.PI / 2); arc.push(R * Math.sin(th), R * (1 - Math.cos(th)) - 30 + 30); }
+  const cs = createSoups(); roadRibbons(cs, road({ sidewalk: 'both', pts: arc, len: R * Math.PI / 2, width: 6 }), tile, STYLE);
+  const cp = slabUV(cs.map.get(SOUP.slab)); assert.ok(cp.length > 100);
+  for (const p of cp) { const th = Math.atan2(p.x, R - p.z); assert.ok(Math.abs(p.u - R * th) < 0.25, `u ${p.u} vs arc ${R * th}`); }
+  // a cell cut: the same triangles' uv from a piece that starts later
+  const box = { x0: -12, x1: -4, z0: -10, z1: 10 }, full = createSoups(); roadRibbons(full, road({ sidewalk: 'both', pts: [-30, 0, -2, 0], len: 100, s0: 0 }), tile, STYLE);
+  const part = createSoups(); roadRibbons(part, road({ sidewalk: 'both', pts: [-18, 0, -2, 0], len: 100, s0: 12 }), tile, STYLE);
+  const f = slabUV(clipSoups(full, box).map.get(SOUP.slab)), g = slabUV(clipSoups(part, box).map.get(SOUP.slab));
+  assert.ok(f.length > 0 && g.length > 0); for (const p of [...f, ...g]) assert.ok(Math.abs(p.u - (p.x + 30)) < 1e-6, 'u is metres along the whole way, whichever piece draws it');
+});
+test('sidewalk slabs: v keeps a narrow walk in the lower band and a wide one in the upper, metres of a 6 m tile', () => {
+  assert.ok(slabV(0, 1.6) > 0 && slabV(1.6, 1.6) < 3);
+  assert.ok(slabV(0, 3) >= 3 && slabV(3, 3) <= 6);
+  const tile = tileOf(() => 0), s = createSoups(); roadRibbons(s, road({ sidewalk: 'both', pts: [-10, 0, 10, 0], len: 20 }), tile, resolveStyle({ sidewalk: { width: 2.8 } }));
+  for (const p of slabUV(s.map.get(SOUP.slab))) assert.ok(p.v >= 3 - 1e-9 && p.v <= 6 + 1e-9, `v ${p.v}`);
+});
+test('every soup with vertex colours has a colour for every vertex, and the sidewalk takes style.sidewalk.color', () => {
+  const tile = tileOf(() => 0), s = createSoups(); roadRibbons(s, road({ sidewalk: 'both', pts: [-10, 0, 10, 0], len: 20, marking: 1 }), tile, resolveStyle({ sidewalk: { color: '#808080' } }));
+  steps(s, road({ pts: [0, 0, 12, 0], kind: 'steps', steps: { count: 14, handrail: 1 }, width: 3, len: 12 }), () => 0, STYLE);
+  for (const [key, sp] of s.map) if (/\|[a-z]*v/.test(key)) assert.equal(sp.col.length, sp.pos.length, `${key} has a colour per vertex`);
+  const w = s.map.get(SOUP.slab), g = parseColor('#808080'); assert.ok(w.pos.length > 0);
+  for (let i = 0; i < w.col.length; i += 3) if (w.nrm[i + 1] > 0.9) assert.ok(Math.abs(w.col[i] - g[0]) < 1e-9, 'tinted with the style colour');
+});
+
+test('asphalt cracks sealed with tar, a damp strip at the kerb, and three kinds of cover: seeded, never a row of identical stamps', () => {
+  const tile = tileOf((x, z) => 0.05 * z, { n: 161, minX: -100, minZ: -50 }), r = road({ pts: [-100, 0, 300, 0], len: 400, s0: 0, sidewalk: 'both', width: 6 });
+  const mk = (st) => { const s = createSoups(); roadRibbons(s, r, tile, st); return s; };
+  const on = mk(STYLE), wear = on.map.get('wear|n'), iron = on.map.get('metal|tv');
+  const bands = new Set(); for (let i = 1; i < wear.uv.length; i += 2) bands.add(Math.floor((wear.uv[i] / 4) * 5 + 1e-9));
+  assert.ok(bands.has(4) && bands.has(2) && bands.has(0), `cracks (band 4), patches and the kerb strip are all drawn: ${[...bands]}`);
+  const off = mk(resolveStyle({ wear: { cracks: 0 } })).map.get('wear|n'), has4 = (sp) => { for (let i = 1; i < sp.uv.length; i += 2) if (Math.floor((sp.uv[i] / 4) * 5 + 1e-9) === 4) return true; return false; };
+  assert.ok(has4(wear) && !has4(off), 'cracks: 0 draws none');
+  // the grates stand at the kerb on the low side (z < 0: the ground rises with z), and nothing else is that near the kerb
+  const nearKerb = []; for (let i = 0; i < iron.pos.length; i += 3) if (Math.abs(iron.pos[i + 2]) > 2.2) nearKerb.push(iron.pos[i + 2]);
+  assert.ok(nearKerb.length > 0 && nearKerb.every((z) => z < 0), 'drain grates on the low side only');
+  // covers differ: the sizes of the round ones and the angles of the square ones are drawn, not repeated
+  const xs = new Set(); for (let i = 0; i < iron.pos.length; i += 9) xs.add(Math.round((iron.pos[i + 2] % 1) * 1000)); assert.ok(xs.size > 30, 'positions and sizes vary');
+  const gaps = []; const centres = []; for (let i = 0; i < iron.pos.length; i += 9) if (iron.nrm[i + 1] > 0.9 && iron.pos[i + 2] < -2.2) centres.push(iron.pos[i]);
+  centres.sort((a, b) => a - b); for (let i = 1; i < centres.length; i++) if (centres[i] - centres[i - 1] > 5) gaps.push(Math.round(centres[i] - centres[i - 1])); assert.ok(new Set(gaps).size > 1, 'the spacing of the grates varies');
+  const none = mk(resolveStyle({ wear: { covers: 0 } })).map.get('metal|tv'); assert.ok(!none || none.pos.length === 0, 'covers: 0 draws none');
 });
