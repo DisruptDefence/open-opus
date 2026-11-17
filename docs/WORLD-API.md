@@ -45,6 +45,12 @@ interface WorldApi {
   };
   settings(patch?: { sensitivity?: number; invertY?: boolean; volume?: number; fov?: number }):
     { sensitivity: number; invertY: boolean; volume: number; fov: number };   // see "Settings"
+  // street doors that open (see "Doors"): only the doors of the chunks that are live exist
+  doors: {
+    open(id: string): boolean;                  // false when there is no such door, or it is already open
+    close(id: string): boolean;                 // false when it is not open, or somebody stands in its swing
+    near(x: number, z: number, r?: number): Array<{ id: string; x: number; y: number; z: number; open: boolean }>;  // within r (default 1.6 m), nearest first
+  };
   scene(): { id: string; name: string; version: string; bounds: Box; walkable: Box; credits: string[] };
 
   // the Earth (from the scene's georeference, SCENE-FORMAT.md section 2)
@@ -101,10 +107,25 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `say` | `{ text, channel }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
 | `photo` | `{ on }` | Photo mode began or ended |
+| `door:opened` | `{ id }` | A street door began to open: the player pressed interact at it, or `doors.open(id)` was called. Once per change |
+| `door:closed` | `{ id }` | A street door began to close, the same ways |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
 | `error` | `{ module, message }` | A part of the engine threw inside a frame (`module`: `threats`, `player`, `render`, `hook`, `clock` …). Said once per module and kept: the frame loop never stops, the failing part loses its own update, nothing is switched off. Additive; a host that ignores it sees the same engine |
 
 An event is a report, not a decision. The engine says a mark was reached; what that is worth is the host's.
+
+## Doors
+
+Every ordinary street door of a generated scene (not a carriage door, and not one on a hillside too steep to step up to)
+opens. The player walks up, faces it within 1.6 m and presses the interact key (the same action as the held marks, but a
+press, not a hold): the prompt is the existing one (`Press E — Open` / `Close`, words `hud.words.press`, `open`, `close` of
+the content pack) and the leaf swings inward on its hinge in about half a second. Behind it is a vestibule, a real little room
+1.4 m deep, lit by the doorway only, which the player can step into and no further: the doorway is cover and a hide. Pressing
+interact again closes the door, unless the player stands in its swing. Open doors stay open for the session, even when their
+chunk is released and loaded again. `doors.open(id)`, `doors.close(id)` and `doors.near(x, z, r)` are for hosts and scenarios;
+ids are stable for a scene (a hash of the building, the edge and the bay) and are listed by `near`. The host switch `doors=open`
+opens every door as its chunk loads (pictures). Threats neither open doors nor path through them: a shut door blocks sight and
+bullets, an open doorway does not. Rooms and whole interiors are a later, much larger item; there is no inside beyond the hall.
 
 ## Photo mode
 
