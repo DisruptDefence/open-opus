@@ -1217,3 +1217,8 @@ weathering, stains and decals placed with intent; interiors; vehicles; statues a
 get their massing, not their ornament: the Château's dormers, finials and brickwork are an artist's or a
 licensed model's work, through `models/` of the format); real façade textures (no open street-level imagery
 allows it); people. Each is either artist's work or a licensed asset; none is blocked by the engine.
+
+**Landmark château keys (2026-11-16).** A look can now carry `base`, `roof`, `dormers` (tiers), `stacks`, `turret` and `crown` (docs/SCENE-FORMAT.md,
+`style.looks`; `gen/landmark_roof.js`). `roof.js` returns, additively and only for a building with a look, `planes` (the roof planes as 3-D polygons),
+`top` (where a fallback hip ends) and a `run`/`hip` on each slot. A landmark part whose footprint no steep hip fits now gets a lower, steeper hip instead of
+a flat lid. Still open: coplanar roof pieces are cut at the centre lines, so dormer rows and rolls restart there; a real straight-skeleton roof would end it.

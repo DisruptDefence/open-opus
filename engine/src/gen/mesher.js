@@ -55,7 +55,7 @@ const roofInfos = new WeakMap(), pieceLists = new WeakMap();
 /** What roof.js returned for a building (slots, ridge, parapet), computed once. */
 export function roofInfoOf(b, style) {
   let info = roofInfos.get(b);
-  if (!info) { info = roof(createSoups(), b, style) || {}; info = { slots: info.slots || [], ridge: info.ridge || [], parapet: info.parapet || 0 }; roofInfos.set(b, info); }
+  if (!info) { info = roof(createSoups(), b, style) || {}; info = { slots: info.slots || [], ridge: info.ridge || [], parapet: info.parapet || 0, planes: info.planes || [], top: info.top }; roofInfos.set(b, info); }
   return info;
 }
 /** A building as the pieces its passages cut it into ([b] itself when it has none). */
@@ -86,7 +86,7 @@ export function cellSoups(cell, group, env) {
   if (group === 'base') {
     for (const b of cell.buildings) {
       const info = roof(soups, b, style) || {};
-      roofInfos.set(b, { slots: info.slots || [], ridge: info.ridge || [], parapet: info.parapet || 0 });
+      roofInfos.set(b, { slots: info.slots || [], ridge: info.ridge || [], parapet: info.parapet || 0, planes: info.planes || [] });
       if (b.look) landmarkBase(soups, b, style, roofInfos.get(b));
       for (const p of b.passages || []) passageArch(soups, b, p, groundAt, style);
     }
