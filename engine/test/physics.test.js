@@ -156,7 +156,7 @@ test('a passage leads into a courtyard: a walker goes in along the way and is he
   const into = walk(physics, { x: 4, y: 0, z: 20 }, 1, 0, 3, 5); assert.ok(into.pos.x > 15.5, `walked in along the passage and stands in the courtyard, x = ${into.pos.x.toFixed(2)}`);
   const held = walk(physics, { x: 18, y: 0, z: 20 }, 0, 1, 3, 3); assert.ok(held.pos.z < 25, 'and beyond the courtyard the piece beside the way holds'); void held;
 });
-test('the scene installer gives the physics the holes of the published scene: an Old Quebec courtyard is open to walk in', async () => {
+test('the scene installer gives the physics the holes of the published scene: a courtyard of the published scene is open to walk in', async () => {
   const { physics, chunks } = await installAll(jsonSource(oldQuebecScene()));
   const holed = [...physics.solids].filter((s) => s.holes);
   assert.ok(holed.length >= 2, `holed solids: ${holed.length}`);

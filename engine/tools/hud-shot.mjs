@@ -4,7 +4,7 @@
 //
 //   1. serve the repository root:   python3 -m http.server 9762 --bind 127.0.0.1      (from the repository root)
 //   2. PLAYWRIGHT=/path/to/node_modules/playwright node engine/tools/hud-shot.mjs [scenario] [outDir] [WxH,WxH]
-//      scenario: test (default) | old-quebec     sizes default to 1280x720,960x540; a size ending in t is a touch device (844x390t)     HUD_BASE overrides http://127.0.0.1:9762
+//      scenario: test (default) | a baked scene file path relative to the repo root (scenes/NAME.json); HUD_START=x,z sets its start     sizes default to 1280x720,960x540; a size ending in t is a touch device (844x390t)     HUD_BASE overrides http://127.0.0.1:9762
 //
 // Pictures per size: 1-idle (objective, markers, radio line, message; health hidden, full carbine), 2-prompt (a mark used with
 // the key, half way), 3-lowammo, 4-reloading, 5-damage (an arc), 5b-hurt (health 55), 5c-critical (health 18), 6-kill (feed and
@@ -33,8 +33,9 @@ window.addEventListener('error', (e) => window.__errors.push(String(e.message)))
 window.addEventListener('unhandledrejection', (e) => window.__errors.push('unhandled: ' + String((e.reason && e.reason.message) || e.reason)));
 { const err = console.error.bind(console); console.error = (...a) => { window.__errors.push(a.join(' ').slice(0, 400)); err(...a); }; }
 const getJson = async (u) => (await fetch(u)).json();
-const source = params.scenario === 'old-quebec' ? getJson('/scenes/old-quebec.json').then(jsonSource) : packageSource(new URL('/engine/scenes/test/', location.href).href);
-if (params.scenario === 'old-quebec') { params.x = 0; params.z = -60; }
+const baked = params.scenario && params.scenario !== 'test' ? params.scenario : null;
+const source = baked ? getJson('/' + baked).then(jsonSource) : packageSource(new URL('/engine/scenes/test/', location.href).href);
+if (baked && params.sx !== undefined) { params.x = +params.sx; params.z = +params.sz; }
 window.__OPUS_WORLD = openWorld({ source, params, modules: { hud: createHud } });
 window.__G = () => engineOf(window.__OPUS_WORLD).G;
 window.__OPUS_WORLD.ready().then(() => { window.__ready = true; }, (e) => { window.__fatal = String((e && e.stack) || e); });
@@ -66,15 +67,15 @@ try {
     const page = await browser.newPage({ viewport: { width: w, height: h }, ...(touch ? { hasTouch: true, isMobile: true } : {}) });
     page.on('console', (m) => log.push(`[${m.type()}] ${m.text().slice(0, 300)}`)); page.on('pageerror', (e) => log.push('[pageerror] ' + String(e.stack || e).slice(0, 600)));
     await page.route('**/engine/hud-shot.html*', (r) => r.fulfill({ contentType: 'text/html', body: PAGE }));
-    await page.goto(`${base}/engine/hud-shot.html?scenario=${scenario}&q=low&noaudio=1`);
+    await page.goto(`${base}/engine/hud-shot.html?scenario=${encodeURIComponent(scenario)}${process.env.HUD_START ? '&sx=' + process.env.HUD_START.split(',')[0] + '&sz=' + process.env.HUD_START.split(',')[1] : ''}&q=low&noaudio=1`);
     const world = (fn, arg) => page.evaluate(fn, arg);
     const until = async (what, fn, arg, seconds = 60) => { for (let i = 0; i < seconds * 4; i++) { const v = await world(fn, arg); if (v) return v; await page.waitForTimeout(250); } throw new Error(`timed out waiting for ${what}`); };
     const size = { w, h, pictures: [], layout: [] };
-    const shot = async (name) => { const p = join(outDir, `hud-${scenario}-${w}x${h}${touch ? 't' : ''}-${name}.png`); await page.screenshot({ path: p, timeout: 180000 }); size.pictures.push(p); report.pictures.push(p); size.layout.push({ name, ...(await world(() => window.__layout())) }); };
+    const shot = async (name) => { const p = join(outDir, `hud-${scenario.replace(/[^\w.-]+/g, '_')}-${w}x${h}${touch ? 't' : ''}-${name}.png`); await page.screenshot({ path: p, timeout: 180000 }); size.pictures.push(p); report.pictures.push(p); size.layout.push({ name, ...(await world(() => window.__layout())) }); };
     await until('ready', () => window.__ready || window.__fatal, undefined, 90);
     const fatal = await world(() => window.__fatal); if (fatal) throw new Error(fatal);
     // start where the scenario starts, then place everything relative to where the player is
-    const start = scenario === 'old-quebec' ? { x: 0, z: -60, heading: 0 } : null;
+    const start = process.env.HUD_START ? (([x, z]) => ({ x, z, heading: 0 }))(process.env.HUD_START.split(',').map(Number)) : null;
     await world((s) => { const W = window.__OPUS_WORLD; window.__ev = []; for (const n of ['player:hit', 'say']) W.on(n, (e) => window.__ev.push([n, e])); W.on('entity', (e) => window.__ev.push(['entity', e])); W.start(s ? { at: s } : {}); }, start);
     await until('play', () => window.__OPUS_WORLD.state() === 'playing', undefined, 20);
     await until('the fade-in', () => window.__OPUS_WORLD.snapshot().time > 3.2, undefined, 90); // start() fades in from black over 2.6 s

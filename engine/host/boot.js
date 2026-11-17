@@ -1,7 +1,7 @@
 // The loading screen every host shares: one module, plain ES, no imports. A host makes one with createBoot(), hands it
 // openWorld's onProgress, and calls boot.done() when the world is ready (or boot.fail(error) when it is not).
 //
-//   const boot = createBoot({ parent: document.getElementById('app'), words: DEFAULT_PACK.loader, title: 'Old Quebec', subtitle: 'Patrol' });
+//   const boot = createBoot({ parent: document.getElementById('app'), words: DEFAULT_PACK.loader, title: 'Scene title', subtitle: 'Mission' });
 //   openWorld({ source: boot.fetchJson(url).then(jsonSource), onProgress: boot.onProgress, ... });
 //   await world.ready(); await boot.done();
 //

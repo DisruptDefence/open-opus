@@ -4,11 +4,11 @@
 //   1. serve the repository root on 127.0.0.1 (any free port)
 //   2. PLAYWRIGHT=/path/to/node_modules/playwright ENGINE_URL=http://127.0.0.1:PORT/engine/dev.html \
 //        node engine/tools/figure-shot.mjs outDir [name]
-//      SETS=distance,gallery,street  (default all)   SIZE=1280x720   QUERY adds switches (default q=high&tod=15)
+//      SCENE_NAME=<scene file name> (required unless SCENE=test)   SETS=distance,gallery,street  (default all)   SIZE=1280x720   QUERY adds switches (default q=high&tod=15)
 //
-//   distance  one person at 5, 15 and 40 m in Old Quebec, viewpoint 1, facing the camera (three pictures)
+//   distance  one person at 5, 15 and 40 m in the named scene, viewpoint 1, facing the camera (three pictures)
 //   gallery   every archetype, then a person in each pose (idle, walk, run, aim, fire, hit, crouch, dead), at 7 m
-//   street    Old Quebec viewpoints 1 and 10 with a few threats standing and walking in the street
+//   street    the named scene's viewpoints 1 and 10 with a few threats standing and walking in the street
 //   look      (with SCENE=test) close-ups of every look of the people and of their poses, in the quick test scene
 //
 // The world is left in `title`, so nothing moves by itself: each figure is posed through the threats module's `pose`
@@ -26,14 +26,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2] || '.', name = process.argv[3] || 'figures';
 const sets = (process.env.SETS || 'distance,gallery,street').split(',');
 const [W, H] = (process.env.SIZE || '1280x720').split('x').map(Number);
-const views = JSON.parse(readFileSync(join(here, 'viewpoints', 'old-quebec.json'), 'utf8')).views;
+// SCENE_NAME names the baked scene (scenes/<name>.json) and its viewpoints file (viewpoints/<name>.json); no default
+const sceneName = process.env.SCENE_NAME;
+if (process.env.SCENE !== 'test' && !sceneName) { console.error('set SCENE_NAME=<scene file name without .json>, or SCENE=test'); process.exit(2); }
+const views = process.env.SCENE === 'test' ? [] : JSON.parse(readFileSync(join(here, 'viewpoints', sceneName + '.json'), 'utf8')).views;
 const view = (id) => views.find((v) => v.id.startsWith(id));
 const base = process.env.ENGINE_URL || 'http://127.0.0.1:9760/engine/dev.html';
-const v1 = view('1-'), v10 = view('10-');
+const v1 = view('1-') || { x: 20, z: 18 }, v10 = view('10-');
 // SCENE=test: the generated test scene, quick to load, for the `look` set only (close-ups while a figure is worked on)
 const quick = process.env.SCENE === 'test';
 const url = quick ? `${base}?scene=test&noaudio=1&shot=1&x=20&z=18&${process.env.QUERY || 'q=medium&tod=15'}`
-  : `${base}?scene=../scenes/old-quebec.json&noaudio=1&shot=1&x=${v1.x}&z=${v1.z}&${process.env.QUERY || 'q=high&tod=15'}`;
+  : `${base}?scene=../scenes/${sceneName}.json&noaudio=1&shot=1&x=${v1.x}&z=${v1.z}&${process.env.QUERY || 'q=high&tod=15'}`;
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

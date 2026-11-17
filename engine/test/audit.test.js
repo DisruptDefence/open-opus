@@ -1,5 +1,5 @@
 // The collision audit (tools/collision-audit.mjs): the walk and detail checks assert on real scenes; the pair checks
-// assert on fixtures with one planted fault each, and are reported (not asserted) on Old Quebec by the tool.
+// assert on fixtures with one planted fault each, and are reported (not asserted) on the published scene by the tool.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGrid, createTerrain } from '../src/terrain/heightfield.js';
