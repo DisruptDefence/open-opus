@@ -6,7 +6,7 @@
 //   2. PLAYWRIGHT=/path/to/node_modules/playwright node engine/tools/play.mjs [scenario] [outDir]
 //      scenario: test (default) | old-quebec        ENGINE_URL overrides http://127.0.0.1:9760/engine/dev.html
 //
-// Playwright is not a dependency of the engine: point PLAYWRIGHT at any installed copy. Software WebGL draws a few
+// Playwright is not a dependency of the engine: point PLAYWRIGHT at any installed copy. GPU=1 draws on the graphics card. Software WebGL draws a few
 // frames a second, so a run takes a minute or two. Exit code 0 only when the mission reached `complete`.
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
@@ -18,7 +18,11 @@ const scenario = process.argv[2] || 'test', outDir = process.argv[3] || '.';
 const url = `${process.env.ENGINE_URL || 'http://127.0.0.1:9760/engine/dev.html'}?scenario=${scenario}&q=low&noaudio=1${process.env.QUERY ? '&' + process.env.QUERY : ''}`;
 mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+// GPU=1 draws on the graphics card (run it as `GPU=1 GALLIUM_DRIVER=d3d12 flock ...`; CHROME=/path/to/chrome picks the browser);
+// otherwise software WebGL
+const browser = await chromium.launch(process.env.GPU
+  ? { channel: process.env.CHROME ? undefined : 'chromium', executablePath: process.env.CHROME || undefined, headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--window-position=4000,4000', '--window-size=960,540'] }
+  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const log = []; page.on('console', (m) => log.push(`[${m.type()}] ${m.text().slice(0, 300)}`)); page.on('pageerror', (e) => log.push('[pageerror] ' + String(e.stack || e).slice(0, 600)));
 const report = { url, steps: [], pictures: [], ok: false }, t0 = Date.now();

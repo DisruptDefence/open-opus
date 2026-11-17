@@ -25,6 +25,7 @@ interface WorldApi {
   setHoldMode(mode: 'pause' | 'slow'): void;
   held(): 'pause' | 'slow' | null;              // null also when the game ended under the hold
   release(): void;
+  phone: { setRaised(raised: boolean): void; raised(): boolean };   // the phone host says whether the phone is up; release() lowers it. Additive
 
   // what is where (game metres; +x east, −z grid north, y up)
   snapshot(): {
@@ -106,6 +107,7 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `shot` | `{ ammo }` | The player fired |
 | `say` | `{ text, channel }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
+| `phone:raised` | `{ raised }` | The phone host raised or lowered the phone (`world.phone.setRaised`), once per change; `release()` lowers it. The pistol's view model moves behind the phone on it |
 | `photo` | `{ on }` | Photo mode began or ended |
 | `tree:felled` | `{ id, x, z }` | A tree broke under fire (the damage of the shots that hit its trunk reached its hit points, `12 + 90 * trunk radius * 10`) and fell. Once per tree; `id` is its position to 0.1 m (`"<x*10>,<z*10>"`), `x`, `z` game metres. Additive |
 | `door:opened` | `{ id }` | A street door began to open: the player pressed interact at it, or `doors.open(id)` was called. Once per change |

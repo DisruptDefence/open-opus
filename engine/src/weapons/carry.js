@@ -30,6 +30,8 @@ export function createCarry(i, weapons) {
       return true;
     },
     reset() { swap = null; cur = 0; for (const w of weapons) { if (w.debug) w.debug.noFire = false; w.reset && w.reset(); } wrap.position.set(0, 0, 0); wrap.rotation.set(0, 0, 0); show(0); },
+    /** The engine's every-frame call with the real frame time (paused or not): the weapons that move on it are told. */
+    realFrame(real) { for (const w of weapons) if (w.realFrame) w.realFrame(real); },
     setVisible(on) { shown = !!on; wrap.visible = shown; show(cur); },
     update(dt) {
       const inp = i.input;

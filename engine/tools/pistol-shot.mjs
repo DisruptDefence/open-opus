@@ -25,13 +25,16 @@ const views = {
   rear: { pos: [0, 0.043, 0.30], at: [0, 0.0355, -0.2], fov: 22 },
   beauty: { pos: [0.34, 0.12, -0.42], at: [0, -0.035, -0.1], fov: 30 },
   // as held at the ready: 0.45 m behind and 0.06 m above the rear sight, looking along the bore
+  beauty2: { pos: [-0.30, 0.10, -0.40], at: [0, -0.04, -0.1], fov: 30 },
+  under: { pos: [0.15, -0.55, -0.1], at: [0, -0.06, -0.05], fov: 22, up: [0, 0, -1] },
+  rq: { pos: [0.25, 0.08, 0.35], at: [0, -0.03, -0.05], fov: 26 },
   detail: { pos: [0.20, 0.07, -0.02], at: [0, 0.015, -0.055], fov: 22 },
   grip: { pos: [-0.30, -0.10, 0.12], at: [0, -0.07, -0.02], fov: 22 },
   fpv: { pos: [0, 0.0355 + 0.06, -0.012 + 0.45], at: [0, 0.0135, -0.5], fov: 28 },
 };
 // GPU=1 draws on the graphics card (run it as `GPU=1 GALLIUM_DRIVER=d3d12 flock ...`); otherwise software WebGL
 const browser = await chromium.launch(process.env.GPU
-  ? { channel: 'chromium', headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--window-position=4000,4000', '--window-size=1280,720'] }
+  ? { channel: process.env.CHROME ? undefined : 'chromium', executablePath: process.env.CHROME || undefined, headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--window-position=4000,4000', '--window-size=1280,720'] }
   : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const log = []; page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') log.push(`[${m.type()}] ${m.text().slice(0, 400)}`); }); page.on('pageerror', (e) => log.push('[pageerror] ' + String(e.stack || e).slice(0, 600)));
@@ -40,7 +43,7 @@ try {
   await page.goto(url);
   await page.waitForFunction(() => window.__ready, null, { timeout: 60000 });
   const only = process.env.VIEWS ? process.env.VIEWS.split(',') : null;
-  for (const [colour, hex] of [['black', '#1f2022'], ['coyote', '#8a7a5c']]) {
+  for (const [colour, hex] of [['black', '#26272a'], ['coyote', '#8a7a5c']].filter(([c]) => !process.env.COLOURS || process.env.COLOURS.split(',').includes(c))) {
     const info = await page.evaluate(([h]) => window.build(h), [hex]);
     report.triangles = info.triangles; report.drawCalls = info.dims.drawCalls;
     for (const [id, v] of Object.entries(views)) {
@@ -50,7 +53,7 @@ try {
       await page.screenshot({ path }); report.pictures.push({ path, calls }); console.log(path, 'calls', calls);
     }
   }
-  await page.evaluate(() => window.build('#1f2022', { slide: true, mag: 0.045, pull: true }));
+  await page.evaluate(() => window.build('#26272a', { slide: true, mag: 0.045, pull: true }));
   for (const id of ['right', 'left', 'beauty', 'detail', 'grip']) {
     if (only && !only.includes(id)) continue;
     const calls = await page.evaluate((v) => window.shoot(v), views[id]);
