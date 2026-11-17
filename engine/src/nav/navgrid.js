@@ -26,7 +26,7 @@ export function createNav({ physics, terrain, cell = 1, size = 160, maxSlope = 0
       const px = cx(i), pz = cz(j), k = j * n + i, h = terrain.height(px, pz, true);
       hgt[k] = h;
       walk[k] = !Number.isNaN(h) && terrain.slope(px, pz, cell * 0.5) <= maxSlope && terrain.surfaceAt(px, pz) !== 'water'
-        && !physics.blocked(px, pz, pad, h) ? 1 : 0;
+        && !physics.blocked(px, pz, pad, h, 1.8, true) ? 1 : 0;
     }
     buildCover();
     built = true; version++;
@@ -122,7 +122,7 @@ export function createNav({ physics, terrain, cell = 1, size = 160, maxSlope = 0
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const w1 = (j + dj) * n + i + di, w2 = (j + dj * 2) * n + i + di * 2;
         // a solid there (not just a slope): ask the physics at head height
-        if (!walk[w1] && !walk[w2] && physics.blocked(cx(i + di * 2), cz(j + dj * 2), 0.3, hgt[k])) { covers.push({ x: cx(i), y: hgt[k], z: cz(j), nx: di, nz: dj }); break; }
+        if (!walk[w1] && !walk[w2] && physics.blocked(cx(i + di * 2), cz(j + dj * 2), 0.3, hgt[k], 1.8, true)) { covers.push({ x: cx(i), y: hgt[k], z: cz(j), nx: di, nz: dj }); break; }
       }
     }
   }

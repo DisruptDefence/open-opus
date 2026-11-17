@@ -1,4 +1,5 @@
 import { VOICE_SOUNDS, attachVoices } from './voice.js'; // OPUS: synthesised voices of people (voice.js)
+import { DOOR_SOUNDS } from './door.js'; // OPUS: a latch and a creak (door.js)
 export var vt = Math.PI * 2;
 export function ao(i) {
   let e = i >>> 0;
@@ -1847,7 +1848,7 @@ export function iC() {
   };
 }
 export async function createAudio(i) {
-  Object.assign(Go, VOICE_SOUNDS); // OPUS: the voices join the sound table
+  Object.assign(Go, VOICE_SOUNDS, DOOR_SOUNDS); // OPUS: the voices and the doors join the sound table
   let e = typeof window < 'u' && (window.AudioContext || window.webkitAudioContext),
     t = null;
   try {

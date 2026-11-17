@@ -87,6 +87,7 @@
     "kerb": 0.14, "kerbColor": "#928e88", "treadColor": "#9a968e", "season": "summer",
     "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6 },
     "dressing": { "signs": 0.45, "lanterns": 0.5, "boxes": 0.3, "pots": 0.3, "flowers": ["#c8323c", "#d9507a", "#e8c23a", "#f2f0ea"] },
+    "vestibule": { "depth": 1.4, "height": 2.5, "walls": ["#cfc6b4", "#b9c0b6", "#c9b8a6", "#bfb7c2"], "floors": ["timber", "stone"] },
     "detail": {
       "default": { "strength": 0.85, "normal": 1, "rough": 1, "ao": 0.8, "hue": 0.1, "base": 0.3, "far": 60 },
       "materials": {

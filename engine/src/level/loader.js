@@ -46,8 +46,11 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
       g.visible = false; root.add(g); stats.nearBuildMs = performance.now() - t0; stats.nearBuilt++;
       return g;
     },
-    show(k, cell, g, on) { g.visible = on; state.get(k).fixed.setNear(cell.index, on); },
-    dispose(k, cell, g) { disposeGroup(g); },
+    show(k, cell, g, on) {
+      g.visible = on; state.get(k).fixed.setNear(cell.index, on);
+      const d = g.userData.doors; if (d && G.doors) { if (on) G.doors.show(`${k}/${cell.index}`, d.recs, d.mesh); else G.doors.hide(`${k}/${cell.index}`); } // doors exist while their near group shows (world/doors.js)
+    },
+    dispose(k, cell, g) { if (G.doors) G.doors.hide(`${k}/${cell.index}`); disposeGroup(g); },
   });
   const hasNear = (cell) => cell.buildings.length + cell.trees.length + cell.roads.length + cell.props.length + cell.crossings.length + cell.walls.filter((w) => w.rail).length > 0;
 
@@ -60,6 +63,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     const t0 = performance.now(), k = key(s.ce, s.cn);
     s.env = installChunk(G.physics, G.terrain, s.data, m.style); // collision and height first: the simulation never waits for a mesh
     s.env.season = m.season || s.env.season;
+    G.doors.add(s.env.doors); // the street doors that open (world/doors.js)
     s.terrain = buildTerrain(G, s.data); s.fixed = buildChunkStatic(G, s.data, s.env);
     root.add(s.terrain, s.fixed.group); s.groups = [s.terrain, s.fixed.group];
     detail.add(k, s.data.cells.map((cell) => (hasNear(cell) ? cell : { ...cell, empty: true })));
@@ -71,7 +75,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   function release(s) {
     detail.remove(key(s.ce, s.cn));
     for (const g of s.groups) disposeGroup(g);
-    uninstallChunk(G.physics, G.terrain, s.ce, s.cn);
+    G.doors.drop(s.env.doors); uninstallChunk(G.physics, G.terrain, s.ce, s.cn);
     const f = farTiles.get(key(s.ce, s.cn)); if (f) f.visible = true;
     state.delete(key(s.ce, s.cn)); stats.chunksLive--; stats.released++;
     G.events.emit('scene:chunk', { ce: s.ce, cn: s.cn, live: false });

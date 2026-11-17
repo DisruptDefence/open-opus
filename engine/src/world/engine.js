@@ -36,6 +36,7 @@ import { createThreats } from '../threats/threats.js';
 import { validateBehaviour } from '../threats/brain.js';
 import { DEFAULT_PACK } from '../content/default.js';
 import { validatePack, mergePacks } from '../content/pack.js';
+import { createDoors } from './doors.js';
 import { createDirector } from '../director/director.js';
 
 export const DEFAULT_MODULES = {
@@ -86,6 +87,7 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   G.terrain = createTerrain({ grid: m.grid });
   G.physics = createPhysics({ terrain: G.terrain, vec, bounds: { min: vec(w.minX, -20, w.minZ), max: vec(w.maxX, 2000, w.maxZ) } });
   G.nav = createNav({ physics: G.physics, terrain: G.terrain, vec }); G.physics.nav = G.nav;
+  G.doors = createDoors(G); // the loader hands it each cell's doors as the cells show
   G.input = F.input(G);
 
   const radius = +(params.radius || RADIUS[G.quality.name] || 1);
@@ -130,7 +132,7 @@ export async function createEngine({ source, params = {}, modules = {}, content,
   /** One simulation step of `dt` seconds (already scaled). */
   function simulate(dt) {
     const state = safe('game', () => G.game.state), active = safe('game', () => G.game.update(dt)) !== false && state !== 'title' && state !== 'paused';
-    if (active && dt > 0) { upd('player', dt); upd('weapon', dt); upd('threats', dt); upd('director', dt); }
+    if (active && dt > 0) { upd('player', dt); upd('doors', dt); upd('weapon', dt); upd('threats', dt); upd('director', dt); }
     else if (active) upd('player', 0); // frozen: the camera still follows the view angles (the hold tilts the view)
     if (state !== 'paused' && dt > 0) { upd('fx', dt); upd('ground', dt); upd('mats', dt); }
     upd('level', dt); // streaming goes on whatever the clock does

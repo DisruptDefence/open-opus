@@ -120,6 +120,8 @@ export const DEFAULT_STYLE = {
   wear: { gutter: 1, tracks: 1, patches: 1, oil: 1, manholes: 1 },
   // façade dressing (gen/dressing.js): the chance per candidate of a hanging sign, a wall lantern, a window box (per house), door pots; 0 = none
   dressing: { signs: 0, lanterns: 0, boxes: 0, pots: 0, flowers: ['#c8323c', '#d9507a', '#e8c23a', '#f2f0ea'] },
+  // the vestibule behind a street door that opens (gen/vestibule.js): depth and height in metres, plaster colours, floor kinds
+  vestibule: { depth: 1.4, height: 2.5, walls: ['#cfc6b4', '#b9c0b6', '#c9b8a6', '#bfb7c2'], floors: ['timber', 'stone'] },
 };
 
 const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);

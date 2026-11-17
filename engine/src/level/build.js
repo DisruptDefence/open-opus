@@ -7,13 +7,14 @@
 //             handful of draw calls however many cells it has. The `far` meshes keep each cell's triangles together
 //             and can leave a cell out (its `near` group is showing instead) by rewriting their index.
 //   near      one group per cell, built when the camera comes close and thrown away when it leaves
-import { BufferAttribute, BufferGeometry, Group, Mesh } from '../../vendor/three.module.js';
+import { BufferAttribute, BufferGeometry, Color, Group, InstancedMesh, Mesh } from '../../vendor/three.module.js';
 import { CHUNK } from '../scene/grid.js';
 import { legacyTint } from '../scene/source.js';
 import { SURFACE_MATERIAL } from '../materials/outdoor.js';
 import { cellSoups } from '../gen/mesher.js';
 import { createSoups, prism, cap } from '../gen/soup.js';
 import { SOUP } from '../gen/style.js';
+import { leafMatrix } from '../gen/vestibule.js';
 
 const ROCK_SLOPE = 1.05; // ground steeper than this is drawn as rock whatever the raster says
 
@@ -153,8 +154,33 @@ export function buildChunkStatic(G, chunk, env) {
   }
   return { group, setNear, tris: () => b.userData.tris + farTris };
 }
-/** The `near` group of one cell. */
-export const buildCellNear = (G, chunk, cell, env) => soupsToGroup(G, cellSoups(cell, 'near', env), `near ${chunk.ce},${chunk.cn}/${cell.index}`);
+/** A door leaf: a unit box, x 0..1 from the hinge, y 0..1, z -0.5..0.5; both big faces carry the door's uv (u from the hinge), the edges the plain left strip. */
+let leafGeo = null;
+function leafGeometry() {
+  if (leafGeo) return leafGeo;
+  const P = [], N = [], U = [], I = [];
+  const f = (n, pts, uvs) => { const k = P.length / 3; for (let i = 0; i < 4; i++) { P.push(...pts[i]); N.push(...n); U.push(...uvs[i]); } I.push(k, k + 1, k + 2, k, k + 2, k + 3); };
+  const e = [[0.02, 0.5], [0.02, 0.5], [0.02, 0.5], [0.02, 0.5]];
+  f([0, 0, 1], [[0, 0, .5], [1, 0, .5], [1, 1, .5], [0, 1, .5]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  f([0, 0, -1], [[1, 0, -.5], [0, 0, -.5], [0, 1, -.5], [1, 1, -.5]], [[1, 0], [0, 0], [0, 1], [1, 1]]);
+  f([1, 0, 0], [[1, 0, .5], [1, 0, -.5], [1, 1, -.5], [1, 1, .5]], e); f([-1, 0, 0], [[0, 0, -.5], [0, 0, .5], [0, 1, .5], [0, 1, -.5]], e);
+  f([0, 1, 0], [[0, 1, .5], [1, 1, .5], [1, 1, -.5], [0, 1, -.5]], e); f([0, -1, 0], [[0, 0, -.5], [1, 0, -.5], [1, 0, .5], [0, 0, .5]], e);
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(P), 3)); g.setAttribute('normal', new BufferAttribute(new Float32Array(N), 3));
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(U), 2)); g.setAttribute('color', new BufferAttribute(new Float32Array(P.length).fill(1), 3));
+  g.setIndex(I); return (leafGeo = g);
+}
+/** The `near` group of one cell. Its street doors that open (gen/vestibule.js) are ONE instanced mesh: `userData.doors = { recs, mesh }`, instance i = recs[i], drawn shut. */
+export function buildCellNear(G, chunk, cell, env) {
+  const soups = cellSoups(cell, 'near', env), g = soupsToGroup(G, soups, `near ${chunk.ce},${chunk.cn}/${cell.index}`), recs = soups.doors || [];
+  if (recs.length) {
+    const m = new InstancedMesh(leafGeometry(), G.mats.get(SOUP.door.split('|')[0], { vertexColors: true }), recs.length), c = new Color();
+    recs.forEach((r, i) => { m.instanceMatrix.array.set(leafMatrix(r, 0), i * 16); m.setColorAt(i, c.setRGB(r.tint[0], r.tint[1], r.tint[2])); });
+    m.castShadow = m.receiveShadow = true; m.frustumCulled = false; m.name = 'near doors'; m.userData.tris = recs.length * 12; // counted by the loader on its own
+    g.add(m); g.userData.doors = { recs, mesh: m };
+  }
+  return g;
+}
 
 /** The far ring for one chunk cell: coarse ground and plain hulls, drawn until the chunk itself is in. */
 export function buildFarTile(G, far, ce, cn, x0, z0, hulls) {

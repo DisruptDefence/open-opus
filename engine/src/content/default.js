@@ -138,7 +138,7 @@ export const DEFAULT_PACK = {
   } },
   hud: {
     elements: ['markers', 'objective', 'health', 'ammo', 'crosshair', 'hitmarker', 'damage', 'feed', 'prompt', 'radio', 'warn', 'message'],
-    words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' },
+    words: { objective: 'Objective', health: 'Health', lowAmmo: 'Low ammo', reload: 'R — Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', press: 'Press', open: 'Open', close: 'Close', destroyed: 'destroyed', weak: 'Weak point', key: 'E' },
   },
   // The loading screen's words (host/boot.js), by language; a product's pack may replace any of them. `phases` names the
   // steps the engine reports (engine.js step labels and G.progress phases, see boot.js STEP_IDS); `tips` rotate under the bar.
