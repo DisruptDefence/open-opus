@@ -256,6 +256,8 @@ the road's direction there, width the road's.
 
 ### 3.4 Trees (4.5)
 
+**Update 2026-11-16.** Trees are now also placed by seeded rules from the style's `trees.fill` (tree rows, woods and scrub, parks, steep unbuilt ground, street trees) and carry a seventh number, `source` (SCENE-FORMAT 4.5). The city tree-inventory enricher described in 2.1 is not wired (the place has `enrichers: []`, no file is cached).
+
 A tree stays an array and grows at the end: `[x, z, height, crownRadius, kind, form]`, `kind` the enum of 4.5,
 `form` `0 round, 1 vase, 2 column, 3 cone, 4 spreading`. An old reader takes `[x, z]` and invents the rest, as
 before. `season` at scene level (`"summer" | "autumn" | "winter" | "spring"`), as 4.5 already says.

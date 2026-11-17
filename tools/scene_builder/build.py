@@ -47,7 +47,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
 
     osm.classify(ctx, ground.ROAD_WIDTH)
     layers: dict = {}
-    for mod in (ground, walls, terrace, trees, props, landmarks):
+    for mod in (ground, walls, terrace, props, trees, landmarks):
         layers.update(mod.build(ctx))
         ctx.layers = layers
     layers.update(buildings.build(ctx))
