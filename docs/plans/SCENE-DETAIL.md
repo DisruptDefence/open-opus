@@ -1119,6 +1119,11 @@ what is stubbed today: rain and puddles (`ground.setRain`, `isPuddle`), reflecti
 one value for the whole scene, water as one flat sheet, no night lighting of lamps or windows, no clouds'
 shadows, no seasonal light.
 
+**Tool (2026-11-16).** `tools/lookmatch/` repeats the "look at the street photographs, list the gaps, change
+the `look` values" loop for any place: it fetches open-licensed photographs near each viewpoint, renders the same
+viewpoints, measures both the same way and writes a comparison sheet, a numbers file and a proposed `ambience.look`
+(`tools/lookmatch/README.md`). It proposes; a person decides whether the place file takes the change.
+
 **Tests.** `world-api.test.js`: a scene with `ambience.tod = 17` starts at 17; with `params.tod = 9` at 9.
 **Proof.** All six views, before and after. **Done** when the pairs are chosen by the planning model.
 
