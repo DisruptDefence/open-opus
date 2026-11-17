@@ -63,3 +63,47 @@ export function weightedMedian(items) {
   }
   return xs[xs.length - 1].v;
 }
+
+/** Median of plain numbers (NaN when empty). */
+export const median = (xs) => weightedMedian(xs.filter(Number.isFinite).map((v) => ({ v, w: 1 })));
+/** Median absolute deviation about the median (NaN for fewer than 2 numbers). */
+export function mad(xs) { const v = xs.filter(Number.isFinite); if (v.length < 2) return NaN; const m = median(v); return median(v.map((x) => Math.abs(x - m))); }
+
+/**
+ * Earth mover's distance between two weighted point sets (weights normalised to 1 each): the least total of weight x distance
+ * that turns one into the other. A minimum-cost flow on the small bipartite graph (source -> P -> Q -> sink), by successive shortest
+ * paths (SPFA). `dist(p, q)` is the ground distance. Points: [{ w, ... }]. NaN when either set is empty.
+ */
+export function emd(P, Q, dist) {
+  const sp = P.reduce((s, p) => s + p.w, 0), sq = Q.reduce((s, q) => s + q.w, 0); if (!(sp > 0) || !(sq > 0)) return NaN;
+  const n = P.length, m = Q.length, S = n + m, T = n + m + 1, N = n + m + 2, E = [], adj = Array.from({ length: N }, () => []);
+  const edge = (u, v, cap, cost) => { adj[u].push(E.length); E.push({ v, cap, cost }); adj[v].push(E.length); E.push({ v: u, cap: 0, cost: -cost }); };
+  P.forEach((p, i) => edge(S, i, p.w / sp, 0)); Q.forEach((q, j) => edge(n + j, T, q.w / sq, 0));
+  P.forEach((p, i) => Q.forEach((q, j) => edge(i, n + j, 1, dist(p, q))));
+  let total = 0;
+  for (let round = 0; round < 1000; round++) {
+    const d = new Array(N).fill(Infinity), via = new Array(N).fill(-1), queue = [S]; d[S] = 0;
+    for (let qi = 0; qi < queue.length && qi < 100000; qi++) { const u = queue[qi]; for (const id of adj[u]) { const e = E[id]; if (e.cap > 1e-12 && d[u] + e.cost < d[e.v] - 1e-12) { d[e.v] = d[u] + e.cost; via[e.v] = id; queue.push(e.v); } } }
+    if (!Number.isFinite(d[T])) break;
+    let cap = Infinity; for (let v = T; v !== S; v = E[via[v] ^ 1].v) cap = Math.min(cap, E[via[v]].cap);
+    if (!(cap > 1e-12)) break;
+    for (let v = T; v !== S; v = E[via[v] ^ 1].v) { E[via[v]].cap -= cap; E[via[v] ^ 1].cap += cap; }
+    total += cap * d[T];
+  }
+  return total;
+}
+
+/** Weighted k-means in 3-D ([{ p: [x,y,z], w }]); farthest-first start, fixed iterations. Clusters by weight, largest first, as { centre, share }. */
+export function kmeans3w(items, k = 5, iters = 10) {
+  const xs = items.filter((i) => i.w > 0); if (!xs.length) return [];
+  const kk = Math.min(k, xs.length), tot = xs.reduce((s, i) => s + i.w, 0), d2 = (p, c) => (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+  const C = [xs.reduce((b, i) => (i.w > b.w ? i : b), xs[0]).p.slice()];
+  while (C.length < kk) { let best = null, bd = -1; for (const i of xs) { const d = Math.min(...C.map((c) => d2(i.p, c))); if (d > bd) { bd = d; best = i; } } C.push(best.p.slice()); }
+  let assign = new Array(xs.length).fill(0);
+  for (let it = 0; it < iters; it++) {
+    assign = xs.map((i) => { let b = 0, bd = Infinity; C.forEach((c, ci) => { const d = d2(i.p, c); if (d < bd) { bd = d; b = ci; } }); return b; });
+    C.forEach((c, ci) => { let w = 0, s = [0, 0, 0]; xs.forEach((i, ii) => { if (assign[ii] === ci) { w += i.w; for (let j = 0; j < 3; j++) s[j] += i.p[j] * i.w; } }); if (w) for (let j = 0; j < 3; j++) c[j] = s[j] / w; });
+  }
+  const out = C.map((c, ci) => ({ centre: c, share: xs.reduce((s, i, ii) => s + (assign[ii] === ci ? i.w : 0), 0) / tot })).filter((c) => c.share > 0);
+  return out.sort((a, b) => b.share - a.share || a.centre[0] - b.centre[0]);
+}

@@ -1,0 +1,11 @@
+{
+  "_about": "Words in a photograph's title, description or categories that say it is not a street photograph of the place. 'stems' match the start of a word (painting also catches paintings), 'words' match whole words. English and French. 'medium' = not a photograph at all (painting, drawing, print, map, plan, postcard, old-work licence templates); 'subject' = a photograph of something else (interior, object, night, winter...).",
+  "medium": {
+    "stems": ["painting", "peinture", "watercolo", "aquarelle", "lithograph", "lithographie", "drawing", "dessin", "engraving", "gravure", "etching", "eau-forte", "sketch", "croquis", "postcard", "carte postale", "poster", "affiche", "illustration", "PD-old", "PD-art", "in art", "manuscript", "stamp"],
+    "words": ["maps?", "cartes? g[eé]ographiques?", "plans?", "prints?", "estampes?"]
+  },
+  "subject": {
+    "stems": ["interior", "int[eé]rieur", "inside", "museum", "mus[eé]e", "exhibit", "plaque", "statue", "sculpture", "logo", "coat of arms", "night", "nuit", "nocturne", "winter", "hiver", "snow", "neige", "fireworks", "feux d", "aerial", "a[eé]rienne", "drone", "altar", "crypt", "pew", "cemetery", "lobby", "corridor", "bust", "portrait", "coin", "incendie", "christmas", "no[eë]l", "trough"],
+    "words": ["fires?", "rooms?", "nave", "menu", "food"]
+  }
+}

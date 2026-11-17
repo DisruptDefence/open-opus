@@ -34,7 +34,9 @@ export async function main(o, { log = console.log, fetchImpl } = {}) {
     }
     const dir = join(P.photos, v.id); mkdirSync(dir, { recursive: true });
     const photos = [];
-    for (const c of result.kept) {
+    // walk down the ranked list until `perView` are downloaded (a candidate that cannot be fetched, or is not in the cache with --offline, is skipped)
+    for (const c of result.ranked) {
+      if (photos.length >= perView) break;
       const file = `${c.id}.${/png/i.test(c.mime) ? 'png' : 'jpg'}`;
       try { writeFileSync(join(dir, file), await fetcher.getBuffer({ url: c.downloadUrl, headers: { ...BASE_HEADERS } })); } catch (e) { log(`  ${v.id}: ${c.id} not downloaded: ${e.message}`); continue; }
       const { downloadUrl, ...rest } = c; photos.push({ file: `photos/${v.id}/${file}`, ...rest });
