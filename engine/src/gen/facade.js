@@ -32,6 +32,7 @@
 import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.js';
 import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor, treadTint } from './style.js';
 import { signedArea, obb } from './poly.js';
+import { dressEdge, dressingLook } from './dressing.js';
 
 const MARGIN = 0.45;
 export function bays(len, style, seed) {
@@ -89,6 +90,7 @@ function look(b, style) {
   };
   // the shopfront colour comes from its own stream, so the draws of `r` (door bay, awning) stay where they were
   const q = rng(((b.id | 0) ^ 0x2b7e1516) >>> 0);
+  Object.assign(out, dressingLook(b, style)); // lk.dr, lk.hasBoxes, lk.dcolors: its own stream, lk.r untouched
   out.shopC = q() < 0.5 ? out.awnC : (q() < 0.5 ? out.frameC : out.trim);
   return out;
 }
@@ -317,6 +319,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
       }
     }
     for (const rd of roundels) roundel(soups, f, rd, y0, lk, tint);
+    dressEdge(soups, f, { ops, storey: s, y0, sh, len, front, shop: b.groundFloor === 1, style, r: lk.dr, colors: lk.dcolors, hasBoxes: lk.hasBoxes, groundY: (u, d) => { const p = f.at(u, 0, d); return groundAt(p[0], p[2]); } });
     if (ground && front && b.groundFloor === 1) { // the fascia over the shopfronts, and sometimes an awning
       slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.06, lk.shopC, 'fbtlr');
       if (lk.r() < gfl.awning) {

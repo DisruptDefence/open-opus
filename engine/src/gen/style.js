@@ -118,6 +118,8 @@ export const DEFAULT_STYLE = {
   kerb: 0.14, kerbColor: '#8d8a84', treadColor: '#9a968e', season: 'summer',
   // street wear (gen/ground.js): how much of each kind a street gets, 0 = none, 1 = the usual; all drawn near only
   wear: { gutter: 1, tracks: 1, patches: 1, oil: 1, manholes: 1 },
+  // façade dressing (gen/dressing.js): the chance per candidate of a hanging sign, a wall lantern, a window box (per house), door pots; 0 = none
+  dressing: { signs: 0, lanterns: 0, boxes: 0, pots: 0, flowers: ['#c8323c', '#d9507a', '#e8c23a', '#f2f0ea'] },
 };
 
 const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);

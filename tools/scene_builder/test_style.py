@@ -58,6 +58,10 @@ class Merge(unittest.TestCase):
             s = style.load(name, STYLES)
             self.assertTrue(s.client()["palettes"])
         self.assertEqual(style.load("quebec-historic", STYLES).storey, 3.1)
+        # the façade dressing block is copied into the scene whole (client() copies the client block as it is)
+        d = style.load("quebec-historic", STYLES).client()["dressing"]
+        self.assertEqual(sorted(d), ["boxes", "flowers", "lanterns", "pots", "signs"])
+        self.assertEqual(d["signs"], 0.45)
         # inherited from the default pack, not repeated in the regional one
         self.assertIn("concrete", style.load("quebec-historic", STYLES).client()["palettes"])
 

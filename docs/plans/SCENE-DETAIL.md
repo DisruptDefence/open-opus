@@ -1042,6 +1042,11 @@ kit has those nine, each within the 250-triangle contract. `glass_lamp` is not i
 `balustrade_iron` joins `rail_iron` in `gen/structures.js`. Terrace decks: `gen/terrace.js`, layer `terraces` (SCENE-FORMAT 4.4a). Not built: hydrant, bin,
 fountain, post_box, sign_stop, bike_rack, trees by species.
 
+**Façade dressing (built).** `gen/dressing.js`, called per storey from `facadeNear` on front edges only, amounts in `style.dressing` (SCENE-FORMAT):
+hanging signs on iron brackets (storey 0, a plain board, rectangular or octagonal, lowest point 2.2 m up; **no lettering**), wall lanterns beside doors,
+window boxes with flowers on the first upper storey, and potted small conifers flanking doors. Seeded per building from its own stream, so the existing
+façade choices do not move; no colliders (within 0.45 m of the wall, signs above head height); at most 1 200 extra triangles on a 20 m edge.
+
 **Tests** (`engine/test/props.test.js`, builder tests):
 
 - Every kind in the kit builds at yaw 0 and 90°: triangle count within its bound; every vertex within the
