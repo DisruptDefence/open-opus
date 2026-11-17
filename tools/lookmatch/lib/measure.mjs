@@ -39,7 +39,7 @@
 import { srgb8ToLab, labToHex, hueDeg } from './color.mjs';
 import { percentileSorted, mean, stdev, otsu, kmeans3 } from './stats.mjs';
 
-export const T = { skyRelDrop: 14, skyBlueB: -1.5, skyMinL: 25, skyB: 3, skyChroma: 50, skyGrad: 8, skyStep: 6, skyGap: 6, groundChroma: 20, groundBand: 0.05, groundDL: 25, groundStep: 10, groundLowerShare: 0.45, vertRadius: 2, vertMin: 2.5, vertRatio: 1.7, denseRadius: 3, denseMin: 0.55, groundTex: 5, poorLow: 0.03, poorHigh: 0.7, minRegion: 20, openingDrop: 25 };
+export const T = { skyRelDrop: 14, skyBlueB: -1.5, skyMinL: 25, skyB: 8, skyChroma: 50, skyGrad: 8, skyStep: 6, skyGap: 6, groundChroma: 20, groundBand: 0.05, groundDL: 25, groundStep: 10, groundLowerShare: 0.45, vertRadius: 2, vertMin: 2.5, vertRatio: 1.7, denseRadius: 3, denseMin: 0.55, groundTex: 5, poorLow: 0.03, poorHigh: 0.7, minRegion: 20, openingDrop: 25 };
 export const MASK = { wall: 0, sky: 1, ground: 2 };
 const round = (v, d = 2) => (Number.isFinite(v) ? +v.toFixed(d) : null);
 
