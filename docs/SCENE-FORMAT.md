@@ -305,6 +305,13 @@ grid north; 255 = along the long axis of the outline), `bw` the board width in m
 
 Props `items` are `[kind index, x, z, yawDeg, variant, source]`; `source` is `0` a mapped feature, `1` a terrace rule's lamp, `2` a lamp placed by the
 style pack's street rule (`street.lamps`: along the roads of the listed classes, every `spacing` m, `offset` m behind the kerb line).
+`4` is a parked vehicle placed by the style pack's street rule (`street.parking`) and `5` a bystander placed by `street.people` (`tools/scene_builder/streetlife.py`,
+appended to the same layer after `props.py`). Kinds: `car_hatch`, `car_sedan`, `car_suv`, `van_delivery`, `bicycle` (variant 0 to 7 = the paint) and `person_stand`
+(variant: pose = variant mod 5, everything else from variant div 5). They are static scenery: nothing moves, a vehicle stops walkers and bullets, a bystander is a
+prop with a collider and is never a threat or a scoring target. Style keys, both optional (a pack without them places none):
+`street.parking = { on: [highway classes], share, minWidth, kinds: { kind: weight }, bikes, max (250) }` (one side of the road by the way id's parity, parallel to the kerb,
+6 m slots each filled with chance `share`, never within 8 m of a junction, crossing, road end, steps, tunnel or bridge) and
+`street.people = { density (groups per 100 m of sidewalk), squares (groups per 1 000 m2 of pedestrian area), groups: [sizes drawn from], max (300 people) }`.
 
 ### 4.5 Vegetation
 

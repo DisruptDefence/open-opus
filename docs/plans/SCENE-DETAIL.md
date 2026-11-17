@@ -986,6 +986,11 @@ each road of the listed classes that is not `lit=no`, a lamp every `spacing` m, 
 skipped when a mapped lamp is within `spacing / 2`, when the point is inside a building or within 0.4 m of one
 (then try the other side; else skip), on a bridge, on steps, or outside `extent`. `source: 2`. **Built (props.py, `test_street_props.py`): street lamps by rule are placed.** **Rule bollards**:
 at both ends of a `pedestrian` road that meets a vehicular one, a row across the width at `gap` spacing.
+**Street life (added later, `streetlife.py`, props sources 4 and 5).** Parked vehicles by rule (`style.street.parking`) and standing bystanders by rule
+(`style.street.people`): static props only. Moving traffic and walking civilians are out of scope here: a car does not drive, a person does not walk,
+no pedestrian or vehicle record exists, and nothing in the director, the threats or the scoring knows about them. The kinds live in `engine/src/gen/vehicles.js`
+(lofted bodies, at most 700 triangles a car, 500 the van, 120 the bicycle) and `engine/src/gen/bystander.js` (a static capsule-limbed figure in one of five
+poses, at most 600 triangles). The threat figure builder is not reused: `gen` may not import `threats` or three.js.
 Rules sentences added; the count of ruled props is printed. `trees.py`: OSM `natural=tree` nodes and `tree_row`
 ways (every 8 m, as today) with `species`, `genus`, `leaf_type`; then each `trees` enricher: its points replace
 OSM trees within 3 m (the inventory is the better record: it carries species and trunk diameter) and add the
@@ -1213,7 +1218,7 @@ type), 125 mapped sidewalks, 5 gate buildings.
 ## 10. What will still fall short of a hand-built level
 
 Stated now so nobody is surprised by the "after": signs with lettering, shop names and window displays;
-weathering, stains and decals placed with intent; interiors; vehicles; statues and carved stone (the landmarks
+weathering, stains and decals placed with intent; interiors; moving vehicles; statues and carved stone (the landmarks
 get their massing, not their ornament: the Château's dormers, finials and brickwork are an artist's or a
 licensed model's work, through `models/` of the format); real façade textures (no open street-level imagery
-allows it); people. Each is either artist's work or a licensed asset; none is blocked by the engine.
+allows it); moving people and traffic (standing bystanders and parked vehicles are placed by rule, item 8). Each is either artist's work or a licensed asset; none is blocked by the engine.

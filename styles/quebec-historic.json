@@ -23,7 +23,10 @@
                  "residential": "asphalt", "service": "asphalt", "path": "gravel" },
     "lamps": { "kind": "lamp_lantern", "spacing": 24, "offset": 0.6, "stagger": true,
                "on": ["residential", "living_street", "pedestrian", "tertiary", "secondary", "primary"] },
-    "bollards": { "kind": "bollard_iron", "at": "pedestrian_ends", "gap": 1.6 }
+    "bollards": { "kind": "bollard_iron", "at": "pedestrian_ends", "gap": 1.6 },
+    "parking": { "on": ["residential", "tertiary", "secondary", "unclassified"], "share": 0.22, "minWidth": 6.5,
+                 "kinds": { "car_hatch": 4, "car_sedan": 3, "car_suv": 2, "van_delivery": 1 }, "bikes": 0.08 },
+    "people": { "density": 0.6, "squares": 2.0, "groups": [1, 1, 2, 2, 3] }
   },
   "props": { "amenity=bench": "bench_slat", "highway=street_lamp": "lamp_lantern", "historic=cannon": "cannon",
              "man_made=flagpole": "flagpole", "emergency=fire_hydrant": "hydrant", "amenity=waste_basket": "bin",

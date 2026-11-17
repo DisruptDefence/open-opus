@@ -12,18 +12,20 @@
 // variant = a small integer: the pose is variant % 5 (0 weight on one leg, 1 hands in pockets, 2 looking at a phone,
 // 3 arms folded, 4 talking with one hand raised) and everything else (height 1.55 to 1.90 m, clothes, skin, hair, a cap,
 // a bag) is drawn from floor(variant / 5), so variants 0..4 are one person in five poses.
-import { triN, tri, fan, linear, rng } from './soup.js';
+import { triN, tri, fan, linear, rng, shade } from './soup.js';
 import { SOUP } from './style.js';
 import { face, frameOf } from './vehicles.js';
 
-const BODY_SOUP = SOUP.tread;   // diffuse, tinted, casts a shadow (the trim soup casts none and a person would float)
+const BODY_SOUP = SOUP.tread;   // diffuse, tinted, casts a shadow (the trim soup casts none and a person would float); it is dark, so the colours are lifted
+const LIFT = 2.4;
 const SIDES = 8, LIMB_SIDES = 6;
 
-const JACKETS = ['#3b4048', '#5a5148', '#2f3d34', '#6b6f73', '#4a3a3a', '#8c7f6a', '#2d3347', '#7a6a52', '#a8a49a', '#5b3f35'].map(linear);
-const TROUSERS = ['#2e3d5c', '#3c3f44', '#222426', '#7b6c55', '#4a5568', '#5a5046'].map(linear);
-const SKIN = ['#e1b898', '#c98f6a', '#a06a47', '#6d4630', '#f0cdb4'].map(linear);
-const HAIR = ['#1b1512', '#3a281c', '#6a4a2a', '#8e8678', '#b08a4a', '#2a2a2c'].map(linear);
-const SHOE = linear('#1b1b1c'), CAP = ['#2b3a52', '#6a2a2a', '#3a3a3c', '#d8d4c8'].map(linear), BAG = ['#3a2f28', '#2a2c2e', '#4a5a3e', '#7a4a2a'].map(linear), SCREEN = linear('#10151a');
+const JACKETS = ['#3b4048', '#5a5148', '#2f3d34', '#6b6f73', '#4a3a3a', '#8c7f6a', '#2d3347', '#7a6a52', '#a8a49a', '#5b3f35'].map((h) => shade(linear(h), LIFT));
+const TROUSERS = ['#2e3d5c', '#3c3f44', '#222426', '#7b6c55', '#4a5568', '#5a5046'].map((h) => shade(linear(h), LIFT));
+const SKIN = ['#e1b898', '#c98f6a', '#a06a47', '#6d4630', '#f0cdb4'].map((h) => shade(linear(h), LIFT));
+const HAIR = ['#1b1512', '#3a281c', '#6a4a2a', '#8e8678', '#b08a4a', '#2a2a2c'].map((h) => shade(linear(h), LIFT));
+const lift = (list) => list.map((h) => shade(linear(h), LIFT));
+const SHOE = shade(linear('#1b1b1c'), LIFT), CAP = lift(['#2b3a52', '#6a2a2a', '#3a3a3c', '#d8d4c8']), BAG = lift(['#3a2f28', '#2a2c2e', '#4a5a3e', '#7a4a2a']), SCREEN = linear('#10151a');
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], len = (a) => Math.hypot(a[0], a[1], a[2]);

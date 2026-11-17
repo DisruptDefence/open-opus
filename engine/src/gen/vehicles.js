@@ -9,17 +9,19 @@
 //
 // Frame of a prop (props.js header): right hand u, up y, facing d (the nose). Soups: the body in SOUP.trim, tinted by the paint
 // (variant, index into PAINT; the library has no painted-metal material: steel is tinted dark iron, and a white car would be
-// grey), glass, tyres, bumpers and lamps in SOUP.iron with vertex colours. The bicycle's thin quads are drawn from both sides
+// grey, so the smooth tinted render stands in), glass, tyres, bumpers and lamps in SOUP.iron with vertex colours. The bicycle's thin quads are drawn from both sides
 // (the iron material with the `d` flag).
 import { box, fan, linear, shade } from './soup.js';
 import { SOUP } from './style.js';
 
 /** Muted body paints, sRGB: white, silver, graphite, black, dark blue, burgundy, forest green, sand. */
-export const PAINT = ['#d9d8d2', '#a9adb0', '#46494d', '#1d1e20', '#22365a', '#5b2230', '#27442f', '#b9a57f'].map(linear);
-const VAN_PAINT = ['#dcdbd6', '#cfd0cd', '#aeb1b3', '#8b8e90'].map(linear);
-const GLASS = linear('#161b20'), TYRE = linear('#151515'), HUB = linear('#8d9094'), DARK = linear('#232527'), PLATE = linear('#b4b2a6');
-const LAMP_W = linear('#e6e2cf'), LAMP_A = linear('#d08a1c'), LAMP_R = linear('#a01616'), SEAM = linear('#26282a');
+export const PAINT = ['#d9d8d2', '#a9adb0', '#46494d', '#1d1e20', '#22365a', '#5b2230', '#27442f', '#b9a57f'].map((h) => linear(h));
+const VAN_PAINT = ['#dcdbd6', '#cfd0cd', '#aeb1b3', '#8b8e90'].map((h) => linear(h));
+const GLASS = linear('#161b20'), TYRE = linear('#151515'), HUB = shade(linear('#8d9094'), 4), DARK = linear('#232527'), PLATE = shade(linear('#b4b2a6'), 4);
+const LAMP_W = shade(linear('#e6e2cf'), 5), LAMP_A = shade(linear('#d08a1c'), 5), LAMP_R = shade(linear('#a01616'), 4), SEAM = linear('#26282a');
 export const VEHICLE_KINDS = ['car_hatch', 'car_sedan', 'car_suv', 'van_delivery', 'bicycle'];
+// the body in SOUP.trim (smooth tinted render: SOUP.tread, which casts a shadow, shows its paving joints on a car's flanks); it casts no shadow,
+// so a dark quad under the car stands in for the contact shadow
 const BODY_SOUP = SOUP.trim, IRON_SOUP = SOUP.iron;
 
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -129,6 +131,8 @@ function buildCar(spec, soups, x, y, z, yaw, variant) {
     face(I, outer, out, TYRE);
     face(I, ring10(spec.wr * 0.56, uo + 0.012), out, HUB);
   }
+  // a dark floor just above the ground, the car's contact shadow (the body casts none)
+  face(I, [P(-hwMax * 0.9, 0.03, -spec.L / 2 + 0.2), P(hwMax * 0.9, 0.03, -spec.L / 2 + 0.2), P(hwMax * 0.9, 0.03, spec.L / 2 - 0.2), P(-hwMax * 0.9, 0.03, spec.L / 2 - 0.2)], [0, 1, 0], DARK);
   // bumpers, lamps, plates, mirrors
   const hwB = hwMax * 0.925;
   for (const end of [1, -1]) {

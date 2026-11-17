@@ -8,6 +8,7 @@ import urllib.parse
 from pathlib import Path
 
 from . import buildings, fetch, geo, ground, landmarks, osm, place as place_mod, props, style as style_mod, terrace, terrain, trees, walls
+from . import streetlife
 from .ctx import Ctx
 
 REPO = Path(__file__).resolve().parent.parent.parent
@@ -50,6 +51,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
     for mod in (ground, walls, terrace, trees, props, landmarks):
         layers.update(mod.build(ctx))
         ctx.layers = layers
+    layers.update(streetlife.build(ctx))   # parked vehicles and bystanders by rule: appended to the props layer (sources 4 and 5)
     layers.update(buildings.build(ctx))
     ctx.rules["simplify"] = SIMPLIFY_RULE
 
