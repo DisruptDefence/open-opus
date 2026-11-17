@@ -51,3 +51,16 @@ test('ambienceOf: host switch over scene over default', () => {
   assert.deepEqual(ambienceOf({ tod: '', wet: undefined }, { tod: 16.5, wet: 0.3, haze: 0.1 }), { tod: 16.5, day: 172, haze: 0.1, cloud: 0.4, wet: 0.3 });
   assert.deepEqual(ambienceOf({ tod: '7', cloud: '0', day: '200' }, { tod: 16.5, cloud: 0.9, day: 100 }), { tod: 7, day: 200, haze: 0.4, cloud: 0, wet: 0 });
 });
+
+test('the sky keys: defaults, layering, bad values ignored', () => {
+  const keys = { cloudScale: 1, cloudSharp: 0.5, cloudHigh: 0.25, sunGlow: 1, horizonBand: 0.6, windDir: 250, windSpeed: 6 };
+  const d = resolveLook();
+  for (const k in keys) assert.equal(d[k], keys[k], k);
+  const l = resolveLook({ cloudScale: 2, windDir: '90', windSpeed: 0 }, { cloudScale: 1.5, sunGlow: 0.2 }, { cloudHigh: 'x', horizonBand: null, cloudSharp: true, windDir: NaN });
+  assert.equal(l.cloudScale, 1.5);
+  assert.equal(l.windDir, 90);
+  assert.equal(l.windSpeed, 0);
+  assert.equal(l.sunGlow, 0.2);
+  for (const k of ['cloudHigh', 'horizonBand', 'cloudSharp']) assert.equal(l[k], keys[k], k);
+  assert.deepEqual(resolveLook(parseLookParam('{"cloudScale":0.7,"windDir":45}')).windDir, 45);
+});

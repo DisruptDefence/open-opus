@@ -81,55 +81,93 @@ export function Oy() {
 export var H6 = `
 // OPUS_SKY
 // OPUS: a sky for any hour, written for this engine (the lifted one was a single storm dawn with its colours
-// in the shader). Gradient from the horizon colours to the zenith, the sun's glow and disc, and one layer of
-// cloud whose cover is a uniform, lit from the sun's side. Colours come from core/atmosphere.js.
+// in the shader). Gradient from the horizon colours to the zenith with a wide pale horizon band and a ground haze
+// line, the sun's aureole and disc, a cumulus field in a plane at altitude (domain-warped fbm projected from the
+// view ray, so clouds shrink and crowd towards the horizon; one light sample towards the sun gives a lit and a
+// shadowed side) and a thin high layer of streaks. Cover is the uniform uCloud; size, edge, high layer, glow,
+// wind and band come from the scene's look (core/atmosphere.js). The environment capture (uEnv) skips the light sample.
 precision highp float;
 varying vec3 vDir;
 uniform float uTime, uEnv, uFlash, uCloud;
+uniform float uCloudScale, uCloudSharp, uCloudHigh, uSunGlow, uBand;
+uniform vec2 uWind, uWindDir;
 uniform vec3 uFlashDir;
 ${Ug}
 ${Ng}
+float fbm4(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * n2(p); p = mat2(1.6, 1.2, -1.2, 1.6) * p + 17.3; a *= 0.5; } return s / 0.9375; }
+// the horizon colour: warm and bright on the sun's side, but bounded so that looking sunward does not wash out
+vec3 skyHor(vec3 d){
+  float ts = skyToSun(d);
+  vec3 c = mix(uHorAway, uHorAway * 1.2 + vec3(0.04, 0.03, 0.02), smoothstep(0.2, 0.75, ts));
+  c = mix(c, uHor * vec3(1.3, 1.15, 1.0), pow(ts, 5.0));
+  c = mix(c, uSunCol * vec3(1.0, 0.72, 0.45) * 2.0, pow(ts, 34.0) * (1.0 - smoothstep(0.08, 0.42, uSunDir.y)));
+  return c;
+}
 
 void main(){
   vec3 d = normalize(vDir);
   float h = max(d.y, 0.0);
   float mu = dot(d, uSunDir);
   float s = max(mu, 0.0);
-  float ts = skyToSun(d);
   float day = smoothstep(0.02, 0.45, uSunDir.y);
+  float zl = clamp(uZen.g * 4.0, 0.0, 1.0);           // how much daylight there is (the sun direction never goes below 14 degrees)
 
-  vec3 hc = horizonColor(d);
-  vec3 col = mix(hc, uZen, 1.0 - exp(-h * 3.4));
-  // glow round the sun, wider and warmer when it is low
-  col += uSunCol * mix(vec3(1.0, 0.8, 0.6), vec3(1.0), day) * (pow(s, 8.0) * 0.10 + pow(s, 64.0) * 0.30 + pow(s, 700.0) * 1.6);
+  vec3 hc = skyHor(d);
+  float tz = 1.0 - exp(-pow(h, 1.15) * 3.6 * (1.0 - 0.3 * uBand));
+  vec3 col = mix(hc, uZen, tz);
+  col = mix(col, uZen * 0.8, smoothstep(0.4, 1.0, h) * 0.3);   // deeper overhead
+  // the sun's aureole: soft, warm, wider when the sun is low; its energy is bounded below
+  col += uSunCol * mix(vec3(1.0, 0.8, 0.6), vec3(1.0), day) * uSunGlow * (pow(s, 8.0) * 0.08 + pow(s, 64.0) * 0.22 + pow(s, 700.0) * 1.2);
 
-  // one cloud layer
-  vec2 cuv = d.xz / (h + 0.12) * vec2(0.55, 0.8);
-  vec2 q = cuv + vec2(-0.012, 0.004) * uTime;
-  vec2 qq = q + (fbm3(q * 0.45 + 7.1) - 0.5) * 1.3;
-  float dens = fbm5(qq) * 0.78 + n2(q * 0.19 + 3.7) * 0.30;
-  float lo = 1.0 - uCloud;
-  float cov = smoothstep(lo - 0.08, lo + 0.16, dens) * smoothstep(0.0, 0.10, h);
-  vec2 sd = normalize(uSunDir.xz + vec2(1e-4));
-  float relief = clamp((dens - (fbm5(qq + sd * 0.22) * 0.78 + n2((q + sd * 0.22) * 0.19 + 3.7) * 0.30)) * 4.0 + 0.5, 0.0, 1.0);
-  float thick = smoothstep(lo + 0.05, lo + 0.45, dens);
-  vec3 lit = uSunCol * (0.75 + 1.1 * pow(s, 4.0)) + uZen * 0.5;
-  vec3 shade = mix(uHorAway * 0.75, uZen * 0.55, 0.4) * (0.55 + 0.45 * day);
-  vec3 cloudC = mix(lit * (0.45 + 0.75 * relief), shade, thick * (0.55 + 0.35 * (1.0 - relief)));
+  // high thin streaks, drawn along the wind
+  vec2 wd = uWindDir, wn = vec2(-wd.y, wd.x);
+  vec2 pr = (d.xz * (9000.0 / (h + 0.08)) - uWind * uTime * 1.6) / 6000.0;
+  float ci = smoothstep(0.56, 0.85, fbm3(vec2(dot(pr, wd) * 0.5, dot(pr, wn) * 1.3) + 5.0)) * smoothstep(0.03, 0.22, h) * uCloudHigh;
+  vec3 cirC = mix(uSunCol * (0.7 + 0.5 * pow(s, 3.0)), hc, 0.35) * mix(0.25, 1.0, zl);
+  col = mix(col, cirC, clamp(ci, 0.0, 1.0) * 0.4);
+
+  // the cumulus field: a plane 1500 m up, projected from the ray
+  float cell = 450.0 * uCloudScale;
+  vec2 p = (d.xz * (1500.0 / (h + 0.035)) - uWind * uTime) / cell;
+  vec2 w = vec2(n2(p * 0.7 + 3.0), n2(p * 0.7 + 11.0)) - 0.5;
+  vec2 pw = p * 0.8 + w * 0.9;
+  float dens = fbm5(pw);
+  float thr = 0.80 - 0.50 * uCloud + (1.0 - smoothstep(0.0, 0.35, h)) * 0.07;
+  float soft = mix(0.20, 0.05, uCloudSharp);
+  float cov = smoothstep(thr, thr + soft, dens) * smoothstep(0.03, 0.16, h);
+  float thick = clamp((dens - thr) / 0.12, 0.0, 1.0);
+  float lit = 0.6;
+  if (uEnv < 0.5) {
+    vec2 sd = normalize(uSunDir.xz + vec2(1e-4));
+    float dl = fbm4(pw + sd * (0.12 + 0.2 * (1.0 - uSunDir.y)));   // the same cloud a short step towards the sun
+    lit = clamp(0.55 + (dens - dl) * 5.0, 0.0, 1.0);
+  }
+  float L = clamp(lit * 0.9 + (1.0 - thick) * 0.45 - 0.2, 0.0, 1.0);
+  vec3 top = (uSunCol * (0.95 + 0.5 * pow(s, 3.0)) + uZen * 0.3) * mix(0.25, 1.0, zl);
+  vec3 base = (uZen * 0.5 + uHorAway * 0.4) * 0.62 * (0.35 + 0.65 * zl);
+  vec3 cloudC = mix(base, top, L);
+  cloudC += uSunCol * pow(s, 10.0) * (1.0 - thick) * 0.9 * zl;                  // silver lining near the sun
   cloudC += vec3(0.55, 0.68, 1.0) * uFlash * pow(max(dot(d, uFlashDir), 0.0), 5.0) * (0.4 + 2.2 * dens * dens);
-  cloudC = mix(cloudC, hc, exp(-h * 9.0));           // far cloud melts into the horizon
-  col = mix(col, cloudC, cov * 0.96);
+  cloudC = mix(cloudC, hc, exp(-h * 7.0) * 0.8);       // far cloud melts into the horizon
+  col = mix(col, cloudC, cov * 0.97);
 
   // sun disc (not in the environment capture: the directional light is the sun there)
   float disk = smoothstep(0.99990, 0.99996, mu);
   col += uSunCol * disk * 90.0 * (1.0 - cov * 0.9) * (1.0 - uEnv);
 
+  // ground haze at the horizon line (hides where the far terrain ends)
+  col = mix(col, hc * 0.95, uBand * exp(-h * 22.0) * 0.6 * step(0.0, d.y));
+
   // below the horizon: haze over far ground (mostly hidden by geometry)
   if (d.y < 0.0) {
-    float t = clamp(-d.y * 5.0, 0.0, 1.0);
+    float t = clamp(-d.y * mix(2.5, 5.0, uEnv), 0.0, 1.0);
     vec3 low = mix(uHorAway * 0.45, uHorAway * 0.12, uEnv);
-    col = mix(hc, low, smoothstep(0.0, 1.0, t));
+    col = mix(hc * 0.95, low, smoothstep(0.0, 1.0, t));
   }
+  // a soft shoulder so the sunward sky and the disc stay bounded (the picture's tone map sees at most a bright white)
+  float m = max(col.r, max(col.g, col.b)), kn = 1.3;
+  float m2 = m < kn ? m : kn + (m - kn) / (1.0 + (m - kn) * 1.2);
+  col *= mix(m2 / max(m, 1e-4), 1.0, uEnv);
   col = mix(col, min(col, vec3(6.0)), uEnv);          // keep the environment map free of fireflies
   gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
 }`,
@@ -143,6 +181,13 @@ export function W6(i) {
     uEnv: { value: 0 },
     uFlash: { value: 0 },
     uCloud: { value: 0.4 },
+    uCloudScale: { value: 1 },
+    uCloudSharp: { value: 0.5 },
+    uCloudHigh: { value: 0.35 },
+    uSunGlow: { value: 1 },
+    uBand: { value: 0.6 },
+    uWind: { value: new Vector2(-5.6, 2) },
+    uWindDir: { value: new Vector2(-0.94, 0.34) },
     uFlashDir: { value: new Vector3(-0.5, 0.5, -0.7).normalize() },
     uSunDir: { value: SUN.dir },
     uZen: { value: SKY.zenith },
@@ -1626,6 +1671,13 @@ export async function createRender(i) {
       setLook(k) {
         ((N.look = k), (lookExposure = k.exposure));
         (A && A.setLook && A.setLook(k), (r.environmentIntensity = Jy * k.env));
+        {
+          // the sky's own look keys, written once here: cloud size and edge, high layer, glow, wind (towards the bearing, grid north) and horizon band
+          const su = u.material.uniforms, a = (k.windDir * Math.PI) / 180, wx = Math.sin(a), wz = -Math.cos(a);
+          ((su.uCloudScale.value = Math.max(0.2, k.cloudScale)), (su.uCloudSharp.value = Math.min(1, Math.max(0, k.cloudSharp))));
+          ((su.uCloudHigh.value = Math.min(1, Math.max(0, k.cloudHigh))), (su.uSunGlow.value = Math.max(0, k.sunGlow)));
+          ((su.uBand.value = Math.min(1, Math.max(0, k.horizonBand))), su.uWindDir.value.set(wx, wz), su.uWind.value.set(wx * k.windSpeed, wz * k.windSpeed));
+        }
         (bounce.groundColor.setRGB(k.bounce[0], k.bounce[1], k.bounce[2]), (bounce.visible = k.bounce.some((v) => v > 0)));
       },
       // OPUS: sun, sky and haze as data. SUN and SKY are shared objects: the sky, the post chain and the weapon
