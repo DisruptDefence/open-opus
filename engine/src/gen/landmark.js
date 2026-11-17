@@ -24,7 +24,7 @@
 // Soups: SOUP.trim (stone dressing), SOUP.window (glass), ROOF_SOUP copper (caps), SOUP.iron (cresting). Budget: <= 9 000
 // triangles for a building of 40 edges and 8 storeys; near only for courses, oriels, windows.
 import { quad, tri, frame, rect, slab, box, shade } from './soup.js';
-import { SOUP, ROOF_SOUP, ROOF_TINT_SOUP, WALL_SOUP, parseColor, paletteColor } from './style.js';
+import { SOUP, ROOF_SOUP, ROOF_TINT_SOUP, parseColor, paletteColor } from './style.js';
 import { signedArea } from './poly.js';
 import { bays } from './facade.js';
 import { roofSeams, stacks, dormerTiers, bartizans, hasCrown, ball } from './landmark_roof.js';
@@ -120,9 +120,9 @@ export function landmarkNear(soups, b, groundAt, style, info) { // eslint-disabl
   dormerTiers(soups, b, look, info, stone);
 }
 
-/** The ground storeys in rough stone: a dado under the windows, a stone pier on every bay line and a projecting band on top. A thin facing 0.06 m proud of the wall, so the façade generator is not touched. */
+/** The ground storeys in rough stone (the plinth's own stone soup, so no new draw call per cell; `material` only chooses nothing yet): a dado under the windows, a stone pier on every bay line and a projecting band on top. A thin facing 0.06 m proud of the wall, so the façade generator is not touched. */
 function stoneBase(soups, e, b, look, style, base, sh) {
-  const bs = look.base, f = e.f, len = e.len, S = soups.get(bs.material === 'stone_ashlar' ? WALL_SOUP[1] : WALL_SOUP[2]), col = parseColor(bs.color) || [0.3, 0.29, 0.27];
+  const bs = look.base, f = e.f, len = e.len, S = soups.get(SOUP.plinth), col = parseColor(bs.color) || [0.3, 0.29, 0.27];
   const top = base + (bs.storeys || 1) * sh, front = b.front && b.front.has(e.i), round = len < 3, by = bays(len, lookStyle(style, look), b.id);
   const blind = b.blind && b.blind.has(e.i), whole = blind || by.n === 0 || sh < 2.3, dado = bs.dado || 0.72, wmax = (style.window.width || 1) * 1.3 + 0.3;
   if (whole) { slab(S, f, 0, len, base, top, 0, 0.06, col, 'ft'); }

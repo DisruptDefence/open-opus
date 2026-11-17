@@ -120,7 +120,7 @@ test('the stone base faces the ground storey and every v soup has a colour per v
   const st = kstyle({ base: KEYS.base, roof: KEYS.roof, dormers: KEYS.dormers, stacks: KEYS.stacks, crown: KEYS.crown }), b = { ...big, look: 'full' };
   const r1 = draw(b, 'full', st), r2 = draw(b, 'full', st);
   assert.equal(dump(r1.n), dump(r2.n)); assert.equal(dump(r1.s), dump(r2.s));
-  const rub = r1.n.get('wall_rubble|tv'); assert.ok(rub.pos.length > 0); const ys = []; for (let i = 1; i < rub.pos.length; i += 3) ys.push(rub.pos[i]);
+  const rub = r1.n.get('stone|tv'); assert.ok(rub.pos.length > 0); const ys = []; for (let i = 1; i < rub.pos.length; i += 3) ys.push(rub.pos[i]);
   assert.ok(Math.min(...ys) >= 10 - 1e-6 && Math.max(...ys) < 10 + 24 / 7 + 0.2, 'the stone stays within the ground storey and its band');
   for (const set of [r1.n, r1.s]) for (const [key, s] of set.map) if (/\|[a-z]*v/.test(key)) assert.equal(s.col.length, s.pos.length, key);
 });
