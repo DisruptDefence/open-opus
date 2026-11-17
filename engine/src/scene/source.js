@@ -32,7 +32,7 @@
 //             of a mapped way within reach of one cell (its box grown by width / 2 + 3 m). steps: null, or
 //             { count, handrail }. sidewalk: 'both' | 'left' | 'right' | 'no' | 'self' (the way is itself a raised sidewalk).
 //   tree      { x, z, height, crownRadius, kind, form }
-//   prop      { kind, x, z, yaw, variant, source }: kind is the word; yaw in radians about +y as three.js turns
+//   prop      { kind, x, z, yaw, variant, source, y? }: y is the item's own height (a ship on the water), else the ground's; kind is the word; yaw in radians about +y as three.js turns
 //             (0 faces grid north, positive towards the west): the data's degrees clockwise from north, negated.
 //   crossing  { x, z, yaw, width }: yaw as a prop's, the direction the road runs.
 //   cells     16 entries, 4 x 4 of 62.5 m (gen/cells.js): { i, j, index, x0, z0, x1, z1, buildings, walls, trees,
@@ -98,7 +98,7 @@ function completeWall(w) {
   return w;
 }
 const completeTree = (t) => { t.height = t.height ?? 8; t.crownRadius = t.crownRadius ?? 3; t.kind = t.kind || 1; t.form = t.form || 0; return t; };
-const completeProp = (p) => { p.yaw = p.yaw || 0; p.variant = p.variant || 0; p.source = p.source || 0; return p; };
+const completeProp = (p) => { p.yaw = p.yaw || 0; p.variant = p.variant || 0; p.source = p.source || 0; if (!Number.isFinite(p.y)) delete p.y; return p; };
 const ROAD_REACH = 3; // metres beyond half a road's width that its sidewalks, kerbs and stringers may reach
 const HALF_OPEN = 1e-6;
 
@@ -138,7 +138,7 @@ export function decodeChunk(buf, grid, style = resolveStyle()) {
     buildings: (h.buildings || []).map((b) => completeBuilding({ ...b, ring: abs(b.ring, ox, oz), holes: (b.holes || []).map((r) => abs(r, ox, oz)), passages: (b.passages || []).map((p) => [p[0] + ox, p[1] + oz, p[2] + ox, p[3] + oz, p[4], p[5]]) }, style)),
     walls: (h.walls || []).filter((w) => w.ring).map((w) => completeWall({ ...w, ring: abs(w.ring, ox, oz) })),
     trees: (h.trees || []).map((t) => completeTree({ ...t, x: t.x + ox, z: t.z + oz })),
-    props: ((h.props && h.props.items) || []).filter((p) => kinds[p[0]]).map((p) => completeProp({ kind: kinds[p[0]], x: p[1] + ox, z: p[2] + oz, yaw: (-(p[3] || 0) * Math.PI) / 180, variant: p[4], source: p[5] })),
+    props: ((h.props && h.props.items) || []).filter((p) => kinds[p[0]]).map((p) => completeProp({ kind: kinds[p[0]], x: p[1] + ox, z: p[2] + oz, yaw: (-(p[3] || 0) * Math.PI) / 180, variant: p[4], source: p[5], y: p[6] })),
     water: (h.water || []).map((w) => ({ ...w, ring: abs(w.ring, ox, oz) })),
     landmarks: (h.landmarks || []).map((l) => ({ ...l, x: l.x + ox, z: l.z + oz })),
   };
@@ -257,7 +257,7 @@ export function jsonSource(scene) {
   // Trees: [x, z, height, crownRadius, kind, form]; a short record takes the old seeded numbers.
   for (const [x, z, height, crown, kind, form] of scene.trees || []) put(own(x, x, z, z), 'trees', completeTree({ x, z, height: height ?? 7 + ((x * 13.7 + z * 7.3) % 5 + 5) % 5, crownRadius: crown ?? 2.5 + (((x * 3.1 + z * 5.9) % 2) + 2) % 2, kind: kind || 1, form: form || 0 }));
   const kinds = (scene.props && scene.props.kinds) || [];
-  for (const p of (scene.props && scene.props.items) || []) if (kinds[p[0]]) put(own(p[1], p[1], p[2], p[2]), 'props', completeProp({ kind: kinds[p[0]], x: p[1], z: p[2], yaw: (-(p[3] || 0) * Math.PI) / 180, variant: p[4], source: p[5] }));
+  for (const p of (scene.props && scene.props.items) || []) if (kinds[p[0]]) put(own(p[1], p[1], p[2], p[2]), 'props', completeProp({ kind: kinds[p[0]], x: p[1], z: p[2], yaw: (-(p[3] || 0) * Math.PI) / 180, variant: p[4], source: p[5], y: p[6] }));
   for (const l of scene.landmarks || []) put(own(l.x, l.x, l.z, l.z), 'landmarks', { kind: l.k, x: l.x, z: l.z, name: l.n, mapLabel: l.n });
 
   // Lines: whole here, cut into the cells of a chunk when the chunk is asked for.

@@ -19,8 +19,11 @@
 //             facing, turned with yaw). nav: true when the prop closes its nav cell (a bench, a cannon), false when a
 //             walker and a bullet are stopped but paths go on beside it (a lamp post). scene/install.js makes the
 //             solid from this, so the model must fill what the collider says and no more than 0.1 m beyond it.
-//   Soups     at most three per kind: SOUP.iron, SOUP.timber, SOUP.trim, SOUP.lampGlass (style.js). Tints are linear
-//             [r, g, b]. Smooth round parts: soup.js triN() with normals pointing away from the axis.
+//   Soups     at most three per kind: SOUP.iron, SOUP.timber, SOUP.trim, SOUP.lampGlass (style.js); a large painted body that
+//             must cast a shadow may use SOUP.hull (ship_cargo does, with SOUP.iron and SOUP.awning for thin double-sided ribbons).
+//             Tints are linear [r, g, b]. Smooth round parts: soup.js triN() with normals pointing away from the axis.
+//   Big kinds A kind may carry `big: { maxTriangles, below }` (ship_cargo, gen/ship.js): it then stands `below` metres under y (a hull in
+//             the water: y is the water level, the item's own `y`) and the 30 to 250 triangle budget is its `maxTriangles` instead.
 //   Winding   counter-clockwise seen from outside.
 //   Group     `near` only: a prop is not drawn beyond the detail distance.
 //   Budget    30 to 250 triangles a prop; <= 25 000 triangles of props a cell.
@@ -30,6 +33,7 @@ export const PROP_KIT = {};
 
 import { box, tri, triN, quad, fan, shade } from './soup.js';
 import { SOUP, ROOF_SOUP } from './style.js';
+import { PROP_SHIP_CARGO } from './ship.js';
 
 const IRON = [0.03, 0.033, 0.036], GREEN_PAINT = [0.02, 0.1, 0.05], STONE = [0.42, 0.4, 0.36], BRONZE = [0.2, 0.36, 0.28], WHITE = [0.8, 0.78, 0.72];
 // a prop's own frame: right, up, forward (the facing), at the plan point (x, z) turned by yaw
@@ -164,4 +168,5 @@ PROP_KIT.planter = {
     lathe(L, p, 0, 0, [[0.38, y + 0.5], [0.44, y + 0.75], [0.3, y + 0.95], [0.0, y + 1.0]], 8, null);
   },
 };
+PROP_KIT.ship_cargo = PROP_SHIP_CARGO;   // a coastal cargo ship, gen/ship.js
 void shade;

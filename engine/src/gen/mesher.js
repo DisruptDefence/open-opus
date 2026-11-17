@@ -127,7 +127,7 @@ export function cellSoups(cell, group, env) {
     for (const p of cell.props) {
       const kit = PROP_KIT[p.kind];
       if (!kit) { warnOnce(`prop kind "${p.kind}" is not in the kit: skipped`); continue; }
-      kit.build(soups, p.x, groundAt(p.x, p.z), p.z, p.yaw, p.variant, style);
+      kit.build(soups, p.x, p.y ?? groundAt(p.x, p.z), p.z, p.yaw, p.variant, style);
     }
   } else throw new Error(`gen/mesher.js: no group "${group}"`);
   return soups;

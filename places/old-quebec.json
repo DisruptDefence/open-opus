@@ -32,5 +32,8 @@
       "source": "OpenStreetMap node (historic=monument, wikidata Q16665231); the tall pedestal with a bronze figure is a simple model, no likeness",
       "prop": { "kind": "monument_tall", "variant": 0 }
     }
+  ],
+  "props": [
+    { "kind": "ship_cargo", "lat": 46.8119998, "lon": -71.2011013, "bearing": 12.4, "variant": 0, "on": "water" }
   ]
 }
