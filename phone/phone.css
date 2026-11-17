@@ -1,61 +1,118 @@
 /* The phone a player raises with T: a rugged handset held sideways, rising from the bottom of the view.
-   What is on the glass belongs to the screen (stream-screen.js); this file draws the device around it. */
+   What is on the glass belongs to the screen (stream-screen.js); this file draws the device around it.
+   The case is flat paint on purpose: no filter, backdrop-filter or mask on .opus-phone or anything inside the glass, because a live
+   video stream repaints under it. The one blur (the cast shadow) sits on a separate static element behind the phone. */
 .opus-phone {
-  --w: min(58vw, 118vh); --c: calc(var(--w) * .022); position: absolute; left: 50%; bottom: 3vh; width: var(--w); margin-left: calc(var(--w) / -2); z-index: 60;
+  --w: min(58vw, 118vh); --c: calc(var(--w) * .022); --b: calc(var(--w) * .004); position: absolute; left: 50%; bottom: 3vh; width: var(--w); margin-left: calc(var(--w) / -2); z-index: 60;
   padding: calc(var(--w) * .03) calc(var(--w) * .045);
-  filter: drop-shadow(0 calc(var(--w) * .02) calc(var(--w) * .03) rgba(0, 0, 0, .5)) drop-shadow(0 calc(var(--w) * .004) calc(var(--w) * .006) rgba(0, 0, 0, .5));
   transform: translateY(130%) rotate(-4deg); transition: transform .32s cubic-bezier(.2, .75, .25, 1); pointer-events: auto;
 }
 .opus-phone.on { transform: none; }
 .opus-phone[hidden] { display: none; }
-/* The bumper shell: matte dark-earth polymer, 45 degree chamfered corners, a fine texture of two crossed gradients */
+/* The bumper shell, outer bevel: the whole chamfered outline in a light top-left facet and a dark bottom-right facet; the face
+   (.face, 0.4 % of --w inside) covers all but a ring of that width */
 .opus-phone::before { content: ''; position: absolute; inset: 0; pointer-events: none;
   clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(-45deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, #6a6253, #5b5346 45%, #463f35);
-  box-shadow: inset 0 1px 0 rgba(255, 245, 220, .38), inset 0 -1px 0 rgba(0, 0, 0, .55), inset 1px 0 0 rgba(255, 245, 220, .12), inset -1px 0 0 rgba(0, 0, 0, .3); }
-/* moulded relief: a pale rim just inside the frame and a shaded step down to the gasket */
-.opus-phone::after { content: ''; position: absolute; inset: calc(var(--w) * .006); pointer-events: none;
-  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), inset 0 calc(var(--w) * .004) calc(var(--w) * .006) rgba(255, 245, 220, .07); }
+  background: linear-gradient(to bottom right, #8c8470 49.5%, #26221b 50.5%); }
 .opus-phone-deco { position: absolute; display: block; pointer-events: none; }
-/* corner guards: raised, darker, each with one recessed screw head */
-.opus-phone-deco.guard { width: calc(var(--w) * .055); height: calc(var(--w) * .043); --s: calc(var(--w) * .0075);
-  background: radial-gradient(circle at var(--sx) var(--sy), #14110d 0 calc(var(--s) * .45), #8b826f calc(var(--s) * .62) calc(var(--s) * .95), transparent calc(var(--s) * 1.05)),
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 3px),
-    linear-gradient(145deg, #50483c, #2f2a23);
-  box-shadow: inset 0 1px 0 rgba(255, 245, 220, .3), inset 0 -2px 0 rgba(0, 0, 0, .55), inset -2px 0 0 rgba(0, 0, 0, .25), inset 2px 0 0 rgba(255, 245, 220, .08); }
-.guard.tl { left: 0; top: 0; --sx: 58%; --sy: 55%; clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
-.guard.tr { right: 0; top: 0; --sx: 42%; --sy: 55%; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
-.guard.bl { left: 0; bottom: 0; --sx: 58%; --sy: 45%; clip-path: polygon(0 0, 100% 0, 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.guard.br { right: 0; bottom: 0; --sx: 42%; --sy: 45%; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%); }
-/* side keys on the top edge: raised rubber pads in cut-outs */
-.opus-phone-deco.key { top: calc(var(--w) * -.007); height: calc(var(--w) * .014); border-radius: calc(var(--w) * .004);
-  background: linear-gradient(180deg, #4a463f, #25231f); box-shadow: 0 0 0 calc(var(--w) * .0025) #17150f, inset 0 1px 0 rgba(255, 255, 255, .2); }
+/* the cast shadow: a static element behind the phone, blurred on its own, so nothing over the stream is filtered */
+.opus-phone-deco.shade { inset: 0; z-index: -1; filter: blur(calc(var(--w) * .011)); }
+.shade::before, .shade::after { content: ''; position: absolute; background: #000;
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c)); }
+.shade::before { inset: calc(var(--w) * -.012); transform: translateY(calc(var(--w) * .022)); opacity: .45; }
+.shade::after { inset: calc(var(--w) * -.002); transform: translateY(calc(var(--w) * .005)); opacity: .65; }
+/* the face: moulded dark-coyote polymer. Fine stipple (two dot patterns, different pitch), each rail convex (light along its middle,
+   dark towards both edges), a vertical tone from top to bottom */
+.opus-phone-deco.face { inset: var(--b);
+  clip-path: polygon(calc(var(--c) - var(--b) * .42) 0, calc(100% - var(--c) + var(--b) * .42) 0, 100% calc(var(--c) - var(--b) * .42), 100% calc(100% - var(--c) + var(--b) * .42), calc(100% - var(--c) + var(--b) * .42) 100%, calc(var(--c) - var(--b) * .42) 100%, 0 calc(100% - var(--c) + var(--b) * .42), 0 calc(var(--c) - var(--b) * .42));
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, .12) 0 .5px, transparent .95px) 0 0 / 3px 3px,
+    radial-gradient(circle, rgba(255, 244, 214, .08) 0 .5px, transparent .9px) 1.3px 2.1px / 4.7px 4.7px,
+    linear-gradient(180deg, rgba(0, 0, 0, .15), rgba(255, 244, 214, .09) 50%, rgba(0, 0, 0, .15)) top / 100% calc(var(--w) * .026) no-repeat,
+    linear-gradient(0deg, rgba(0, 0, 0, .15), rgba(255, 244, 214, .09) 50%, rgba(0, 0, 0, .15)) bottom / 100% calc(var(--w) * .026) no-repeat,
+    linear-gradient(90deg, rgba(0, 0, 0, .15), rgba(255, 244, 214, .09) 50%, rgba(0, 0, 0, .15)) left / calc(var(--w) * .041) 100% no-repeat,
+    linear-gradient(270deg, rgba(0, 0, 0, .15), rgba(255, 244, 214, .09) 50%, rgba(0, 0, 0, .15)) right / calc(var(--w) * .041) 100% no-repeat,
+    linear-gradient(180deg, #6c6455, #5b5346 50%, #4b4439); }
+/* corner guards: raised chamfered pads. The element carries the contact shadow (its clip reaches past the pad on the two inner sides
+   only, so the shadow lands on the rail and never outside the outline); ::before is the pad itself: a light top facet, a dark lower
+   facet, a 1 px highlight on the upper edge, and a screw in a recessed counterbore (dark ring, lighter rim, slotted head) */
+.opus-phone-deco.guard { width: calc(var(--w) * .055); height: calc(var(--w) * .043); --s: calc(var(--w) * .0075); --e: calc(var(--w) * .012);
+  box-shadow: calc(var(--dx) * var(--w) * .0022) calc(var(--dy) * var(--w) * .003) calc(var(--w) * .0055) rgba(0, 0, 0, .7); }
+.guard::before { content: ''; position: absolute; inset: 0;
+  background:
+    linear-gradient(40deg, transparent 40%, rgba(0, 0, 0, .75) 40% 58%, transparent 58%) calc(var(--sx) - var(--s) * .55) calc(var(--sy) - var(--s) * .55) / calc(var(--s) * 1.1) calc(var(--s) * 1.1) no-repeat,
+    radial-gradient(circle at var(--sx) var(--sy), #8d8571 0, #6d6555 calc(var(--s) * .5), #17140f calc(var(--s) * .58) calc(var(--s) * .8), #9a917c calc(var(--s) * .84) calc(var(--s) * .98), transparent calc(var(--s) * 1.06)),
+    radial-gradient(circle, rgba(0, 0, 0, .14) 0 .5px, transparent .9px) 0 0 / 3px 3px,
+    linear-gradient(180deg, #7a7160 0 9%, #5a5245 9% 86%, #373128 86%);
+  box-shadow: inset 0 1px 0 rgba(255, 246, 222, .6), inset var(--b) 0 0 rgba(255, 244, 214, .08), inset calc(var(--b) * -1) 0 0 rgba(0, 0, 0, .22), inset 0 calc(var(--b) * -.6) 0 rgba(0, 0, 0, .35); }
+.guard.tl { left: 0; top: 0; --sx: calc(var(--w) * .032); --sy: calc(var(--w) * .0245); --dx: 1; --dy: 1;
+  clip-path: polygon(var(--c) 0, calc(100% + var(--e)) 0, calc(100% + var(--e)) calc(100% + var(--e)), 0 calc(100% + var(--e)), 0 var(--c)); }
+.guard.tl::before { clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+.guard.tr { right: 0; top: 0; --sx: calc(var(--w) * .023); --sy: calc(var(--w) * .0245); --dx: -1; --dy: 1;
+  clip-path: polygon(calc(var(--e) * -1) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% + var(--e)), calc(var(--e) * -1) calc(100% + var(--e))); }
+.guard.tr::before { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.guard.bl { left: 0; bottom: 0; --sx: calc(var(--w) * .032); --sy: calc(var(--w) * .0185); --dx: 1; --dy: -1;
+  clip-path: polygon(0 calc(var(--e) * -1), calc(100% + var(--e)) calc(var(--e) * -1), calc(100% + var(--e)) 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.guard.bl::before { clip-path: polygon(0 0, 100% 0, 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.guard.br { right: 0; bottom: 0; --sx: calc(var(--w) * .023); --sy: calc(var(--w) * .0185); --dx: -1; --dy: -1;
+  clip-path: polygon(calc(var(--e) * -1) calc(var(--e) * -1), 100% calc(var(--e) * -1), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, calc(var(--e) * -1) 100%); }
+.guard.br::before { clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%); }
+/* keys on the top rail: raised rubber pads that sit on the rail, each casting a 1 px shadow onto it; the rocker has a centre notch */
+.opus-phone-deco.key { top: calc(var(--w) * .0075); height: calc(var(--w) * .0135); border-radius: calc(var(--w) * .0035);
+  background: linear-gradient(180deg, #5a5750, #3a3833 45%, #24221f);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .7), 0 0 0 1px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(0, 0, 0, .4); }
 .key.vol { left: 56%; width: calc(var(--w) * .11); } .key.pwr { left: 74%; width: calc(var(--w) * .05); }
-/* cable port on the left short side, with strain relief and a cable that fades away */
-.opus-phone-deco.port { left: calc(var(--w) * .006); top: 50%; width: calc(var(--w) * .03); height: calc(var(--w) * .07); margin-top: calc(var(--w) * -.035); border-radius: calc(var(--w) * .004);
-  background: repeating-linear-gradient(0deg, #1b1a17 0 calc(var(--w) * .003), #3e3b34 calc(var(--w) * .003) calc(var(--w) * .006)); box-shadow: 0 0 0 1px #0d0c0a, inset 0 0 0 1px rgba(255, 255, 255, .06); }
-.opus-phone-deco.cable { left: calc(var(--w) * -.13); top: 50%; width: calc(var(--w) * .14); height: calc(var(--w) * .022); margin-top: calc(var(--w) * -.011); border-radius: calc(var(--w) * .011) 0 0 calc(var(--w) * .011);
-  background: linear-gradient(180deg, #55524a, #1b1a17 55%, #0e0d0b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+.key.vol::after { content: ''; position: absolute; left: 50%; top: 14%; bottom: 14%; width: calc(var(--w) * .0035); margin-left: calc(var(--w) * -.00175);
+  background: linear-gradient(180deg, #121110, #1d1c19); box-shadow: 1px 0 0 rgba(255, 255, 255, .13), -1px 0 0 rgba(0, 0, 0, .5); border-radius: 1px; }
+/* cable: a ribbed, tapered overmould on the left rail (.port), and a round cable leaving it in a slight downward arc (.cable: a quarter
+   ellipse of border, with a highlight along its top) that fades out */
+.opus-phone-deco.port { left: calc(var(--w) * -.024); top: 50%; width: calc(var(--w) * .062); height: calc(var(--w) * .074); margin-top: calc(var(--w) * -.037);
+  clip-path: polygon(0 32%, 38% 25%, 100% 0, 100% 100%, 38% 75%, 0 68%);
+  background:
+    repeating-linear-gradient(90deg, #14130f 0 calc(var(--w) * .0028), #55524a calc(var(--w) * .0028) calc(var(--w) * .0042), #3b3934 calc(var(--w) * .0042) calc(var(--w) * .0066)) right / 66% 100% no-repeat,
+    linear-gradient(180deg, #4c4a43, #2b2a26 50%, #171613); }
+.port::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255, 255, 255, .22) 0, transparent 14%, transparent 80%, rgba(0, 0, 0, .45)); }
+.opus-phone-deco.cable { left: calc(var(--w) * -.146); top: 50%; width: calc(var(--w) * .124); height: calc(var(--w) * .04); margin-top: calc(var(--w) * -.0065);
+  border-top: calc(var(--w) * .013) solid #2a2926; border-left: calc(var(--w) * .013) solid #2a2926; border-top-left-radius: 100% 100%; box-sizing: border-box;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 70%); mask-image: linear-gradient(90deg, transparent, #000 70%); }
-.opus-phone-deco.cable::after { content: ''; position: absolute; right: 0; top: -22%; bottom: -22%; width: 20%; border-radius: calc(var(--w) * .006) 0 0 calc(var(--w) * .006); background: linear-gradient(180deg, #4a463f, #1c1b18); }
-/* lanyard loop on the right short side */
-.opus-phone-deco.lanyard { right: calc(var(--w) * -.02); top: 42%; width: calc(var(--w) * .04); height: calc(var(--w) * .05); border-radius: calc(var(--w) * .02);
-  border: calc(var(--w) * .0045) solid #2b2a25; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 1px 2px rgba(0, 0, 0, .5); }
-/* mount hint: the plate the case folds down from on a chest rig */
+.cable::after { content: ''; position: absolute; left: calc(var(--w) * -.013); top: calc(var(--w) * -.013); right: 0; bottom: 0; box-sizing: border-box;
+  border-top: calc(var(--w) * .0035) solid rgba(255, 255, 255, .26); border-left: calc(var(--w) * .0035) solid rgba(255, 255, 255, .12); border-top-left-radius: 100% 100%; }
+/* lanyard lug: a rounded tab growing out of the right rail with a slot through it, and a short loop of flat olive webbing (stitched
+   edges) through the slot, hanging down and fading out */
+.opus-phone-deco.lanyard { right: calc(var(--w) * -.021); top: 40%; width: calc(var(--w) * .043); height: calc(var(--w) * .052);
+  border-radius: calc(var(--w) * .004) calc(var(--w) * .021) calc(var(--w) * .021) calc(var(--w) * .004);
+  background: linear-gradient(90deg, #5b5346, #6a6253 45%, #4d463a);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .5), inset -1px 0 0 rgba(255, 244, 214, .14), inset 0 -2px 0 rgba(0, 0, 0, .4), 0 1px 1px rgba(0, 0, 0, .55), 1px 0 2px rgba(0, 0, 0, .35); }
+.lanyard::before { content: ''; position: absolute; left: 28%; right: 14%; top: 20%; bottom: 22%; border-radius: calc(var(--w) * .008);
+  background: #0f0e0c; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 244, 214, .22); }
+.opus-phone-deco.strap { right: calc(var(--w) * -.0092); top: calc(40% + var(--w) * .012); width: calc(var(--w) * .0125); height: calc(var(--w) * .078);
+  background: linear-gradient(90deg, rgba(0, 0, 0, .3), transparent 25% 75%, rgba(0, 0, 0, .3)), #3d422d;
+  box-shadow: inset 0 calc(var(--w) * .005) calc(var(--w) * .004) rgba(0, 0, 0, .6);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
+.strap::after { content: ''; position: absolute; inset: calc(var(--w) * .006) calc(var(--w) * .0018) 0;
+  background: repeating-linear-gradient(180deg, rgba(214, 214, 170, .45) 0 2px, transparent 2px 4px) left / 1px 100% no-repeat, repeating-linear-gradient(180deg, rgba(214, 214, 170, .45) 0 2px, transparent 2px 4px) right / 1px 100% no-repeat; }
+/* mount hinge: a round-sectioned bar (light band along its top third, dark underside) under the case, with a thin shadow below it, and
+   two short cylindrical knuckles with end caps and a pin line */
 .opus-phone-deco.hinge { left: 50%; width: calc(var(--w) * .4); margin-left: calc(var(--w) * -.2); bottom: calc(var(--w) * -.012); height: calc(var(--w) * .02);
-  border-radius: calc(var(--w) * .003); background: linear-gradient(180deg, #4d4639, #342f27); box-shadow: 0 0 0 1px #17150f, inset 0 1px 0 rgba(255, 245, 220, .3), 0 2px 3px rgba(0, 0, 0, .45); }
-.opus-phone-deco.knuckle { bottom: calc(var(--w) * -.014); width: calc(var(--w) * .035); height: calc(var(--w) * .024); border-radius: calc(var(--w) * .006);
-  background: linear-gradient(90deg, #2a2721, #6a6253 40%, #2a2721); box-shadow: 0 0 0 1px #15130f, 0 2px 3px rgba(0, 0, 0, .45); }
+  border-radius: calc(var(--w) * .006);
+  background: linear-gradient(180deg, #8c826e 0, #7a7059 16%, #655c4a 36%, #4d4639 60%, #2e2a22 100%);
+  box-shadow: 0 calc(var(--w) * .0025) calc(var(--w) * .004) rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 246, 222, .45); }
+.opus-phone-deco.knuckle { bottom: calc(var(--w) * -.0165); width: calc(var(--w) * .035); height: calc(var(--w) * .026); border-radius: calc(var(--w) * .0035);
+  background:
+    linear-gradient(90deg, #1e1b16 0 9%, rgba(255, 255, 255, .16) 9% 11%, transparent 11% 89%, rgba(255, 255, 255, .12) 89% 91%, #1e1b16 91%),
+    linear-gradient(180deg, transparent 47%, rgba(0, 0, 0, .65) 47% 55%, transparent 55%),
+    linear-gradient(180deg, #a09680 0, #867c67 18%, #6a6253 38%, #453f34 68%, #26231d 100%);
+  box-shadow: 0 calc(var(--w) * .002) calc(var(--w) * .003) rgba(0, 0, 0, .55); }
 .knuckle.l { left: 38%; } .knuckle.r { right: 38%; }
-/* the inner lip: a black rubber gasket, then the phone's own thin black bezel */
+/* the inner rim, from the outside in: the bumper's soft inner step, one black gasket, the phone's own black bezel (rounded inner
+   corners), then the glass. Nothing else. */
 .opus-phone-body { position: relative; padding: calc(var(--w) * .01) calc(var(--w) * .012) calc(var(--w) * .01) calc(var(--w) * .03);
-  border-radius: calc(var(--w) * .02); background: #040405; box-shadow: 0 0 0 calc(var(--w) * .005) #0b0b0a, 0 0 0 calc(var(--w) * .0055) #2a2822, inset 0 0 0 1px #1a1b1d; }
-.opus-phone-cam { position: absolute; left: calc(var(--w) * .011); top: 50%; width: calc(var(--w) * .01); height: calc(var(--w) * .01);
-  margin-top: calc(var(--w) * -.005); border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(190, 200, 255, .55) 0 8%, transparent 16%), radial-gradient(circle, #05060a 0 38%, #3a3470 55%, #12122a 70%, #020203 100%); }
+  border-radius: calc(var(--w) * .02); background: #040405; box-shadow: 0 0 0 calc(var(--w) * .005) #000, 0 0 calc(var(--w) * .008) calc(var(--w) * .005) rgba(0, 0, 0, .5); }
+/* the front camera: dark glass, a faint ring, one small specular dot */
+.opus-phone-cam { position: absolute; left: calc(var(--w) * .0105); top: 50%; width: calc(var(--w) * .009); height: calc(var(--w) * .009);
+  margin-top: calc(var(--w) * -.0045); border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .95) 0 7%, transparent 14%), radial-gradient(circle, #05060a 0 52%, #1c2236 66%, #080a10 80%, #000 100%);
+  box-shadow: 0 0 0 1px rgba(150, 165, 210, .16); }
 .opus-phone-glass { position: relative; aspect-ratio: 1068 / 476; overflow: hidden; border-radius: calc(var(--w) * .006); background: #000; }
 /* a hairline dark edge and a faint diagonal reflection over the glass; neither takes a touch or a click */
 .opus-phone-glass::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .75); }
