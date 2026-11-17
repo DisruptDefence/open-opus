@@ -1,13 +1,13 @@
 // Proposed changes to `ambience.look` from the gaps. The rules, all damped (60 % of the measured gap is applied, so a
-// rerun converges instead of oscillating), all clamped, and each views-wide number is the MEDIAN over views that have both
-// a reference and a render:
+// rerun converges instead of oscillating), all clamped, and each views-wide number is the MEDIAN, over the views that have both
+// a reference and a render, of that view's own gap or ratio (never a median of values from different places):
 //   exposure   x Y(L+dL)/Y(L): dL = 0.6 x median gap of mean L* over walls and ground (reference - render); Y is the CIE L*->luminance
 //              curve; the multiplier is clamped 0.8..1.25.
-//   saturation x (1 + 0.6 (r - 1)), r = reference / render mean chroma of walls; clamped 0.85..1.2.
+//   saturation x (1 + 0.6 (r - 1)), r = median over views of reference / render mean chroma of walls; clamped 0.85..1.2.
 //   skySat     the same on the sky's mean chroma; clamped 0.85..1.2.
 //   skyTint    RGB multipliers (kept in luminance, within +-6 %) from 0.6 x the sky's (a*, b*) gap.
 //   shadows    the same from the dark part's (a*, b*) gap (walls and ground together);   highlights: the lit part's.
-//   env, bounce  shade too dark (reference ratio > render ratio, ratio = dark L* / lit L*): rel = (ref - render) / ref;
+//   env, bounce  shade too dark (reference ratio > render ratio, ratio = dark L* / lit L*): rel = median over views of (ref - render) / ref;
 //              env x (1 + clamp(0.6 rel, -0.25, 0.25)); bounce x (1 + clamp(0.48 rel, -0.2, 0.2)); too bright lowers them.
 //   curve      + clamp(0.006 x contrast gap in L*, -0.1, 0.1), never below 0.
 import { labToLinear, lstarToY } from './color.mjs';
@@ -46,16 +46,17 @@ export function propose(views, look) {
     add('exposure', r4(look.exposure * mult), `walls and ground are ${Math.abs(gapL).toFixed(1)} L* ${gapL > 0 ? 'darker' : 'lighter'} than the photographs: apply 60 % of it (${dL.toFixed(1)} L*) through the L*-to-luminance curve, x${mult.toFixed(3)}`, { medianGapL: r4(gapL), renderL: r4(curL), multiplier: r4(mult) });
   }
   // saturation
-  const cw = [fv('walls.chroma'), rv('walls.chroma')];
-  if (cw.every((x) => x > 0)) {
-    const r = cw[0] / cw[1], step = clamp(1 + DAMP * (r - 1), 0.85, 1.2);
-    add('saturation', r4(look.saturation * step), `wall chroma is ${cw[1].toFixed(1)} against ${cw[0].toFixed(1)} in the photographs: x${step.toFixed(3)}`, { reference: cw[0], render: cw[1], ratio: r4(r), step: r4(step) });
+  const ratios = (k) => use.map((v) => (v.reference[k] > 0 && v.render[k] > 0 ? v.reference[k] / v.render[k] : NaN)).filter(Number.isFinite);
+  const cw = [fv('walls.chroma'), rv('walls.chroma')], rW = med(ratios('walls.chroma'));
+  if (Number.isFinite(rW)) {
+    const r = rW, step = clamp(1 + DAMP * (r - 1), 0.85, 1.2);
+    add('saturation', r4(look.saturation * step), `wall chroma is ${cw[1].toFixed(1)} against ${cw[0].toFixed(1)} in the photographs (median per-view ratio ${r.toFixed(2)}): x${step.toFixed(3)}`, { reference: cw[0], render: cw[1], ratio: r4(r), step: r4(step) });
   }
   // sky
-  const cs = [fv('sky.chroma'), rv('sky.chroma')];
-  if (cs.every((x) => x > 0)) {
-    const r = cs[0] / cs[1], step = clamp(1 + DAMP * (r - 1), 0.85, 1.2);
-    add('skySat', r4(look.skySat * step), `sky chroma is ${cs[1].toFixed(1)} against ${cs[0].toFixed(1)} in the photographs: x${step.toFixed(3)}`, { reference: cs[0], render: cs[1], ratio: r4(r), step: r4(step) });
+  const cs = [fv('sky.chroma'), rv('sky.chroma')], rS = med(ratios('sky.chroma'));
+  if (Number.isFinite(rS)) {
+    const r = rS, step = clamp(1 + DAMP * (r - 1), 0.85, 1.2);
+    add('skySat', r4(look.skySat * step), `sky chroma is ${cs[1].toFixed(1)} against ${cs[0].toFixed(1)} in the photographs (median per-view ratio ${r.toFixed(2)}): x${step.toFixed(3)}`, { reference: cs[0], render: cs[1], ratio: r4(r), step: r4(step) });
   }
   const tint = (key, ka, kb, what) => {
     const da = med(d(ka)), db = med(d(kb)); if (!Number.isFinite(da) || !Number.isFinite(db)) return;
@@ -66,9 +67,9 @@ export function propose(views, look) {
   tint('shadows', 'surfaces.dark.a', 'surfaces.dark.b', 'the shade (dark part of walls and ground)');
   tint('highlights', 'surfaces.lit.a', 'surfaces.lit.b', 'the sunlit part of walls and ground');
   // env and bounce
-  const rf = fv('surfaces.ratio'), rr = rv('surfaces.ratio');
-  if (rf > 0 && rr > 0) {
-    const rel = (rf - rr) / rf, envStep = clamp(DAMP * rel, -0.25, 0.25), bStep = clamp(0.8 * DAMP * rel, -0.2, 0.2);
+  const rf = fv('surfaces.ratio'), rr = rv('surfaces.ratio'), rel = med(use.map((v) => (v.reference['surfaces.ratio'] > 0 && v.render['surfaces.ratio'] > 0 ? (v.reference['surfaces.ratio'] - v.render['surfaces.ratio']) / v.reference['surfaces.ratio'] : NaN)));
+  if (Number.isFinite(rel)) {
+    const envStep = clamp(DAMP * rel, -0.25, 0.25), bStep = clamp(0.8 * DAMP * rel, -0.2, 0.2);
     const why = `shadow/lit ratio ${rr.toFixed(2)} against ${rf.toFixed(2)} in the photographs: shade is ${rel > 0 ? 'too dark' : 'too light'}`;
     add('env', r4(look.env * (1 + envStep)), `${why}: env ${envStep >= 0 ? '+' : ''}${(envStep * 100).toFixed(0)} %`, { referenceRatio: rf, renderRatio: rr, step: r4(envStep) });
     add('bounce', look.bounce.map((v) => r4(v * (1 + bStep))), `${why}: bounce ${bStep >= 0 ? '+' : ''}${(bStep * 100).toFixed(0)} %${look.bounce.every((v) => v === 0) ? ' (the bounce is zero, so nothing changes)' : ''}`, { referenceRatio: rf, renderRatio: rr, step: r4(bStep) });

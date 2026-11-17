@@ -57,3 +57,10 @@ test('no file under tools/lookmatch/ writes the name of a place (the builder che
   const words = places.flatMap((p) => [p.id, p.name]).flatMap((w) => [fold(w), fold(w).replace('-', ' ')]).filter((w) => w.length >= 4); assert.ok(words.length);
   for (const f of walk(root)) { const t = fold(readFileSync(f, 'utf8')).replace(/_/g, '-'); for (const w of words) assert.ok(!t.includes(w), `${relative(root, f)} names ${w}`); }
 });
+import { beforeAfter } from '../lib/report.mjs';
+test('before and after: per view and controlled measure, with whether the gap got smaller', () => {
+  const mk = (L, refL) => ({ id: 'v', reference: { values: { 'walls.L': refL } }, render: { flat: { 'walls.L': L } } });
+  const rows = beforeAfter([mk(48, 50)], [mk(40, 50)]);
+  assert.deepEqual(rows, [{ view: 'v', key: 'walls.L', before: -10, after: -2, better: true }]);
+  assert.equal(beforeAfter([mk(60, 50)], [mk(52, 50)])[0].better, false); assert.deepEqual(beforeAfter([mk(1, 1)], []), []);
+});

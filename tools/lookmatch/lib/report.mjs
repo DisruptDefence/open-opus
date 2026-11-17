@@ -74,3 +74,17 @@ ${tg}${prop}
 ${sections}
 </main></body></html>`;
 }
+
+/** The measures the proposal rules act on: before and after gaps (render minus reference) per view. */
+export const CONTROLLED = ['walls.L', 'ground.L', 'walls.chroma', 'sky.chroma', 'sky.a', 'sky.b', 'surfaces.dark.a', 'surfaces.dark.b', 'surfaces.lit.a', 'surfaces.lit.b', 'surfaces.ratio', 'contrast'];
+export function beforeAfter(views, beforeViews) {
+  const by = Object.fromEntries(beforeViews.map((v) => [v.id, v])), rows = [];
+  for (const v of views) {
+    const b = by[v.id]; if (!b || !v.reference || !b.reference) continue;
+    for (const k of CONTROLLED) {
+      const ref = v.reference.values[k], r0 = b.render && b.render.flat[k], r1 = v.render && v.render.flat[k];
+      if ([ref, r0, r1].every(Number.isFinite)) rows.push({ view: v.id, key: k, before: +(r0 - ref).toFixed(2), after: +(r1 - ref).toFixed(2), better: Math.abs(r1 - ref) < Math.abs(r0 - ref) });
+    }
+  }
+  return rows;
+}

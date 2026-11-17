@@ -51,6 +51,10 @@ test('the median over views resists one odd view; views without a reference are 
   const p = propose([view({ 'walls.L': 60, 'ground.L': 60 }, {}), view({ 'walls.L': 61, 'ground.L': 61 }, {}), view({ 'walls.L': 5, 'ground.L': 5 }, {}), { id: 'none', reference: null, render: same }], LOOK);
   assert.ok(get(p, 'exposure').to > 0.95); assert.deepEqual(p.used, ['v', 'v', 'v']);
 });
+test('saturation and env use each view\'s own ratio: a median of values from different places would give the opposite sign', () => {
+  const a = view({ 'walls.chroma': 40, 'surfaces.ratio': 0.8 }, { 'walls.chroma': 50, 'surfaces.ratio': 0.9 }), b = view({ 'walls.chroma': 10, 'surfaces.ratio': 0.3 }, { 'walls.chroma': 12, 'surfaces.ratio': 0.35 }), c = view({ 'walls.chroma': 20, 'surfaces.ratio': 0.5 }, { 'walls.chroma': 30, 'surfaces.ratio': 0.7 });
+  const p = propose([a, b, c], LOOK); assert.ok(get(p, 'saturation').numbers.step < 1, 'every view has more chroma in the render than the photographs'); assert.ok(get(p, 'env').to < 2, 'every view has lighter shade in the render');
+});
 test('damping makes repeated rounds converge: applying 60 % of the gap each round shrinks it', () => {
   let render = 40; const ref = 60, gaps = [];
   for (let i = 0; i < 4; i++) { gaps.push(Math.abs(ref - render)); render += 0.6 * (ref - render); }
