@@ -7,7 +7,7 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-from . import buildings, fetch, geo, ground, landmarks, osm, place as place_mod, props, style as style_mod, terrace, terrain, trees, walls
+from . import buildings, facade_facts, fetch, geo, ground, landmarks, osm, place as place_mod, props, style as style_mod, terrace, terrain, trees, walls
 from . import streetlife
 from .ctx import Ctx
 
@@ -33,7 +33,7 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
     osm_raw = cache.get("osm.json", fetch.OVERPASS, urllib.parse.urlencode({"data": fetch.overpass_query(s, w, n, e)}).encode())
     dtm_raw = cache.get("hrdem-dtm.tif", fetch.hrdem_url("dtm", bb))
     dsm_raw = cache.get("hrdem-dsm.tif", fetch.hrdem_url("dsm", bb))
-    enrich = [fetch.enricher_bytes(cache, i, spec) for i, spec in enumerate(pl.enrichers)]  # noqa: F841 (read by layer modules)
+    enrich = [fetch.enricher_bytes(cache, i, spec) for i, spec in enumerate(pl.enrichers) if spec.get("kind") != facade_facts.KIND]  # noqa: F841 (read by layer modules)
     osm_doc = json.loads(osm_raw)
     osm_date = (osm_doc.get("osm3s") or {}).get("timestamp_osm_base", now)
     stamp = cache.stamp(osm_date if offline else now)
@@ -46,6 +46,9 @@ def build(place_path: Path, cache_dir: Path | None, offline: bool, out: Path | N
     if dsm is None:
         print("warning: no surface model here, heights come from tags and rules", file=sys.stderr)
 
+    ctx.facades = facade_facts.load(pl.enrichers, place_path, pl.game)   # façade colours and materials from photographs (a data file beside the place file), or None
+    if ctx.facades:
+        ctx.sources.append(facade_facts.source_entry(ctx.facades))
     osm.classify(ctx, ground.ROAD_WIDTH)
     layers: dict = {}
     for mod in (ground, walls, terrace, props, trees, landmarks):

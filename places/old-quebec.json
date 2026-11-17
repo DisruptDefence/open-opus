@@ -8,7 +8,9 @@
   "ambience": { "tod": 15, "day": 200, "haze": 0.3, "cloud": 0.5, "wet": 0,
     "look": { "exposure": 0.95, "maxExposure": 1.3, "env": 2.0, "skySat": 0.7, "bounce": [0.6, 0.52, 0.42], "sun": 0.8, "sunTint": [1.0, 0.93, 0.82],
               "highlights": [1.03, 1.0, 0.96], "farHaze": 0.25, "curve": 0.3, "saturation": 1.08 } },
-  "enrichers": [],
+  "enrichers": [
+    { "kind": "facades", "title": "Facade colours and materials read from open-licensed street photographs", "licence": "derived facts; sources listed in the file", "file": "enrichers/old-quebec-palette-zones.json" }
+  ],
   "landmarks": [
     {
       "id": "chateau-frontenac",

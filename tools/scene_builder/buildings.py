@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import re
 
-from . import landmark_rules, parts as parts_mod
+from . import facade_facts, landmark_rules, parts as parts_mod
 from .geom import bbox, flat, inside, num, obb, ring_area, ring_edges, seg_dist, seg_nearest
 from .style import FACADES, ROOF_MATS, ROOF_SHAPES, USES, pick
 
@@ -379,6 +379,8 @@ def build(ctx) -> dict:
     pitches = {"flat": 0, "low": 0, "steep": 0}
     stats = {"measured": 0, "roofShape": 0, "facade": 0, "blind": 0, "front": 0}
     buildings, parts, recs = [], [], {}
+    rule_facades: dict[int, dict] = {}          # per record: the style rule's façade weights (the facade enricher keeps the style's own stone class)
+    tagged: set[int] = set()                    # records with a mapped building:material or a building:colour tag: the enricher leaves them alone
     for i, ft in enumerate(fts):
         t, ring, holes, kind, area = ft["tags"], ft["ring"], ft["holes"], ft["kind"], ft["area"]
         bid = ids[i]
@@ -480,6 +482,9 @@ def build(ctx) -> dict:
         pal = int(pal_draw * len(pal_list)) if pal_list else 0
         rp = int(rp_draw * len(rp_list)) if rp_list else 0
         stats["facade"] += 1
+        rule_facades[i] = rule["facade"]
+        if t.get("building:colour") or FACADE_TAG.get(str(t.get("building:material", "")).strip().lower()) is not None:
+            tagged.add(i)
 
         gf = 1 if use == 2 and front else 2 if kind in ("garage", "garages", "carport") else 0
         # item 7: a road through the building is a passage; the building then has a flat roof, no shopfront, no street front
@@ -522,6 +527,8 @@ def build(ctx) -> dict:
         recs[i] = b
 
     parts += landmark_rules.finish(ctx, fts, recs, lm_found, set(ids))
+    if getattr(ctx, "facades", None):
+        facade_facts.apply_layer(ctx, ctx.facades, fts, recs, ids, groups, rule_facades, tagged)
     parts_mod.mark(buildings, parts)
     _rules(ctx, have_surface)
     ctx.stats = {"measured": stats["measured"], "roof_shape_from_style": stats["roofShape"], "facade": stats["facade"],

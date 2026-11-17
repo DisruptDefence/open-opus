@@ -19,7 +19,7 @@
 // THE DECODED RECORDS (docs/plans/SCENE-DETAIL.md section 4). Every field is always present: a file that lacks a key
 // gets the default named here, so a generator never asks whether a field exists.
 //   building  { id, ring, holes, yBase, yMin, hEave, hRoof, levels, roofShape, roofDir, roofMat, roofColor, facade,
-//               tint, use, blind, front, groundFloor, passages, name, kind, part, heightSource }
+//               tint, frameColor, doorColor, use, blind, front, groundFloor, passages, name, kind, part, heightSource }
 //             ring and holes: flat [x, z, …]. yBase: the lowest ground. yMin: where the walls start (yBase + the
 //             part's min height). The eave is at yBase + hEave, the roof's top hRoof above it. roofDir: degrees
 //             clockwise from grid north, 0 to 179, or 255 (along the long side). roofColor and tint: linear
@@ -73,6 +73,10 @@ function completeBuilding(b, style) {
   b.yMin = b.yMin ?? b.yBase + (b.minHeight || 0);
   // a styled palette entry is a family of colours: each building gets its own tone and hue within it (gen/wallvar.js), which is
   // also its id in the wall shader. A scene from before formatMinor 1 keeps its exact colours (the rules it was drawn with).
+  // `wc`: a wall colour read from photographs (a hex), used INSTEAD of the palette index; the tint stays one constant per building (the same jitter by id, so it is still the id in the wall shader). `frm` and `dr`: frame and door colours (null = the style's lists)
+  const own = parseColor(b.wallColor);
+  if (own) b.tint = jitterTint(own, b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13));
+  b.frameColor = parseColor(b.frameColor); b.doorColor = parseColor(b.doorColor);
   if (!b.tint) {
     const pick = b.styled ? paletteColor(style.palettes[FACADE_NAMES[b.facade]] || style.palettes.generic, b.palette || 0) : legacyTint(b.palette || 0);
     b.tint = b.styled ? jitterTint(pick, b.id ?? Math.round(b.ring[0] * 7 + b.ring[1] * 13)) : pick;
@@ -252,7 +256,7 @@ export function jsonSource(scene) {
     put(own(...boxOf(b.r)), 'buildings', completeBuilding({ id: b.id ?? n, ring: b.r, holes: b.holes || [], yBase, minHeight: b.mh || 0, hEave: b.h - hRoof, hRoof, levels: b.lv || 0,
       roofShape, roofDir: b.rd ?? 255, roofMat: b.rmt ?? (b.mat === 'copper' || /^#(4|5|6|7|8)/.test(b.rc || '') ? 2 : 1), roofColor: b.rc || undefined, roofPalette: b.rp,
       facade: b.fa ?? FACADE[b.mat] ?? (b.k === 'church' || b.h > 14 ? 1 : ((n + 1) % 3 ? 4 : 1)), styled, palette: styled ? b.pal : (n + 1) % 5,
-      use: b.use || 0, look: b.lm || '', blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
+      use: b.use || 0, look: b.lm || '', wallColor: b.wc, frameColor: b.frm, doorColor: b.dr, blind: b.blind, front: b.front, groundFloor: b.gf || 0, passages: b.pass, name: b.n || '', kind: b.k || '', part: !!b.part, heightSource: b.hs }, style));
   }
   // Trees: [x, z, height, crownRadius, kind, form]; a short record takes the old seeded numbers.
   for (const [x, z, height, crown, kind, form] of scene.trees || []) put(own(x, x, z, z), 'trees', completeTree({ x, z, height: height ?? 7 + ((x * 13.7 + z * 7.3) % 5 + 5) % 5, crownRadius: crown ?? 2.5 + (((x * 3.1 + z * 5.9) % 2) + 2) % 2, kind: kind || 1, form: form || 0 }));
