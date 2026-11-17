@@ -101,6 +101,7 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `say` | `{ text, channel }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
 | `photo` | `{ on }` | Photo mode began or ended |
+| `tree:felled` | `{ id, x, z }` | A tree broke under fire (the damage of the shots that hit its trunk reached its hit points, `12 + 90 * trunk radius * 10`) and fell. Once per tree; `id` is its position to 0.1 m (`"<x*10>,<z*10>"`), `x`, `z` game metres. Additive |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
 | `error` | `{ module, message }` | A part of the engine threw inside a frame (`module`: `threats`, `player`, `render`, `hook`, `clock` …). Said once per module and kept: the frame loop never stops, the failing part loses its own update, nothing is switched off. Additive; a host that ignores it sees the same engine |
 

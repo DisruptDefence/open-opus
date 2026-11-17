@@ -51,7 +51,7 @@ def classify(ctx, road_width: dict) -> dict:
         ins = [r for r in (clean_ring(i) for i in inner) if r]
         return [(o, [h for h in ins if inside(centroid(h), o)]) for o in outs]
 
-    f = {k: [] for k in ("buildings", "pois", "roads", "areas", "walls", "green", "water", "trees", "gates", "landmarks", "crossings")}
+    f = {k: [] for k in ("buildings", "pois", "roads", "areas", "walls", "green", "water", "trees", "gates", "landmarks", "crossings", "tree_rows")}
 
     def landmark(el: dict, x: float, z: float, kind: str) -> None:
         f["landmarks"].append({"el": el, "x": x, "z": z, "kind": kind})
@@ -130,15 +130,10 @@ def classify(ctx, road_width: dict) -> dict:
             for ring, _ in polygons(el):
                 f["water"].append({"ring": ring, "tags": t})
             continue
-        if kind == "tree_row" and not rel:
+        if kind == "tree_row" and not rel:  # trees.py places them by rule (style trees.fill.rowSpacing)
             p = pts(el.get("geometry") or [])
-            for a, b in zip(p, p[1:]):
-                ln = math.hypot(b[0] - a[0], b[1] - a[1])
-                n = max(1, int(ln // 8))
-                for k in range(n):
-                    q = (a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n)
-                    if in_ext(q):
-                        f["trees"].append({"x": q[0], "z": q[1], "tags": {}, "node": None})
+            if len(p) >= 2 and any(in_ext(q) for q in p):
+                f["tree_rows"].append({"pts": p, "tags": t})
             continue
         lk = t.get("historic") or t.get("tourism") or t.get("amenity") or t.get("place")
         if lk and t.get("name") and landmark_ok(t):

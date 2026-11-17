@@ -313,6 +313,8 @@ Trees are points: `x`, `z`, `height`, `crownRadius` (`uint8`, 0.25 m steps each)
 blocks sight only. Ground cover (grass, crops, scrub) is the surface raster; the client scatters instances
 from it with a seed derived from the chunk index, so it is not shipped. `season` is a scene-level field.
 
+The builder writes a tree as `[x, z, height, crownRadius, kind, form, source]` (`form` `0 round, 1 vase, 2 column, 3 cone, 4 spreading`; metres, 0.25 m steps). `source`: `0` a mapped `natural=tree` node, `1` a `natural=tree_row` way (every `trees.fill.rowSpacing`), `2` woods, forest and scrub (`woodDensity`, `scrubDensity` per 100 m²), `3` parks, gardens, cemeteries and grass (`parkDensity`), `4` steep unbuilt, unpaved ground (`slopeMin`, `slopeDensity`), `5` street trees (`streetOn`, `streetMinSidewalk`, `streetSpacing`, `streetOffset`). A style pack's `trees.fill` holds every amount, the species weights (`kinds`, `forms`) and the size table (`size`); a pack without `fill` places no rule trees and writes mapped nodes as `[x, z]`. Height and crown are the measured canopy (`dsm − dtm`) where there is one and no building is near, else the size table, ±15 % seeded. `trees.fill.max` caps the total; the scene's `rules.trees` states the counts. An old reader ignores the seventh number.
+
 ### 4.6 Water
 
 Polygons with one surface height: `class` (`1 sea, 2 river, 3 lake, 4 canal, 5 pond`), `ySurface`, `depth`

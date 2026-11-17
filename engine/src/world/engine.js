@@ -31,6 +31,7 @@ import { createNullHud } from '../hud/hooks.js';
 import { createSceneLoader } from '../level/loader.js';
 import { createPlayer } from '../player/player.js';
 import { createCombat } from '../combat/combat.js';
+import { createTreefall } from './treefall.js';
 import { createWeapon } from '../weapons/weapon.js';
 import { createThreats } from '../threats/threats.js';
 import { validateBehaviour } from '../threats/brain.js';
@@ -105,6 +106,7 @@ export async function createEngine({ source, params = {}, modules = {}, content,
 
   await step('effects', 0.7, async () => { G.fx = await F.fx(G); });
   await step('audio', 0.75, async () => { try { G.audio = params.noaudio ? silentAudio() : await F.audio(G); } catch (e) { console.error('[engine] audio failed, running silent: ' + e); G.audio = silentAudio(); } });
+  G.treefall = createTreefall(G);
   G.player = F.player(G);
   G.combat = F.combat(G);
   await step('weapon', 0.8, async () => { G.weapon = await F.weapon(G); });
@@ -132,7 +134,7 @@ export async function createEngine({ source, params = {}, modules = {}, content,
     const state = safe('game', () => G.game.state), active = safe('game', () => G.game.update(dt)) !== false && state !== 'title' && state !== 'paused';
     if (active && dt > 0) { upd('player', dt); upd('weapon', dt); upd('threats', dt); upd('director', dt); }
     else if (active) upd('player', 0); // frozen: the camera still follows the view angles (the hold tilts the view)
-    if (state !== 'paused' && dt > 0) { upd('fx', dt); upd('ground', dt); upd('mats', dt); }
+    if (state !== 'paused' && dt > 0) { upd('treefall', dt); upd('fx', dt); upd('ground', dt); upd('mats', dt); }
     upd('level', dt); // streaming goes on whatever the clock does
   }
   function posePhoto() {

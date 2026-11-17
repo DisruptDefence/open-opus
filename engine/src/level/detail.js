@@ -28,6 +28,8 @@ export function createDetail({ radius = 0, build, show, dispose }) {
     setRadius(r) { radius = Math.max(0, +r || 0); },
     /** A chunk went live. `cells`: its cell boxes; one with `empty: true` has nothing to draw near and is never built. */
     add(key, cells) { chunks.set(key, cells.map((cell) => ({ cell, handle: null, on: false }))); },
+    /** Throw a cell's near group away (its records changed): the next update builds it again. */
+    invalidate(key, index) { const e = (chunks.get(key) || []).find((x) => x.cell.index === index); if (e && e.handle != null) drop(key, e); },
     remove(key) { const list = chunks.get(key); if (!list) return; for (const e of list) drop(key, e); chunks.delete(key); },
     /** Bring every cell up to date for a camera at (x, z). Returns how many near groups were built in this call. */
     update(x, z, budget = 1) {

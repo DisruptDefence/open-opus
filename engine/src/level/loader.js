@@ -10,7 +10,7 @@
 // Objectives, the extraction point and threat spawns are NOT here: by the format they are the host's (anchors.json)
 // and arrive as scenario commands through the world API.
 import { Group, Mesh, PlaneGeometry, Vector3 } from '../../vendor/three.module.js';
-import { installChunk, uninstallChunk } from '../scene/install.js';
+import { installChunk, uninstallChunk, refitTree } from '../scene/install.js';
 import { buildTerrain, buildChunkStatic, buildCellNear, buildFarTile, disposeGroup } from './build.js';
 import { createDetail, DETAIL_RADIUS } from './detail.js';
 import { setBayStyle } from '../materials/facades.js';
@@ -46,7 +46,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
       g.visible = false; root.add(g); stats.nearBuildMs = performance.now() - t0; stats.nearBuilt++;
       return g;
     },
-    show(k, cell, g, on) { g.visible = on; state.get(k).fixed.setNear(cell.index, on); },
+    show(k, cell, g, on) { const s = state.get(k); g.visible = on; s.fixed.setNear(cell.index, on); (s.nearOn = s.nearOn || new Set())[on ? 'add' : 'delete'](cell.index); },
     dispose(k, cell, g) { disposeGroup(g); },
   });
   const hasNear = (cell) => cell.buildings.length + cell.trees.length + cell.roads.length + cell.props.length + cell.crossings.length + cell.walls.filter((w) => w.rail).length > 0;
@@ -58,6 +58,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
   }
   function goLive(s) {
     const t0 = performance.now(), k = key(s.ce, s.cn);
+    if (G.treefall) G.treefall.restore(s.data.trees); // a tree felled earlier in the session stays felled when its chunk comes back
     s.env = installChunk(G.physics, G.terrain, s.data, m.style); // collision and height first: the simulation never waits for a mesh
     s.env.season = m.season || s.env.season;
     s.terrain = buildTerrain(G, s.data); s.fixed = buildChunkStatic(G, s.data, s.env);
@@ -107,6 +108,21 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     throw new Error('scene: the start window did not load');
   }
 
+  /**
+   * A tree was felled (world/treefall.js set `t.fell`): its trunk solid becomes the stump's, the chunk's far group is built again
+   * (the mesher draws a felled record as a stump), and the cell's near group is thrown away to be built again. False when the tree's
+   * chunk is not live (the record is then right the next time the chunk comes in: `treefall.restore`).
+   */
+  function fellTree(t) {
+    const k = key(grid.ce(t.x), grid.cn(t.z)), s = state.get(k);
+    if (!s || s.phase !== 'live') return false;
+    refitTree(G.physics, G.terrain, t);
+    const old = s.fixed.group; s.fixed = buildChunkStatic(G, s.data, s.env); disposeGroup(old);
+    root.add(s.fixed.group); s.groups = [s.terrain, s.fixed.group];
+    for (const i of s.nearOn || []) s.fixed.setNear(i, true);
+    const cell = s.data.cells.find((c) => c.trees.includes(t)); if (cell) detail.invalidate(k, cell.index);
+    return true;
+  }
   const start = { pos: new Vector3(0, 0, 0), yaw: 0 };
   const level = {
     root, manifest: m,
@@ -114,7 +130,7 @@ export async function createSceneLoader(G, source, { radius = 1 } = {}) {
     objectives: [], extraction: null, enemySpawns: [], zones: m.zones || [], interiorBoxes: [], cinematicPath: [], coverPoints: [],
     groundSurfaceAt: (x, z) => { const s = G.terrain.surfaceAt(x, z); return s === 'unknown' ? 'concrete' : s; },
     update() { const at = G.photo || (G.player && G.player.pos); if (at) { stream(at.x, at.z); detail.update(at.x, at.z, 1); } }, // in photo mode the scene follows the camera
-    stream, preload, stats: () => ({ ...stats, tris: trisNow(), cellsNear: detail.stats().shown, cellsBuilt: detail.stats().built, detail: detail.radius }),
+    stream, preload, fellTree, stats: () => ({ ...stats, tris: trisNow(), cellsNear: detail.stats().shown, cellsBuilt: detail.stats().built, detail: detail.radius }),
     setDetail(r) { detail.setRadius(r); },
     setRadius(r) { radius = r; },
     get radius() { return radius; },

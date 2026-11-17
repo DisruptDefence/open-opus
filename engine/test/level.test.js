@@ -48,8 +48,8 @@ test('the mesher: base has what never changes, far and near are two pictures of 
     }
     assert.ok(total.base.get('roof_zinc|tv') > 0, 'roofs are in base, tinted when the scene gives a colour'); assert.ok(total.base.get('wall_stone|t') > 0, 'solid walls are in base');
     assert.equal(total.base.get('galv|t'), undefined, 'a wall drawn as a rail is not in base'); assert.equal(total.near.get('galv|t'), undefined); assert.ok(total.near.get('metal|tv') > 10, 'the rail is posts and rails in iron, in near');
-    assert.ok(total.far.get('facade_stone|v') > 0 && total.far.get('leaves|t') > 0, 'flat façades and simple trees are in far');
-    for (const key of ['leaves|t', 'wood|t']) assert.equal(total.near.get(key), total.far.get(key), `the placeholders draw the same ${key} near and far`);
+    assert.ok(total.far.get('facade_stone|v') > 0 && total.far.get('leaves|tv') > 0, 'flat façades and simple trees are in far');
+    for (const key of ['leaves|tv', 'wood|tv']) assert.ok(total.near.get(key) > total.far.get(key), `the full tree has more ${key} than the simple one`);
     assert.equal(total.near.get('facade_stone|v'), undefined, 'the near façade is modelled, not the painted one'); assert.ok(total.near.get('wall_stone|tv') > 0 || total.near.get('wall_stucco|tv') > 0, 'near walls are cut around openings');
     assert.equal(built, 1, 'the one prop whose kind the kit has was built; the others were skipped'); 
     assert.equal(total.far.get('metal|tv'), undefined);
