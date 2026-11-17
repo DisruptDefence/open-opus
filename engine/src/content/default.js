@@ -127,8 +127,11 @@ export const DEFAULT_PACK = {
   id: 'opus-default',
   threats: THREATS,
   threatTuning: { maxTokens: 2, maxTokensCrowd: 3, crowd: 5, tokenGap: 1.25, exposureUp: 0.1, exposureDown: 0.45, maxBolts: 32, boltLife: 1.3, maxWrecks: 5, wreckSeconds: 12, nearMetres: 26 },
-  weapons: { carbine: { name: 'Carbine', magSize: 30, reserve: 150, rpm: 720, damage: 26, range: 300, weakMultiplier: 2.2, view: 'carbine' } },
-  loadout: ['carbine'],
+  weapons: {
+    carbine: { name: 'Carbine', magSize: 30, reserve: 150, rpm: 720, damage: 26, range: 300, weakMultiplier: 2.2, view: 'carbine' },
+    pistol: { name: 'P320', magSize: 17, reserve: 51, rpm: 400, damage: 18, range: 50, weakMultiplier: 2.0, view: 'pistol', auto: false },
+  },
+  loadout: ['carbine', 'pistol'],
   player: {},
   // `pain`, `death`, `callout`: the synthesised barks of people (audio/voice.js); a person has no servo and no crash
   sounds: { bed: { rain: 'wet', sea: 0, wind: 0.75 }, threats: {
