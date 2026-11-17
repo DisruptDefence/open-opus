@@ -120,8 +120,8 @@ function lobesOf(form, n, r) {
     out.push({ c: [0, 0.58, 0], rx: 0.5, ry: 0.3 });
     for (let i = 1; i < n; i++) { const p = 0.6 + 0.25 * r(), a = a0 + i * golden; out.push({ c: [Math.cos(a) * p, 0.3 + 0.22 * r(), Math.sin(a) * p], rx: 0.45 + 0.1 * r(), ry: 0.28 + 0.06 * r() }); }
   } else { // round
-    out.push({ c: [0, 0.7, 0], rx: 0.5, ry: 0.4 });
-    for (let i = 1; i < n; i++) { const p = 0.5 * (0.7 + 0.3 * r()), a = a0 + i * golden; out.push({ c: [Math.cos(a) * p, 0.28 + 0.36 * r(), Math.sin(a) * p], rx: 0.46 + 0.08 * r(), ry: 0.38 + 0.06 * r() }); }
+    out.push({ c: [0, 0.74, 0], rx: 0.42, ry: 0.34 });
+    for (let i = 1; i < n; i++) { const p = 0.62 * (0.6 + 0.4 * r()), a = a0 + i * golden; out.push({ c: [Math.cos(a) * p, 0.16 + 0.5 * r(), Math.sin(a) * p], rx: 0.36 + 0.1 * r(), ry: 0.3 + 0.08 * r() }); }
   }
   return out;
 }
@@ -158,7 +158,7 @@ function broadleaf(soups, t, y, season, lod, r, dead, part, at) {
   const trunk = soups.get(SOUP.trunk), crown = soups.get(SOUP.leaves), H = t.height, R = Math.max(0.3, t.crownRadius);
   const form = FORK[t.form] != null ? t.form : FORM_ROUND, rb = trunkRadius(H), th = H * FORK[form];
   const bark = mul(BARK, 0.9 + 0.2 * r());
-  const la = r() * 6.283, leanM = (0.02 + 0.03 * r()) * H * 0.5, lean = [Math.cos(la) * leanM, Math.sin(la) * leanM];
+  const la = r() * 6.283, leanM = (0.01 + 0.015 * r()) * H, lean = [Math.cos(la) * leanM, Math.sin(la) * leanM];
   const cx = t.x + lean[0], cz = t.z + lean[1], yb = y + th * 0.85, ytop = y + H;
   const tint = leafTint(season, BROADLEAF, r), bare = season === 'winter' || dead;
   if (lod === 0) {
@@ -185,7 +185,7 @@ function broadleaf(soups, t, y, season, lod, r, dead, part, at) {
   // lobes in unit space, then scaled to the record
   const nLobes = 5 + Math.floor(r() * 5);
   let nLimbs = 3 + Math.floor(r() * 3); if (nLobes === 9) nLimbs = 3;
-  const lobes = lobesOf(form, nLobes, r), verts = lobes.map((L) => ICO_V.map((v) => { const k = 0.8 + 0.4 * r(); return [L.c[0] + v[0] * L.rx * k, L.c[1] + v[1] * L.ry * k, L.c[2] + v[2] * L.rx * k]; }));
+  const lobes = lobesOf(form, nLobes, r), verts = lobes.map((L) => ICO_V.map((v) => { const k = 0.7 + 0.6 * r(); return [L.c[0] + v[0] * L.rx * k, L.c[1] + v[1] * L.ry * k, L.c[2] + v[2] * L.rx * k]; }));
   let ymin = 1e9, ymax = -1e9, rmax = 0;
   for (const L of verts) for (const v of L) { ymin = Math.min(ymin, v[1]); ymax = Math.max(ymax, v[1]); rmax = Math.max(rmax, Math.hypot(v[0], v[2])); }
   let sx = Math.max(0.2, R - Math.hypot(lean[0], lean[1])) / rmax;
