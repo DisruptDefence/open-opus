@@ -40,6 +40,7 @@ export function openWorld({ source, params = {}, modules = {}, content, onProgre
     scene: call('scene'),
     overhead: call('overhead'),
     photo: (pose) => { try { return Promise.resolve(need('photo').photo(pose)); } catch (e) { return Promise.reject(e); } },
+    doors: { open: (id) => need('doors.open').doors.open(id), close: (id) => need('doors.close').doors.close(id), near: (x, z, r) => need('doors.near').doors.near(x, z, r) },
     stats: call('stats'),
     photographing: () => (api ? api.photographing() : false),
     apply: (cmd) => { if (!api) throw new ScenarioCommandError('not-ready', cmd && cmd.op, 'the world is still loading; await ready() first'); api.apply(cmd); },

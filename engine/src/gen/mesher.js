@@ -74,6 +74,18 @@ export function propSolid(p) {
   return { ring: [q[0][0], q[0][1], q[1][0], q[1][1], q[2][0], q[2][1], q[3][0], q[3][1]], h: c.h, nav: !!c.nav };
 }
 
+/**
+ * The street doors that open in a building (gen/vestibule.js records), one list for the whole building. Found by drawing the
+ * building's near façade into a soup set that is thrown away: the same code as the near group, so the collision (scene/install.js)
+ * and the picture never disagree about which doors open or where. [] for a building with no street front.
+ */
+export function doorRecords(b, groundAt, style) {
+  if (!b.front || !b.front.size) { if (!piecesOf(b).some((p) => p.front && p.front.size)) return []; }
+  const info = roofInfoOf(b, style), st = b.look ? lookStyle(style, lookOf(style, b)) : style, set = createSoups(), out = [];
+  for (const piece of piecesOf(b)) { if (!piece.front || !piece.front.size) continue; set.doors = []; facadeNear(set, piece, groundAt, st, info); out.push(...set.doors); }
+  return out;
+}
+
 const warned = new Set();
 const warnOnce = (text) => { if (!warned.has(text)) { warned.add(text); console.warn('[gen] ' + text); } };
 

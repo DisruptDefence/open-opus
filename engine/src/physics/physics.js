@@ -24,7 +24,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
   const cells = new Map();
   const ck = (i, j) => i * 73856093 ^ j * 19349663;
   const ci = (v) => Math.floor(v / CELL);
-  let stamp = 0;
+  let stamp = 0, plugs = false; // plugs: the nav grid's query also sees `navOnly` solids
 
   function insert(s) {
     for (let j = ci(s.min.z); j <= ci(s.max.z); j++) for (let i = ci(s.min.x); i <= ci(s.max.x); i++) {
@@ -46,21 +46,22 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
     const s = ++stamp;
     for (let j = ci(z0); j <= ci(z1); j++) for (let i = ci(x0); i <= ci(x1); i++) {
       const c = cells.get(ck(i, j)); if (!c) continue;
-      for (let n = 0; n < c.length; n++) { const o = c[n]; if (o._s !== s) { o._s = s; fn(o); } }
+      for (let n = 0; n < c.length; n++) { const o = c[n]; if (o._s !== s) { o._s = s; if (!o.navOnly || plugs) fn(o); } }
     }
   }
 
   /**
    * A prism: `ring` is a flat [x0, z0, x1, z1, …] outline (either winding, closed implicitly), solid from yBase to yTop.
    * opts: surface, tag (to remove a chunk's solids together), bulletOnly (stops shots, not walkers), playerOnly
-   * (stops walkers, not shots), kind (a word for what the solid is: a hit reports it with `ref`, the record it came from), noNav (ignored by the nav grid), sightOnly is not modelled. holes: flat rings of
+   * (stops walkers, not shots), kind (a word for what the solid is: a hit reports it with `ref`, the record it came from), noNav (ignored by the nav grid), navOnly (seen by the nav grid alone: it keeps a room
+   * threats may not enter closed, e.g. a vestibule; no walker, shot or floor feels it), sightOnly is not modelled. holes: flat rings of
    * the same kind that are NOT solid (a courtyard): inside, closest point and rays all follow the outline with its holes.
    */
   function addPrism(ring, yBase, yTop, opts = {}) {
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (let i = 0; i < ring.length; i += 2) { x0 = Math.min(x0, ring[i]); x1 = Math.max(x1, ring[i]); z0 = Math.min(z0, ring[i + 1]); z1 = Math.max(z1, ring[i + 1]); }
     const s = { ring, min: vec(x0, yBase, z0), max: vec(x1, yTop, z1), surface: opts.surface || 'concrete', tag: opts.tag,
-      holes: opts.holes && opts.holes.length ? opts.holes : null, bulletOnly: !!opts.bulletOnly, playerOnly: !!opts.playerOnly, noNav: !!opts.noNav, ref: opts.ref, kind: opts.kind, _s: 0 };
+      holes: opts.holes && opts.holes.length ? opts.holes : null, bulletOnly: !!opts.bulletOnly, playerOnly: !!opts.playerOnly, noNav: !!opts.noNav, navOnly: !!opts.navOnly, ref: opts.ref, kind: opts.kind, _s: 0 };
     insert(s);
     return s;
   }
@@ -268,7 +269,7 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
       }
     };
     const test = (s) => {
-      if (forWalker ? s.bulletOnly : s.playerOnly) return;
+      if (s.navOnly || (forWalker ? s.bulletOnly : s.playerOnly)) return;
       const r = s.ring, y0 = s.min.y, y1 = s.max.y;
       // walls: the outline and the edges of every hole (the ray's normal is turned to face the ray)
       wallsOf(s, r); if (s.holes) for (const h of s.holes) wallsOf(s, h);
@@ -308,12 +309,13 @@ export function createPhysics({ terrain, bounds, vec = (x, y, z) => ({ x, y, z }
   }
 
   /** Is there a solid within `r` of (x, z) that a body with feet at `y` and this height would touch? For the nav grid. */
-  function blocked(x, z, r, y, height = 1.8) {
-    let b = false;
+  function blocked(x, z, r, y, height = 1.8, withPlugs = false) {
+    let b = false; plugs = withPlugs;
     near(x - r, z - r, x + r, z + r, (s) => {
       if (b || s.bulletOnly || s.noNav || s.max.y <= y + STEP || s.min.y >= y + height) return;
       if (insideS(s, x, z) || closestS(s, x, z) < r) b = true;
     });
+    plugs = false;
     return b;
   }
 

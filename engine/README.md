@@ -48,6 +48,7 @@ Switches of the development page, as query parameters:
 | `radius` | chunks of full detail round the player |
 | `detail` | metres within which a cell is drawn in near detail (default by quality: `test` 0, `low` 45, `medium` 85, `high` 140, `ultra` 220) |
 | `seed` | the random seed |
+| `doors` | `open` opens every street door as its chunk loads (for pictures); the default is shut |
 
 The page publishes `window.__OPUS_WORLD`, the world API, and uses nothing else of the engine after `openWorld()`.
 `host/mission.js` and `host/scenarios/` are a throwaway stand-in for a session host; their scenario shape is not

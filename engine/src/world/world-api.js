@@ -33,6 +33,8 @@ export function createWorldApi(engine, emit) {
   G.events.on('director:interact', (e) => emit('interact', { id: e.id, kind: e.kind, action: e.action, time: round(e.time), progress: round(e.progress, 1000) }));
   G.events.on('director:say', (e) => emit('say', { text: e.text, channel: e.channel }));
   G.events.on('weapon:fire', () => emit('shot', { ammo: G.weapon.ammo }));
+  G.events.on('door:opened', (e) => emit('door:opened', { id: e.id }));
+  G.events.on('door:closed', (e) => emit('door:closed', { id: e.id }));
   G.events.on('engine:error', (e) => emit('error', { module: e.module, message: e.message }));
   G.events.on('tree:felled', (e) => emit('tree:felled', { id: e.id, x: e.x, z: e.z }));
   G.events.on('scene:chunk', (e) => emit('chunk', { ce: e.ce, cn: e.cn, live: e.live }));
@@ -182,6 +184,8 @@ export function createWorldApi(engine, emit) {
     /** What the last frame cost, as plain numbers: for budgets and captures. */
     stats() { const t = engine.stats(), sc = t.scene || {}; return { quality: t.quality, frameMs: t.frameMs, calls: t.calls ?? 0, triangles: t.tris ?? 0, chunksLive: sc.chunksLive ?? 0, sceneTriangles: sc.tris ?? 0, buildMs: round(sc.buildMs ?? 0, 10), cellsNear: sc.cellsNear ?? 0, nearBuildMs: round(sc.nearBuildMs ?? 0, 10) }; },
     photographing: () => !!G.photo,
+    /** Street doors that open (world/doors.js): only the doors of cells that are showing in detail exist. */
+    doors: { open: (id) => G.doors.open(String(id)), close: (id) => G.doors.close(String(id)), near: (x, z, r) => G.doors.near(+x, +z, r == null ? undefined : +r) },
     /** Scenario commands (director/director.js). Throws a ScenarioCommandError, and only that, when one cannot be applied. */
     apply(cmd) {
       let copy;

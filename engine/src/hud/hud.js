@@ -11,7 +11,7 @@ import {
   typedChars, hitmarkerLook, addArc, arcAlpha, pushFeed, FEED_SECONDS,
 } from './model.js';
 
-const DEFAULT_WORDS = { objective: 'Objective', health: 'Vitals', lowAmmo: 'Low ammo', reload: 'R — Reload', reloadTouch: 'Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', destroyed: 'destroyed', weak: 'Weak point', key: 'E' };
+const DEFAULT_WORDS = { objective: 'Objective', health: 'Vitals', lowAmmo: 'Low ammo', reload: 'R — Reload', reloadTouch: 'Reload', reloading: 'Reloading', empty: 'Empty', hold: 'Hold', press: 'Press', destroyed: 'destroyed', weak: 'Weak point', key: 'E' };
 const OBJECTIVE_CPS = 46, RADIO_CPS = 58, CIRCUMFERENCE = 2 * Math.PI * 19;
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 
@@ -63,10 +63,10 @@ export function createHud(G) {
   const v3 = new Vector3(), set = (el, k, v) => { if (el[k] !== v) el[k] = v; };
 
   function typed(node, full, age, cps) { const n = typedChars(age, cps, full.length); node.textContent = full.slice(0, n); return n >= full.length; }
-  function showPrompt(prompt, progress) {
+  function showPrompt(prompt, progress, tap) {
     const p = part.prompt; if (!p) return;
     if (!prompt) { p.box.hidden = true; p.label = ''; return; }
-    const label = `${words.hold} ${words.key} — ${prompt}`; if (label !== p.label) { p.text.textContent = label; p.label = label; }
+    const label = `${tap ? words.press : words.hold} ${words.key} — ${prompt}`; if (label !== p.label) { p.text.textContent = label; p.label = label; }
     const q = Math.round(Math.max(0, Math.min(1, progress || 0)) * 200) / 200; if (q !== p.ring) { p.fg.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - q)); p.ring = q; }
     p.box.hidden = false;
   }
@@ -195,7 +195,7 @@ export function createHud(G) {
   });
 
   // ---- events ----------------------------------------------------------------------------------------------------
-  G.events.on('director:prompt', (e) => showPrompt(e && e.id ? e.prompt : '', e && e.progress));
+  G.events.on('director:prompt', (e) => showPrompt(e && e.id ? e.prompt : '', e && e.progress, e && e.tap));
   G.events.on('player:hitEnemy', (e) => hitmarker(e.killed ? 'kill' : e.weak ? 'weak' : 'hit'));
   G.events.on('player:hitEnemy', (e) => { // the kill's line is made first (enemy:killed): a weak-point kill adds its word to it
     if (!part.feed || !e.killed || !e.weak) return;

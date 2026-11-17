@@ -845,6 +845,19 @@ proportions as the style's defaults.
 houses are modelled and the far ones keep painted windows in the same places. **Done** when tests pass, budgets
 are measured, and the planning model has judged colours and proportions on the pairs (section 7).
 
+### Doors that open (added 2026-11-16)
+
+Each ordinary street door of the near façade (`gen/facade.js`, the `door` branch) is offered to `gen/vestibule.js`, which, when
+the building is deep enough behind it and the street is no more than 0.4 m below the threshold, draws a vestibule behind the
+leaf's plane (1.4 m deep, the door and 0.25 m each side wide, 2.5 m high: floor, three plaster walls, ceiling, a shut inner door,
+a mat or a coat rail; at most 36 triangles; coloured darker than the street so it reads as a dim hall) and records the door
+(`soups.doors`). The leaf is not in the soup: a cell's leaves are one instanced mesh (`level/build.js`). The same generator is
+run at chunk install (`gen/mesher.js doorRecords`, `scene/install.js`), so collision and picture agree at any detail radius: the
+hall is cut out of the piece's prism by a notched ring (roofs, upper floors and the far hull keep the original ring), lintels
+fill the mass over the recess and the hall, and the shut leaf is a thin solid. `world/doors.js` owns the state, the interaction
+and the events (`docs/WORLD-API.md`, Doors). Not built: rooms, stairs, an inside beyond the one hall, doors for threats, carriage
+doors, doors on steeper streets (a stepped threshold would take them in). Interiors are a much larger later item.
+
 ### Item 6 — Ground
 
 **Built (2026-11-16, branch `ground`).** Decisions that differ from the text below: a mapped `footway=sidewalk` way is itself a raised sidewalk (`sw: "self"`, 1.6 m); a `footway=crossing` way takes the surface of the street it crosses; the paving margin is drawn only beside hard surfaces (asphalt, concrete, cobble, paving); nothing yet cuts one road's sidewalk where another crosses it (junction mouths stay raised); steps rails are boxes (no `rail_iron` yet); bare ground is 5 m rectangles.

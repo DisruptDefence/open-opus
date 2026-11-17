@@ -176,6 +176,7 @@ style pack (`docs/plans/SCENE-DETAIL.md` section 2).
 | `style.dressing.boxes` | chance per house that every window of its first upper storey has a window box with flowers |
 | `style.dressing.pots` | chance per door (not a big door) of a potted small conifer on each side |
 | `style.dressing.flowers` | list of colours; one is drawn per building for its window-box flowers |
+| `style.vestibule` | the hall behind a street door that opens (gen/vestibule.js): `depth` (m, 1.4), `height` (m, 2.5), `walls` (list of plaster colours, one drawn per door), `floors` (kinds allowed: `timber`, `stone`; a stone house gets stone when allowed). `depth: 0` turns the openable doors off. The builder copies the whole block. `style.doors` is still the list of door colours |
 | `season` | `"summer" \| "autumn" \| "winter" \| "spring"`, from the place file |
 | `ambience` | `{ tod, day, haze, cloud, wet, look }`: the light the place is best seen in. A host's own switches win. `look` is described below |
 | `sources[]` | one entry per source: `name`, `licence`, `licenceUrl`, `attribution`, `layers` it fed (and, for OpenStreetMap, `extract` and `bbox`) |

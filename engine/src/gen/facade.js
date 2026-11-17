@@ -33,6 +33,7 @@ import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.j
 import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor, treadTint } from './style.js';
 import { signedArea, obb } from './poly.js';
 import { dressEdge, dressingLook } from './dressing.js';
+import { doorOpening } from './vestibule.js';
 
 const MARGIN = 0.45;
 export function bays(len, style, seed) {
@@ -374,7 +375,9 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         const D = soups.get(SOUP.door);
         reveal(W, f, o, o.r, inner);
         quad(W, f.at(o.u0, o.ys, -o.r), f.at(o.u1, o.ys, -o.r), f.at(o.u1, o.ys, 0), f.at(o.u0, o.ys, 0), inner);
-        rect(D, f, o.u0 + 0.02, o.u1 - 0.02, o.ys, o.yh, -o.r, lk.doorC, [0, 0, 1, 1]);
+        const why = o.big ? 'big' : doorOpening(soups, b, e, o, lk, style, groundAt, L, sh); // an opening door: its leaf is an instance (vestibule.js), not in the soup
+        if (soups.doorStats) soups.doorStats[why || 'opens'] = (soups.doorStats[why || 'opens'] || 0) + 1;
+        if (why) rect(D, f, o.u0 + 0.02, o.u1 - 0.02, o.ys, o.yh, -o.r, lk.doorC, [0, 0, 1, 1]);
         const gd = groundAt(f.at((o.u0 + o.u1) / 2, 0, 0.6)[0], f.at((o.u0 + o.u1) / 2, 0, 0.6)[2]), y = Math.min(gd, L.base) - 0.05;
         slab(soups.get(SOUP.tread), f, o.u0 - 0.12, o.u1 + 0.12, y, L.base + 0.02, 0, 0.42, treadTint(style), 'flrt');
         slab(T, f, o.u0 - 0.14, o.u1 + 0.14, o.yh, o.yh + 0.26, 0, lk.headDepth + 0.04, lk.trim, 'fb');
