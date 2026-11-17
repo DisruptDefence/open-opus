@@ -46,7 +46,7 @@ export function createCombat(i) {
             dir: s,
             from: 'player',
           };
-          return (i.events.emit('impact', u), u);
+          return (i.events.emit('impact', u), l.box && l.box.kind === 'tree' && i.treefall && i.treefall.hit(l.box.ref, l.point, s, o), u); // a trunk takes the damage; the crown is no solid, a shot passes through it
         }
         return null;
       },
@@ -66,7 +66,7 @@ export function createCombat(i) {
         }
         return (
           a &&
-            i.events.emit('impact', {
+            (i.events.emit('impact', {
               point: a.point,
               normal: a.normal,
               dist: a.dist,
@@ -75,6 +75,7 @@ export function createCombat(i) {
               dir: s,
               from: 'enemy',
             }),
+            a.box && a.box.kind === 'tree' && i.treefall && i.treefall.hit(a.box.ref, a.point, s, o)),
           !1
         );
       },

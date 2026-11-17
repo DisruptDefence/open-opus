@@ -34,6 +34,7 @@ export function createWorldApi(engine, emit) {
   G.events.on('director:say', (e) => emit('say', { text: e.text, channel: e.channel }));
   G.events.on('weapon:fire', () => emit('shot', { ammo: G.weapon.ammo }));
   G.events.on('engine:error', (e) => emit('error', { module: e.module, message: e.message }));
+  G.events.on('tree:felled', (e) => emit('tree:felled', { id: e.id, x: e.x, z: e.z }));
   G.events.on('scene:chunk', (e) => emit('chunk', { ce: e.ce, cn: e.cn, live: e.live }));
 
   // ---- holding ---------------------------------------------------------------------------------------------------

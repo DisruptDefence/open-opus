@@ -38,10 +38,21 @@ export function installChunk(physics, terrain, c, style) {
     const y = groundAt(p.x, p.z);
     physics.addPrism(s.ring, y - 0.5, y + s.h, { tag, surface: 'metal', noNav: !s.nav, ref: p });
   }
-  for (const t of c.trees) {
-    const y = groundAt(t.x, t.z), r = 0.22;
-    physics.addPrism([t.x - r, t.z - r, t.x + r, t.z - r, t.x + r, t.z + r, t.x - r, t.z + r], y - 1, y + t.height * 0.6, { tag, surface: 'wood', noNav: false, ref: t });
-  }
+  for (const t of c.trees) addTreeSolid(physics, t, groundAt(t.x, t.z), tag);
   return env;
+}
+/** A tree's trunk as a solid, tagged `kind: 'tree'` with its record as `ref` (a hit on it damages that tree). A felled tree keeps only its stump. */
+function addTreeSolid(physics, t, y, tag) {
+  const r = 0.22;
+  return physics.addPrism([t.x - r, t.z - r, t.x + r, t.z - r, t.x + r, t.z + r, t.x - r, t.z + r], y - 1, y + (t.fell ? t.fell.h : t.height * 0.6), { tag, surface: 'wood', noNav: false, ref: t, kind: 'tree' });
+}
+/** After a tree was felled: replace its trunk solid by the stump's. False when its chunk is not installed. */
+export function refitTree(physics, terrain, t) {
+  const old = [];
+  physics.near(t.x - 1, t.z - 1, t.x + 1, t.z + 1, (s) => { if (s.kind === 'tree' && s.ref === t) old.push(s); });
+  if (!old.length) return false;
+  const tag = old[0].tag; for (const s of old) physics.remove(s);
+  addTreeSolid(physics, t, terrain.height(t.x, t.z), tag);
+  return true;
 }
 export function uninstallChunk(physics, terrain, ce, cn) { physics.removeTag(chunkTag(ce, cn)); terrain.removeTile(ce, cn); }
