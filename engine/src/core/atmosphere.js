@@ -13,7 +13,7 @@ export function sunPosition(latDeg, dayOfYear, hour) {
 }
 
 /** Everything the renderer needs for an hour of the day. Directions are game axes: +x east, +y up, -z north. */
-export function atmosphereAt({ lat = 46.8, day = 172, hour = 10, haze = 0.5, cloud = 0.4, convergenceDeg = 0 } = {}) {
+export function atmosphereAt({ lat = 46.8, day = 172, hour = 10, haze = 0.5, cloud = 0.4, convergenceDeg = 0, look = null } = {}) {
   const sun = sunPosition(lat, day, hour), night = sun.elevation < 0;
   // below the horizon the "sun" is a low moon on the same bearing, so there is always one shadow-casting light
   const el = Math.max(night ? 14 : 2.5, sun.elevation) * RAD, az = (sun.azimuth - convergenceDeg) * RAD; // grid, not true, north
@@ -29,5 +29,66 @@ export function atmosphereAt({ lat = 46.8, day = 172, hour = 10, haze = 0.5, clo
   }
   // haze greys the far sky and the fog towards each other
   const grey = (c) => mix(c, [0.62, 0.66, 0.70].map((v) => v * (0.08 + 1.3 * dusk * (0.4 + 0.6 * t))), haze * 0.5);
-  return { hour, sun, night, cloud, sunDir: { x: dir[0], y: dir[1], z: dir[2] }, sunColor, sunIntensity: intensity, zenith, horizon: grey(horizon), horizonAway: grey(away), fog: grey(fog) };
+  const out = { hour, sun, night, cloud, sunDir: { x: dir[0], y: dir[1], z: dir[2] }, sunColor, sunIntensity: intensity, zenith, horizon: grey(horizon), horizonAway: grey(away), fog: grey(fog) };
+  if (!look) return out;
+  out.sunIntensity *= look.sun; out.sunColor = out.sunColor.map((v, i) => v * look.sunTint[i]);
+  const tone = (c) => { const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; return c.map((v, i) => Math.max(0, l + (v - l) * look.skySat) * look.skyTint[i]); };
+  for (const k of ['zenith', 'horizon', 'horizonAway', 'fog']) out[k] = tone(out[k]);
+  out.look = look;
+  return out;
+}
+
+/** The look: the picture's grade, light and haze as data. Every key is optional; these are the neutral defaults. */
+export const DEFAULT_LOOK = {
+  exposure: 1, // multiplies the renderer's manual exposure
+  key: 0.12, minExposure: 0.6, maxExposure: 2, // eye adaptation
+  env: 1, // sky light on shaded surfaces (multiplies the renderer's base environment intensity)
+  sun: 1, // multiplies the sun's intensity
+  sunTint: [1, 1, 1], // multiplies the sun's colour
+  skySat: 1, // saturation of zenith, horizon, horizonAway and fog (0 grey .. 1 as computed .. >1 more)
+  skyTint: [1, 1, 1], // multiplies zenith, horizon, horizonAway and fog
+  bounce: [0, 0, 0], // linear colour x intensity of light arriving from below (ground bounce); 0 = none
+  shadows: [1, 1, 1], highlights: [1, 1, 1], // split tone multipliers
+  lift: [0.004, 0.004, 0.004], // added to blacks after `gain`
+  gain: 0.992, // multiplies before lift
+  curve: 0.22, // strength of the S-curve
+  saturation: 1, // multiplies the gameplay-driven saturation
+  vignette: 0.12, ca: 0.0004, grain: 0.02, sharpen: 0.3,
+  bloom: 0.065, agx: 0.25,
+  farHaze: 0.42, fogSigma: 0.0034, // volumetric haze
+};
+
+const copyLook = (o) => { const r = {}; for (const k in o) r[k] = Array.isArray(o[k]) ? o[k].slice() : o[k]; return r; };
+
+/** DEFAULT_LOOK with each layer laid over it (later wins). Bad layers, unknown keys and bad values are ignored. */
+export function resolveLook(...layers) {
+  const out = copyLook(DEFAULT_LOOK);
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) continue;
+    for (const k of Object.keys(DEFAULT_LOOK)) {
+      if (!Object.prototype.hasOwnProperty.call(layer, k)) continue;
+      const v = layer[k];
+      if (Array.isArray(DEFAULT_LOOK[k])) {
+        if (Array.isArray(v) && v.length === 3 && v.every((x) => typeof x !== 'boolean' && x !== null && x !== '' && Number.isFinite(Number(x)))) out[k] = v.map(Number);
+      } else if (typeof v !== 'boolean' && v !== null && v !== '' && Number.isFinite(Number(v)) && (typeof v === 'number' || typeof v === 'string')) out[k] = Number(v);
+    }
+  }
+  return out;
+}
+
+/** The host's `look` switch: a JSON object string. Anything else (empty, undefined, bad JSON, not an object) gives null; bad JSON warns once. */
+let warnedLook = false;
+export function parseLookParam(s) {
+  if (typeof s !== 'string' || !s.trim()) return null;
+  try { const v = JSON.parse(s); return v && typeof v === 'object' && !Array.isArray(v) ? v : null; } catch (e) {
+    if (!warnedLook) { warnedLook = true; console.warn('[look] the look switch is not valid JSON, ignored: ' + e.message); }
+    return null;
+  }
+}
+
+/** Time of day, day of year, haze, cloud and wet: a host switch wins over the scene's `ambience`, which wins over the default. '' counts as unset. */
+export function ambienceOf(params = {}, sceneAmbience = null) {
+  const amb = sceneAmbience || {}, set = (v) => v !== undefined && v !== null && v !== '';
+  const pick = (k, d) => { const v = set(params[k]) ? params[k] : set(amb[k]) ? amb[k] : d; return +v; };
+  return { tod: pick('tod', 10), day: pick('day', 172), haze: pick('haze', 0.4), cloud: pick('cloud', 0.4), wet: pick('wet', 0) };
 }

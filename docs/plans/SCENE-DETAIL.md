@@ -144,7 +144,7 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
                   "on": ["primary", "secondary", "tertiary", "residential", "unclassified"] },
     "surface": { "pedestrian": "cobble", "living_street": "cobble", "footway": "paving", "steps": "rock",
                  "residential": "asphalt", "service": "asphalt", "path": "gravel" },
-    "lamps": { "kind": "lamp_lantern", "spacing": 28, "offset": 0.6, "stagger": true,
+    "lamps": { "kind": "lamp_lantern", "spacing": 24, "offset": 0.6, "stagger": true,
                "on": ["residential", "living_street", "pedestrian", "tertiary", "secondary", "primary"] },
     "bollards": { "kind": "bollard_iron", "at": "pedestrian_ends", "gap": 1.6 }
   },
@@ -172,13 +172,15 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
     "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.12,
                 "panes": [2, 4] },
     "groundFloor": { "doorWidth": 1.05, "doorHeight": 2.25, "shopPier": 0.45, "shopSill": 0.5, "fascia": 0.55, "awning": 0.4 },
-    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.6, "depth": 0.05 },
+    "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a8a092" },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
     "kerb": 0.14, "season": "summer"
   }
 }
 ```
+
+`client.plinth` is `{ height, depth, color }`: a low base (0.3 to 0.45 m) in a warm grey; a stone house mixes `color` with its own wall tint. An old scene without `color` gets the default `#a39d92`.
 
 **`client.bayWindows`** (added with wall variation, `gen/wallvar.js`, `materials/facades.js`): the windows the far façade
 draws in its material, as data. `types` names each type with its `shape` (`rect`, `segmental`, `round`, `circle`,
@@ -266,7 +268,7 @@ before. `season` at scene level (`"summer" | "autumn" | "winter" | "spring"`), a
 ```
 
 An item is `[kind index, x, z, yawDeg, variant, source]`; `yaw` is the direction the prop faces, degrees
-clockwise from grid north; `source` `0` = a mapped feature, `1` = placed by a rule of the style pack (so data
+clockwise from grid north; `source` `0` = a mapped feature, `1` = a terrace rule's lamp, `2` = a street rule's lamp (`style.street.lamps`) (so data
 and assumption can be told apart, as `hs` does for heights). An unknown kind is skipped by the reader. In a
 chunk: fixed records `kind uint8, x, z float32, yaw uint8 (2° steps), variant uint8, flags uint8`.
 Collision is derived from the kind (4 below).
@@ -982,7 +984,7 @@ Cannons face outwards across the nearest `city_wall` within 8 m. **Rule lamps** 
 each road of the listed classes that is not `lit=no`, a lamp every `spacing` m, starting at half a spacing,
 `offset` m outside the carriageway edge (on the sidewalk when there is one), alternating sides when `stagger`;
 skipped when a mapped lamp is within `spacing / 2`, when the point is inside a building or within 0.4 m of one
-(then try the other side; else skip), on a bridge, on steps, or outside `extent`. `source: 1`. **Rule bollards**:
+(then try the other side; else skip), on a bridge, on steps, or outside `extent`. `source: 2`. **Built (props.py, `test_street_props.py`): street lamps by rule are placed.** **Rule bollards**:
 at both ends of a `pedestrian` road that meets a vehicular one, a row across the width at `gap` spacing.
 Rules sentences added; the count of ruled props is printed. `trees.py`: OSM `natural=tree` nodes and `tree_row`
 ways (every 8 m, as today) with `species`, `genus`, `leaf_type`; then each `trees` enricher: its points replace
