@@ -22,7 +22,10 @@ const first = views[0];
 const url = `${process.env.ENGINE_URL || 'http://127.0.0.1:9765/engine/dev.html'}?scene=${encodeURIComponent(spec.scene)}&noaudio=1&shot=1&x=${first.x}&z=${first.z}${process.env.QUERY ? '&' + process.env.QUERY : '&q=high'}`;
 mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+// GPU=1: a real window on the machine's graphics card (a display is needed; under WSL the window opens off screen), a frame in milliseconds instead of seconds
+const gpu = !!process.env.GPU;
+const browser = await chromium.launch(gpu ? { channel: 'chromium', headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--window-position=4000,4000', `--window-size=${(process.env.SIZE || '1280x720').replace('x', ',')}`] }
+  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: W, height: H } });
 const log = []; page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') log.push(`[${m.type()}] ${m.text().slice(0, 300)}`); }); page.on('pageerror', (e) => log.push('[pageerror] ' + String(e.stack || e).slice(0, 600)));
 const report = { url, size: [W, H], views: [], ok: false }, t0 = Date.now();
