@@ -166,3 +166,12 @@ test('a shopfront pane wider than 1.7 m gets mullions and a transom: at least 2 
   assert.ok(w >= 4, `a 2.4 m pane is two lights, one bar of 2 triangles; two panes: ${w - nr}`);
   assert.ok((w - nr) / 2 <= 12, 'at most 12 triangles a bay');
 });
+test('a door step is drawn in the tread soup with treadColor on every vertex; the default colour without the key', async () => {
+  const { parseColor } = await import('../src/gen/style.js');
+  for (const [st, hex] of [[fixedBays, '#9a968e'], [{ ...fixedBays, treadColor: '#807a70' }, '#807a70']]) {
+    const sp = near(wallOnly({ front: new Set([0]) }), st).map.get(SOUP.tread);
+    assert.ok(sp, 'a door step'); assert.equal(sp.col.length, sp.pos.length); assert.ok(sp.col.every((v) => Number.isFinite(v)));
+    const c = parseColor(hex), n = sp.col.length / 3, m = [0, 0, 0]; for (let i = 0; i < sp.col.length; i++) m[i % 3] += sp.col[i] / n;
+    assert.ok(m.every((v, k) => Math.abs(v - c[k]) < 1e-9));
+  }
+});

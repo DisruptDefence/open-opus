@@ -55,8 +55,8 @@
 //   Must not  read the DOM or three.js, or draw outside what the record says (no invented streets).
 
 
-import { SOUP, GROUND_SOUP, SURFACE_NAMES } from './style.js';
-import { tri, quad, prism, rng, linear } from './soup.js';
+import { SOUP, GROUND_SOUP, SURFACE_NAMES, kerbTint, treadTint } from './style.js';
+import { tri, quad, prism, rng, linear, shade, seedOf } from './soup.js';
 
 const LIFT_ROAD = 0.03, LIFT_MARK = 0.04, LIFT_MARGIN = 0.02, MARGIN = 0.6, KERB_STONE = 0.15;
 const HARD = new Set([1, 2, 3, 4]); // surfaces that sit beside paving: they get a margin strip
@@ -113,8 +113,8 @@ export function drape(tri3, tile) {
 }
 
 /** A convex plan polygon [[x, z], …] laid on the ground, `lift` metres above it, into one soup. */
-function lay(soup, poly, tile, lift) {
-  for (let m = 1; m + 1 < poly.length; m++) for (const t of drape([poly[0], poly[m], poly[m + 1]], tile)) tri(soup, [t[0][0], t[0][1] + lift, t[0][2]], [t[1][0], t[1][1] + lift, t[1][2]], [t[2][0], t[2][1] + lift, t[2][2]]);
+function lay(soup, poly, tile, lift, tint = null) {
+  for (let m = 1; m + 1 < poly.length; m++) for (const t of drape([poly[0], poly[m], poly[m + 1]], tile)) tri(soup, [t[0][0], t[0][1] + lift, t[0][2]], [t[1][0], t[1][1] + lift, t[1][2]], [t[2][0], t[2][1] + lift, t[2][2]], tint);
 }
 
 // ---- lines ---------------------------------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ function breaks(a, b, tile) {
   return ts.sort((x, y) => x - y);
 }
 /** A vertical wall along a plan polyline from `y0` to `y1` above the drawn ground, facing the side of `want` = [x, z]. */
-function wallAlong(soup, L, tile, y0, y1, want) {
+function wallAlong(soup, L, tile, y0, y1, want, tint = null) {
   for (let i = 0; i + 1 < L.length; i++) {
     const a = L[i], b = L[i + 1], ts = breaks(a, b, tile);
     for (let k = 0; k + 1 < ts.length; k++) {
@@ -246,7 +246,7 @@ function wallAlong(soup, L, tile, y0, y1, want) {
       const hp = meshHeight(tile, p[0], p[1]), hq = meshHeight(tile, q[0], q[1]);
       const nrm = (b[1] - a[1]) * want[0] - (b[0] - a[0]) * want[1]; // > 0: (p, q, up) faces want
       const A = [p[0], hp + y0, p[1]], B = [q[0], hq + y0, q[1]], C = [q[0], hq + y1, q[1]], D = [p[0], hp + y1, p[1]];
-      if (nrm < 0) quad(soup, A, B, C, D); else quad(soup, B, A, D, C);
+      if (nrm < 0) quad(soup, A, B, C, D, tint); else quad(soup, B, A, D, C, tint);
     }
   }
 }
@@ -367,12 +367,12 @@ export function roadRibbons(soups, road, tile, style, others = null) {
   const P = points(road.pts); if (P.length < 2) return;
   const hw = road.width / 2, road_ = soupOf(soups, surfaceSoup(road.surface)), L = offsetLine(P, hw), R = offsetLine(P, -hw);
   if (road.sidewalk === 'self') { // a way that is itself a sidewalk: raised by the kerb, with a kerb face on both edges and at both ends
-    const stone = soupOf(soups, SOUP.kerb), kerb = style.kerb;
+    const stone = soupOf(soups, SOUP.kerb), kerb = style.kerb, kt = kerbTint(style);
     for (const q of stripQuads(L, R)) lay(road_, q, tile, kerb);
     const out = (A) => [A[0][0] - P[0][0], A[0][1] - P[0][1]];
-    wallAlong(stone, L, tile, 0, kerb, out(L)); wallAlong(stone, R, tile, 0, kerb, out(R));
+    wallAlong(stone, L, tile, 0, kerb, out(L), kt); wallAlong(stone, R, tile, 0, kerb, out(R), kt);
     const n = P.length - 1, dir = (a, b) => [b[0] - a[0], b[1] - a[1]];
-    wallAlong(stone, [R[0], L[0]], tile, 0, kerb, dir(P[1], P[0])); wallAlong(stone, [L[n], R[n]], tile, 0, kerb, dir(P[n - 1], P[n]));
+    wallAlong(stone, [R[0], L[0]], tile, 0, kerb, dir(P[1], P[0]), kt); wallAlong(stone, [L[n], R[n]], tile, 0, kerb, dir(P[n - 1], P[n]), kt);
     return;
   }
   for (const q of stripQuads(L, R)) lay(road_, q, tile, road.cls >= 7 ? LIFT_ROAD + 0.006 : LIFT_ROAD); // footways and stairs over streets: one wins, never two
@@ -382,15 +382,15 @@ export function roadRibbons(soups, road, tile, style, others = null) {
     for (const side of [1, -1]) if (!have.has(side)) for (const q of stripQuads(side > 0 ? L : R, offsetLine(P, side * (hw + MARGIN)))) lay(pave, q, tile, LIFT_MARGIN);
   }
   if (strips.length) {
-    const walk = soupOf(soups, GROUND_SOUP[Math.max(1, SURFACE_NAMES.indexOf(sw.surface))] || GROUND_SOUP[2]), stone = soupOf(soups, SOUP.kerb);
+    const walk = soupOf(soups, GROUND_SOUP[Math.max(1, SURFACE_NAMES.indexOf(sw.surface))] || GROUND_SOUP[2]), stone = soupOf(soups, SOUP.kerb), kt = kerbTint(style);
     for (const t of strips) {
       for (const q of t.quads) lay(walk, q, tile, kerb);
-      for (const q of t.stone) lay(stone, q, tile, kerb + 0.01);
-      wallAlong(stone, t.inner, tile, LIFT_ROAD, kerb + 0.01, [-t.want[0], -t.want[1]]); // faces the carriageway axis
+      for (const q of t.stone) lay(stone, q, tile, kerb + 0.01, shade(kt, 1 + (rng(seedOf(q[0][0], q[0][1]))() * 2 - 1) * 0.06)); // each kerb stone its own tone, seeded by where it lies
+      wallAlong(stone, t.inner, tile, LIFT_ROAD, kerb + 0.01, [-t.want[0], -t.want[1]], kt); // faces the carriageway axis
       wallAlong(walk, t.outer, tile, 0, kerb, t.want); // faces away from it
       for (const k of [0, 1]) if (t.cut && t.cut[k]) { // where a mouth cuts the strip: a kerb face at that end, looking along the road, away from the strip
         const i = k ? t.inner.length - 1 : 0, j = k ? i - 1 : 1, o = t.outer.length - 1;
-        wallAlong(stone, [t.inner[i], t.outer[k ? o : 0]], tile, 0, kerb + 0.01, [t.inner[i][0] - t.inner[j][0], t.inner[i][1] - t.inner[j][1]]);
+        wallAlong(stone, [t.inner[i], t.outer[k ? o : 0]], tile, 0, kerb + 0.01, [t.inner[i][0] - t.inner[j][0], t.inner[i][1] - t.inner[j][1]], kt);
       }
     }
   }
@@ -444,15 +444,16 @@ function bar(soup, a, b, t) { // a square bar of half-section t between two 3D p
 export function steps(soups, road, groundAt, style) { // eslint-disable-line no-unused-vars
   const P = points(road.pts); if (P.length < 2 || !road.steps) return;
   const cum = cumulative(P), plen = cum[cum.length - 1], n = road.steps.count, len = road.len || plen, per = len / n, hw = road.width / 2;
-  const tread = soupOf(soups, SOUP.tread), top = (k) => { const a = along(P, cum, k * per - road.s0), b = along(P, cum, (k + 1) * per - road.s0); return Math.max(groundAt(a[0], a[1]), groundAt(b[0], b[1])); };
+  const tread = soupOf(soups, SOUP.tread), tt = treadTint(style), top = (k) => { const a = along(P, cum, k * per - road.s0), b = along(P, cum, (k + 1) * per - road.s0); return Math.max(groundAt(a[0], a[1]), groundAt(b[0], b[1])); };
   const k0 = Math.max(0, Math.floor(road.s0 / per)), k1 = Math.min(n - 1, Math.floor((road.s0 + plen) / per));
   for (let k = k0; k <= k1; k++) {
     const sa = k * per - road.s0, sb = (k + 1) * per - road.s0, M = between(P, cum, sa, sb), ha = groundAt(M[0][0], M[0][1]), hb = groundAt(M[M.length - 1][0], M[M.length - 1][1]);
     const y1 = Math.max(ha, hb), low = ha <= hb ? k - 1 : k + 1, base = Math.min(ha, hb);
     const y0 = Math.min(y1 - 0.04, low >= 0 && low < n ? top(low) : base - 0.05);
     const ring = (a, b) => { const A = offsetLine(M, a), B = offsetLine(M, b), r = []; for (const p of A) r.push(p[0], p[1]); for (let i = B.length - 1; i >= 0; i--) r.push(B[i][0], B[i][1]); return r; };
-    prism(tread, ring(hw, -hw), y0, y1, null, true);
-    for (const side of [1, -1]) prism(tread, ring(side * hw, side * (hw + STRINGER)), base - 0.3, y1, null, true);
+    const tint = shade(tt, 1 + (rng(seedOf(P[0][0] + k, P[0][1]))() * 2 - 1) * 0.06); // each tread its own tone, seeded by the road and the tread
+    prism(tread, ring(hw, -hw), y0, y1, tint, true);
+    for (const side of [1, -1]) prism(tread, ring(side * hw, side * (hw + STRINGER)), base - 0.3, y1, tint, true);
   }
   const hr = road.steps.handrail | 0;
   if (hr) {

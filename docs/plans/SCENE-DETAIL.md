@@ -175,7 +175,7 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
     "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a8a092" },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
-    "kerb": 0.14, "season": "summer"
+    "kerb": 0.14, "kerbColor": "#8d8a84", "treadColor": "#9a968e", "season": "summer"
   }
 }
 ```
