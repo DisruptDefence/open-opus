@@ -414,7 +414,9 @@ function dormers(soups, b, style, info, lk) {
     for (let k = by.n > 2 ? lk.r.int(step) : 0; k < by.n; k += step) {
       const c = by.start + (k + 0.5) * by.width, u0 = c - hw, u1 = c + hw, ub = 0.1;
       // front: window set in a painted surround, and the gable above it
-      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, null, [0, 0, 1, 1]);
+      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, lk.glassT, glassUV(0, stateRow(style.window, lk.wst)));
+      { const g0 = u0 + ub, g1 = u1 - ub, y0 = yb + 0.1, y1 = yt - 0.1, fw = 0.05, fd = d0 - 0.04 + 0.03; // a 0.05 frame standing 0.03 proud of the glass
+        rect(T, f, g0, g0 + fw, y0, y1, fd, lk.frameC); rect(T, f, g1 - fw, g1, y0, y1, fd, lk.frameC); rect(T, f, g0 + fw, g1 - fw, y1 - fw, y1, fd, lk.frameC); rect(T, f, g0 + fw, g1 - fw, y0, y0 + fw, fd, lk.frameC); }
       rect(T, f, u0, u0 + ub, yb, yt, d0, lk.trim); rect(T, f, u1 - ub, u1, yb, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yt - 0.1, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yb, yb + 0.1, d0, lk.trim);
       tri(T, f.at(u0, yt, d0), f.at(u1, yt, d0), f.at(c, yt + rise, d0), lk.trim);
       // cheeks and roof

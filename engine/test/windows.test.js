@@ -85,3 +85,15 @@ test('shop panes: two displays by seed (sheet columns 1 and 7), each over the wh
   }
   assert.deepEqual([...cols].sort(), [1, 7]); assert.ok(total >= 30);
 });
+
+test('dormer windows have a state row and a 0.05 frame in front of the glass', () => {
+  const roofInfo = { slots: [{ ox: 10, oz: 0, ex: -1, ez: 0, len: 10, y: 39, slope: 1, edge: 0 }], ridge: [], parapet: 0 };
+  const rows = new Set(); let framed = 0;
+  for (let id = 1; id <= 30; id++) {
+    const soups = createSoups(); facadeNear(soups, building(RING, { id, roofShape: 3, blind: new Set([0, 1, 2, 3]) }), flat, style, roofInfo);
+    const q = glassQuads(soups); for (const g of q) { rows.add(Math.round(g.v0)); assert.equal(g.v1 - g.v0, 1); }
+    if (q.length) { const t = soups.map.get(SOUP.trim); const gz = [...soups.map.get(SOUP.window).pos].filter((_, i) => i % 3 === 2); const gd = Math.max(...gz);
+      if (tris(t, (p) => p.every((v) => Math.abs(v[2] - (gd - 0.03)) < 1e-6)).length >= 8) framed++; }
+  }
+  assert.ok(rows.size >= 3, `states seen on dormers: ${[...rows]}`); assert.ok(framed > 0, 'a frame 0.03 in front of the dormer glass');
+});
