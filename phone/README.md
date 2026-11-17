@@ -16,11 +16,14 @@ engine: it reaches the game through the world API (`docs/WORLD-API.md`) and noth
 There is no imitation of ATAK in this repository and there will not be one: the phone shows a real ATAK or the
 placeholder.
 
-**The case.** The phone is drawn as a generic rugged handset in a dark-earth protective case, in CSS only (`phone.css`, plus twelve
-decorative `aria-hidden` elements that `host.js` adds): chamfered bumper, corner guards with screws, a rubber gasket, side keys, a cable
-port with its cable, a lanyard loop and a mount hinge. Everything scales with `--w`; the glass keeps its size and place. Pictures with no
-game: `flock /tmp/opus-heavy.lock env PLAYWRIGHT=… node phone/tools/case-shot.mjs <outDir> [prefix] [cssFile]` (it also prints the glass's
-bounding box and compares it with a `before` run).
+**The case.** The phone is drawn as a generic rugged handset in a dark-earth protective case, in CSS only (`phone.css`, plus sixteen
+decorative `aria-hidden` elements that `host.js` adds): a chamfered, bevelled bumper with a stippled convex face, raised corner guards with
+counterbored screws, one black gasket and the phone's own bezel, rubber side keys, a ribbed cable overmould with a curved cable, a lanyard
+lug with webbing and a mount hinge. Everything scales with `--w`; the glass keeps its size and place. There is no `filter`, `backdrop-filter`
+or `mask` on `.opus-phone` or the glass (a live stream repaints under them); the one blur is the cast shadow, on a static element behind the
+phone. Pictures with no game: `flock /tmp/opus-heavy.lock env PLAYWRIGHT=… [BACKDROP=<png>] node phone/tools/case-shot.mjs <outDir> [prefix] [cssFile]`
+(`BACKDROP` draws a still image behind the phone instead of the grey gradient; the tool also prints the glass's bounding box, compares it with
+a `before` run and lists any filter or mask in the phone's subtree).
 
 ## Try it (nothing to set up)
 

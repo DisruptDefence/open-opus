@@ -5,6 +5,9 @@
 //
 //   flock /tmp/opus-heavy.lock env PLAYWRIGHT=/path/to/node_modules/playwright node phone/tools/case-shot.mjs <outDir> [prefix] [cssFile]
 //
+// BACKDROP=<path to a PNG> draws that still full-window behind the phone instead of the grey gradient (read here, passed as a
+// data URL; nothing is committed): a game-like scene to judge the case against.
+//
 // prefix defaults to "after", cssFile to phone/phone.css (give an older copy of the stylesheet with prefix "before").
 // If <outDir>/before-glass.json exists the glass boxes are compared with it, as a share of the phone's width --w.
 import { createRequire } from 'node:module';
@@ -20,12 +23,13 @@ const outDir = resolve(process.argv[2] || '.'), prefix = process.argv[3] || 'aft
 const css = readFileSync(resolve(process.argv[4] || join(here, '../phone.css')), 'utf8');
 mkdirSync(outDir, { recursive: true });
 
+const backdrop = process.env.BACKDROP ? `url(data:image/png;base64,${readFileSync(resolve(process.env.BACKDROP)).toString('base64')}) center/cover no-repeat` : null;
 const page_html = `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;height:100%;overflow:hidden}
-body{position:relative;background:
+body{position:relative;background:${backdrop || `
   radial-gradient(120% 90% at 50% 20%, rgba(255,255,255,.22), transparent 60%),
-  linear-gradient(180deg,#8c9399 0%,#6f757a 45%,#4d5256 70%,#3b3f41 100%)}
-.ph{position:absolute;inset:0;background:repeating-linear-gradient(95deg,rgba(255,255,255,.03) 0 3px,rgba(0,0,0,.03) 3px 7px)}
+  linear-gradient(180deg,#8c9399 0%,#6f757a 45%,#4d5256 70%,#3b3f41 100%)`}}
+.ph{position:absolute;inset:0;${backdrop ? '' : 'background:repeating-linear-gradient(95deg,rgba(255,255,255,.03) 0 3px,rgba(0,0,0,.03) 3px 7px)'}}
 .map{position:absolute;inset:0;background:
   linear-gradient(rgba(150,190,170,.12) 1px,transparent 1px) 0 0/12.5% 25%,
   linear-gradient(90deg,rgba(150,190,170,.12) 1px,transparent 1px) 0 0/12.5% 25%,
@@ -49,7 +53,15 @@ for (const [W, H] of [[1280, 720], [1920, 1080]]) {
   await page.screenshot({ path: join(outDir, `${prefix}-${W}.png`) });
   const m = await page.evaluate(() => {
     const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
-    return { glass: r('.opus-phone-glass'), phone: r('.opus-phone'), W: document.querySelector('.opus-phone').offsetWidth };
+    // the stream repaints under the phone: the phone and the glass subtree must carry no filter, backdrop-filter or mask
+    const bad = [], ph = document.querySelector('.opus-phone');
+    for (const e of [ph, ...ph.querySelectorAll('*')]) {
+      const cs = getComputedStyle(e);
+      const on = [['filter', cs.filter], ['backdrop-filter', cs.backdropFilter], ['mask', cs.maskImage]].filter(([, v]) => v && v !== 'none');
+      const inGlass = e === ph || e.closest('.opus-phone-glass');
+      if (on.length) bad.push({ el: e.className || e.tagName, onPhoneOrGlass: !!inGlass, props: on.map(([k]) => k) });
+    }
+    return { glass: r('.opus-phone-glass'), phone: r('.opus-phone'), W: ph.offsetWidth, effects: bad };
   });
   report[W] = m;
   // 3x crops: same page again at device scale 3
@@ -69,6 +81,10 @@ for (const [W, H] of [[1280, 720], [1920, 1080]]) {
     bl: [b.x - w * .02, b.y + b.h - ch + w * .03], br: [b.x + b.w - cw + w * .02, b.y + b.h - ch + w * .03],
   };
   for (const [k, [x, y]] of Object.entries(crops)) await p3.screenshot({ path: join(outDir, `${prefix}-${W}-corner-${k}.png`), clip: { x: Math.max(0, x), y: Math.max(0, y), width: cw, height: ch } });
+  const box = (x, y, cw2, ch2) => ({ x: Math.max(0, x), y: Math.max(0, y), width: cw2, height: ch2 });
+  await p3.screenshot({ path: join(outDir, `${prefix}-${W}-keys.png`), clip: box(b.x + b.w * .5, b.y - w * .02, w * .36, w * .08) });
+  await p3.screenshot({ path: join(outDir, `${prefix}-${W}-lanyard.png`), clip: box(b.x + b.w - w * .1, b.y + b.h * .3, w * .16, w * .16) });
+  await p3.screenshot({ path: join(outDir, `${prefix}-${W}-hinge.png`), clip: box(b.x + b.w * .25, b.y + b.h - w * .06, w * .5, w * .1) });
   await p3.screenshot({ path: join(outDir, `${prefix}-${W}-cable.png`), clip: { x: Math.max(0, b.x - w * .14), y: b.y + b.h / 2 - w * .09, width: w * .26, height: w * .18 } });
   await c3.close(); await ctx.close();
 }
@@ -76,6 +92,7 @@ await browser.close();
 
 writeFileSync(join(outDir, `${prefix}-glass.json`), JSON.stringify(report, null, 1));
 for (const W of Object.keys(report)) { const g = report[W].glass; console.log(`${prefix} ${W}: glass x=${g.x.toFixed(2)} y=${g.y.toFixed(2)} w=${g.w.toFixed(2)} h=${g.h.toFixed(2)} (--w ${report[W].W}px)`); }
+for (const W of Object.keys(report)) for (const e of report[W].effects) console.log(`${W}: effect on ${e.el} (${e.props.join(', ')})${e.onPhoneOrGlass ? ' <- ON PHONE OR GLASS' : ''}`);
 const bf = join(outDir, 'before-glass.json');
 if (prefix !== 'before' && existsSync(bf)) {
   const before = JSON.parse(readFileSync(bf, 'utf8')); let ok = true;
