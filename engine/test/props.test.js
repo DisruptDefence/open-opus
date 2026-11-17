@@ -17,16 +17,17 @@ test('every prop in the kit: stands on its ground, fills its collider and no mor
     assert.equal(typeof kit.build, 'function', kind); assert.ok(kit.collider === null || typeof kit.collider.h === 'number', `${kind}: collider is null or has a height`);
     const at = (yaw) => { const soups = createSoups(); kit.build(soups, 100, 20, -50, yaw, 0, style); return soups; };
     const a = at(0), b = at(-Math.PI / 2), va = vertices(a), vb = vertices(b);
-    assert.ok(a.triangles() >= 30 && a.triangles() <= 250, `${kind}: ${a.triangles()} triangles`); assert.ok(a.map.size <= 3, `${kind}: at most three soups`);
-    assert.ok(Math.abs(Math.min(...va.map((v) => v[1])) - 20) <= 0.02, `${kind}: stands on the ground`);
+    const big = kit.big, below = big ? big.below : 0;   // a hull in the water (gen/ship.js: tests/ship.test.js holds its own checks)
+    assert.ok(big ? a.triangles() <= big.maxTriangles : a.triangles() >= 30 && a.triangles() <= 250, `${kind}: ${a.triangles()} triangles`); assert.ok(a.map.size <= 3, `${kind}: at most three soups`);
+    assert.ok(Math.abs(Math.min(...va.map((v) => v[1])) - (20 - below)) <= 0.02, `${kind}: stands on the ground`);
     // facing east is the model facing north turned a quarter: (dx, dz) -> (-dz, dx)
     const key = (v) => v.map((n) => n.toFixed(4)).join(), turned = new Set(va.map(([x, y, z]) => key([100 - (z + 50), y, -50 + (x - 100)])));
-    for (const v of vb) assert.ok(turned.has(key(v)), `${kind}: yaw turns the same model`);
+    if (!big) for (const v of vb) assert.ok(turned.has(key(v)), `${kind}: yaw turns the same model`);   // a big kind's own test compares vertex by vertex
     if (kit.collider) {
       const c = kit.collider, hw = (c.hw ?? c.r) + 0.1, hd = (c.hd ?? c.r) + 0.1; assert.equal(typeof c.nav, 'boolean');
       const s = propSolid({ kind, x: 100, z: -50, yaw: 0 }); assert.equal(s.ring.length, 8); assert.equal(s.h, c.h);
       // tall thin things (a lamp's arm, a flag) may overhang above head height; below it the model stays in the collider
-      for (const [x, y, z] of va) if (y < 20 + Math.min(c.h, 2)) assert.ok(Math.abs(x - 100) <= hw && Math.abs(z + 50) <= hd, `${kind}: (${x}, ${y}, ${z}) is outside its collider`);
+      if (!big) for (const [x, y, z] of va) if (y < 20 + Math.min(c.h, 2)) assert.ok(Math.abs(x - 100) <= hw && Math.abs(z + 50) <= hd, `${kind}: (${x}, ${y}, ${z}) is outside its collider`);
     }
   }
 });

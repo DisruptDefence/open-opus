@@ -35,7 +35,7 @@ export function installChunk(physics, terrain, c, style) {
   for (const w of c.walls) for (const r of wallSolids(w, groundAt)) physics.addPrism(r.ring, r.yBase, r.yTop, { tag, surface: w.material === 8 ? 'metal' : 'concrete', ref: w });
   for (const p of c.props || []) {
     const s = propSolid(p); if (!s) continue;
-    const y = groundAt(p.x, p.z);
+    const y = p.y ?? groundAt(p.x, p.z);
     physics.addPrism(s.ring, y - 0.5, y + s.h, { tag, surface: 'metal', noNav: !s.nav, ref: p });
   }
   for (const t of c.trees) {
