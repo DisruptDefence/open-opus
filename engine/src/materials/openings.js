@@ -46,7 +46,7 @@ void surf(vec2 uv){
   vec2 q = vec2(fract(uv.x * 8.0), fract(uv.y * 4.0));
   bool shop = panel > 0.5 && panel < 1.5;
   if (shop) row = 0.0;
-  float bx = shop ? 0.035 : (panel > 1.5 && panel < 4.5 ? 0.075 : 0.07), by = shop ? 0.035 : 0.045;
+  float bx = shop ? 0.035 : 0.035, by = shop ? 0.035 : 0.02;   // the outer frame is modelled (gen/facade.js); this strip only guards the panel edge
   float frameD = min(min(q.x, 1.0 - q.x) / bx, min(q.y, 1.0 - q.y) / by);
   float isFrame = 1.0 - smoothstep(0.9, 1.0, frameD);
   float bar = 0.0;

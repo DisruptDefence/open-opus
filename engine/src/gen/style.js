@@ -71,7 +71,7 @@ export const DEFAULT_STYLE = {
   // sash11, french, single), kind 'round' (a roundel of diameter d set on the wall; no cut) ; `blind` is a bricked-up window.
   // window.mix: per storey class (ground, upper, top = the attic storey of a house of 3 storeys or more) the weight of each type; one
   // type is drawn per building and storey from the building's id, and `blind` is mixed into single bays by its share of the weights.
-  window: { bay: [2.8, 3.4], width: 1.0, height: 1.5, sill: 0.9, reveal: 0.12, shutters: 0, panes: [2, 2],
+  window: { bay: [2.8, 3.4], width: 1.0, height: 1.5, sill: 0.9, reveal: 0.12, stoneReveal: 1, shutters: 0, panes: [2, 2],
     // window.states: weights of the room behind a modelled window (a row of the window sheet): dark, curtains, blind (lowered 55 %), lit
     states: { dark: 3, curtains: 3, blind: 2, lit: 0.6 },
     types: {
