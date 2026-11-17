@@ -108,10 +108,10 @@ class Passages(unittest.TestCase):
 
     def test_on_a_slope_the_arch_starts_above_the_highest_ground_of_the_way(self):
         ring = rect(-5, -5, 5, 5)
-        ctx = make_ctx(lambda x, z: 3.0 + 0.5 * (x + 5) if x > -5 else 3.0, buildings_=[feature(ring, historic="city_gate", height="24")], roads=[road([(-20, 0), (20, 0)], 6)])
+        ctx = make_ctx(lambda x, z: 3.0 + 0.2 * (x + 5) if x > -5 else 3.0, buildings_=[feature(ring, historic="city_gate", height="24")], roads=[road([(-20, 0), (20, 0)], 6)])
         ctx.passages = walls.passages(ctx)
         (b,) = buildings.build(ctx)["buildings"]
-        self.assertGreaterEqual(b["pass"][0][5], 5.0 + 2.2)     # the way climbs 5 m inside the footprint, 2.2 m clear at least
+        self.assertGreaterEqual(b["pass"][0][5], 2.0 + 2.2)     # the way climbs 2 m inside the footprint (a steeper one is steps: walls.MAX_CLIMB), 2.2 m clear at least
 
     def test_the_building_record_carries_the_passage_a_flat_roof_and_no_front(self):
         ring = rect(-5, -5, 5, 5)

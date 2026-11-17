@@ -30,8 +30,9 @@
 //   Budget    near: <= 180 000 triangles and <= 30 ms for the densest cell of a town; far: 6 triangles an edge.
 //   Must not  read the DOM or three.js, keep state between calls, or draw the roof (roof.js does).
 import { quad, tri, frame, rect, slab, box, shade, mixTint, rng } from './soup.js';
-import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor } from './style.js';
+import { FACADE_FAR_SOUP, WALL_SOUP, ROOF_SOUP, ROOF_TINT_SOUP, SOUP, paletteColor, parseColor, treadTint } from './style.js';
 import { signedArea, obb } from './poly.js';
+import { dressEdge, dressingLook } from './dressing.js';
 
 const MARGIN = 0.45;
 export function bays(len, style, seed) {
@@ -89,6 +90,7 @@ function look(b, style) {
   };
   // the shopfront colour comes from its own stream, so the draws of `r` (door bay, awning) stay where they were
   const q = rng(((b.id | 0) ^ 0x2b7e1516) >>> 0);
+  Object.assign(out, dressingLook(b, style)); // lk.dr, lk.hasBoxes, lk.dcolors: its own stream, lk.r untouched
   out.shopC = q() < 0.5 ? out.awnC : (q() < 0.5 ? out.frameC : out.trim);
   return out;
 }
@@ -311,12 +313,13 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         quad(W, f.at(o.u0, o.ys, -o.r), f.at(o.u1, o.ys, -o.r), f.at(o.u1, o.ys, 0), f.at(o.u0, o.ys, 0), inner);
         rect(D, f, o.u0 + 0.02, o.u1 - 0.02, o.ys, o.yh, -o.r, lk.doorC, [0, 0, 1, 1]);
         const gd = groundAt(f.at((o.u0 + o.u1) / 2, 0, 0.6)[0], f.at((o.u0 + o.u1) / 2, 0, 0.6)[2]), y = Math.min(gd, L.base) - 0.05;
-        slab(soups.get(SOUP.tread), f, o.u0 - 0.12, o.u1 + 0.12, y, L.base + 0.02, 0, 0.42, null, 'flrt');
+        slab(soups.get(SOUP.tread), f, o.u0 - 0.12, o.u1 + 0.12, y, L.base + 0.02, 0, 0.42, treadTint(style), 'flrt');
         slab(T, f, o.u0 - 0.14, o.u1 + 0.14, o.yh, o.yh + 0.26, 0, lk.headDepth + 0.04, lk.trim, 'fb');
         slab(T, f, o.u0 - 0.14, o.u0 - 0.02, o.ys, o.yh, 0, 0.05, lk.trim, 'fr'); slab(T, f, o.u1 + 0.02, o.u1 + 0.14, o.ys, o.yh, 0, 0.05, lk.trim, 'fl');
       }
     }
     for (const rd of roundels) roundel(soups, f, rd, y0, lk, tint);
+    dressEdge(soups, f, { ops, storey: s, y0, sh, len, front, shop: b.groundFloor === 1, style, r: lk.dr, colors: lk.dcolors, hasBoxes: lk.hasBoxes, groundY: (u, d) => { const p = f.at(u, 0, d); return groundAt(p[0], p[2]); } });
     if (ground && front && b.groundFloor === 1) { // the fascia over the shopfronts, and sometimes an awning
       slab(T, f, 0, len, y0 + sh - gfl.fascia, y0 + sh, 0, 0.06, lk.shopC, 'fbtlr');
       if (lk.r() < gfl.awning) {

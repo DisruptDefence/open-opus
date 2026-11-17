@@ -16,7 +16,7 @@ const PAGE = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><m
 import { createBoot } from '/engine/host/boot.js';
 import { DEFAULT_PACK } from '/engine/index.js';
 window.__errors = []; addEventListener('error', (e) => window.__errors.push(String(e.message)));
-window.__boot = createBoot({ parent: document.getElementById('app'), words: DEFAULT_PACK.loader, brand: 'Open OPUS', title: 'Old Quebec', subtitle: 'Patrol the Lower Town', stallMs: 1500 });
+window.__boot = createBoot({ parent: document.getElementById('app'), words: DEFAULT_PACK.loader, brand: 'Open OPUS', title: 'Scene title', subtitle: 'Mission subtitle', stallMs: 1500 });
 window.__go = true;
 </script></body></html>`;
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader'] });
@@ -35,7 +35,7 @@ for (const sz of sizes) {
   console.log(sz.name, 'mid', JSON.stringify(mid));
   await settle(2200); await snap('3-stalled');
   console.log(sz.name, 'stalled note shown:', await page.evaluate(() => !document.querySelector('.ob-slow').hidden));
-  await page.evaluate(() => window.__boot.fail(new Error('scenes/old-quebec.json answered 404'))); await settle(300); await snap('4-error');
+  await page.evaluate(() => window.__boot.fail(new Error('scene.json answered 404'))); await settle(300); await snap('4-error');
   const errs = await page.evaluate(() => window.__errors); if (errs.length) { bad++; console.error(sz.name, 'page errors', errs); }
   await ctx.close();
 }

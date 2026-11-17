@@ -24,6 +24,10 @@ KNOWN_ENGINE_FILES = {
 }
 
 
+# engine/test/no-place.test.js is the engine's own twin of this rule: its list of forbidden words must name the
+# place it forbids, so that one exact file is exempt.
+KNOWN_ENGINE_FILES.add("engine/test/no-place.test.js")
+
 KNOWN_ENGINE_PREFIXES = ("engine/host/scenarios/",)   # a scenario file is named after its scene
 
 

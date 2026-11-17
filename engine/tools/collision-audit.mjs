@@ -1,6 +1,6 @@
 // A collision audit over a whole scene: walks it the way a player and a threat do and counts what is wrong.
 //
-//   node engine/tools/collision-audit.mjs [scenes/old-quebec.json | engine/scenes/test]   (default: Old Quebec)
+//   node engine/tools/collision-audit.mjs <scenes/NAME.json | engine/scenes/test>   (no default: the scene is named by the caller)
 //
 // The checks are plain functions of a physics world (engine/src/physics), so the test (engine/test/audit.test.js)
 // and this tool run the same code. It reads engine/src only and writes nothing. It judges solids with its own
@@ -187,7 +187,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const { jsonSource, packageSource } = await import('../src/scene/source.js');
   const { installAll, fileFetch, ROOT } = await import('../test/helpers.js');
-  const arg = process.argv[2] || join(here, '..', '..', 'scenes', 'old-quebec.json');
+  const arg = process.argv[2];
+  if (!arg) { console.error('usage: node engine/tools/collision-audit.mjs <scenes/NAME.json | engine/scenes/test>'); process.exit(2); }
   const source = arg.endsWith('.json') ? jsonSource(JSON.parse(readFileSync(arg, 'utf8'))) : await packageSource(resolve(arg) + '/', fileFetch);
   const { physics } = await installAll(source), t0 = Date.now();
   const r = audit(physics, { seed: +(process.env.SEED || 1) });

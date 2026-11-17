@@ -175,7 +175,7 @@ Builder part (never leaves the builder) and client part (copied to the scene as 
     "cornice": { "depth": 0.28, "height": 0.32 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a8a092" },
     "dormers": { "mansard": 1.0, "gabled": 0.5, "width": 1.1, "height": 1.5 },
     "chimneys": { "perBuilding": [1, 2], "width": 0.9, "depth": 0.6, "above": 1.1 },
-    "kerb": 0.14, "season": "summer"
+    "kerb": 0.14, "kerbColor": "#8d8a84", "treadColor": "#9a968e", "season": "summer"
   }
 }
 ```
@@ -1041,6 +1041,11 @@ smaller lobes. Soups `"wood|t"`, `"leaves|tv"`.
 kit has those nine, each within the 250-triangle contract. `glass_lamp` is not in the material library yet (item 5): the lantern's panes use the library's fallback. Rails:
 `balustrade_iron` joins `rail_iron` in `gen/structures.js`. Terrace decks: `gen/terrace.js`, layer `terraces` (SCENE-FORMAT 4.4a). Not built: hydrant, bin,
 fountain, post_box, sign_stop, bike_rack, trees by species.
+
+**Façade dressing (built).** `gen/dressing.js`, called per storey from `facadeNear` on front edges only, amounts in `style.dressing` (SCENE-FORMAT):
+hanging signs on iron brackets (storey 0, a plain board, rectangular or octagonal, lowest point 2.2 m up; **no lettering**), wall lanterns beside doors,
+window boxes with flowers on the first upper storey, and potted small conifers flanking doors. Seeded per building from its own stream, so the existing
+façade choices do not move; no colliders (within 0.45 m of the wall, signs above head height); at most 1 200 extra triangles on a 20 m edge.
 
 **Tests** (`engine/test/props.test.js`, builder tests):
 

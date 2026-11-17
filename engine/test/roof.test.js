@@ -98,7 +98,7 @@ test('triangulate of a square with a square hole gives 8 triangles whose areas s
   for (let i = 0; i < t.length; i += 3) a += Math.abs((all[t[i + 1] * 2] - all[t[i] * 2]) * (all[t[i + 2] * 2 + 1] - all[t[i] * 2 + 1]) - (all[t[i + 2] * 2] - all[t[i] * 2]) * (all[t[i + 1] * 2 + 1] - all[t[i] * 2 + 1])) / 2;
   assert.equal(t.length / 3, 8); assert.ok(Math.abs(a - 84) < 1e-9);
 });
-test('on the Old Quebec scene: no roof throws, no fan fallback, under 120 000 roof triangles', async () => {
+test('on the published scene: no roof throws, no fan fallback, under 120 000 roof triangles', async () => {
   const source = jsonSource(oldQuebec()), m = source.manifest, st = m.style || style; let tris = 0, n = 0; const before = triangulate.fallbacks, failed = roof.failures, byShape = {};
   for (const c of m.chunks) for (const b of (await source.chunk(c.ce, c.cn)).buildings || []) {
     const soups = createSoups(); roof(soups, b, st); const k = soups.triangles(); tris += k; n++; byShape[b.roofShape] = (byShape[b.roofShape] || 0) + k;
