@@ -193,12 +193,13 @@ void surf(vec2 uv){
 
 
 // Street wear laid over the ground as thin decals (gen/ground.js): one texture in four bands, alpha-blended, so the whole
-// street needs one extra draw call. The band is picked by v (a quarter each; the decal's own coordinate runs 0.08..0.92 of
-// the band, so the mip levels never mix two bands): 0 gutter grit and fallen leaves (0 = at the kerb or wall), 1 tyre track,
-// 2 a repaired patch of asphalt with its sealed seam (u and v span the patch), 3 an oil stain (u and v span the blob).
+// street needs one extra draw call. The band is picked by v (a fifth each; the decal's own coordinate runs 0.08..0.92 of
+// the band, so the mip levels never mix two bands): 0 gutter grit and fallen leaves with a darker damp strip at the kerb
+// (0 = at the kerb or wall), 1 tyre track, 2 a repaired patch of asphalt with its sealed seam (u and v span the patch),
+// 3 an oil stain (u and v span the blob), 4 a network of cracks sealed with tar (u and v span the patch).
 GENERATORS.wear = `
 void surf(vec2 uv){
-  float band = floor(uv.y * 4.0), u = uv.x, v = fract(uv.y * 4.0);
+  float band = floor(uv.y * 5.0), u = uv.x, v = fract(uv.y * 5.0);
   float gr = fbm(vec2(u, v), vec2(24.0, 6.0), 4, 101.0), fine = fbm(vec2(u, v), vec2(140.0, 36.0), 3, 102.0), big = fbm(vec2(u, v), vec2(3.0, 2.0), 3, 103.0);
   vec3 col = L(0.1, 0.1, 0.1); float a = 0.0, r = 0.9;
   if (band < 0.5) {
@@ -209,8 +210,10 @@ void surf(vec2 uv){
     vec3 lc = mix(L(0.32, 0.20, 0.07), L(0.20, 0.22, 0.07), lf.w);
     a = edge * (0.22 + 0.35 * smoothstep(0.3, 0.75, big)) * (0.6 + 0.9 * gr);
     col = mix(soil, lc, leaf); a = max(a, leaf * 0.85);
+    float damp = smoothstep(0.42, 0.1, v) * (0.75 + 0.5 * smoothstep(0.3, 0.7, gr));
+    col = mix(col, L(0.035, 0.035, 0.034), damp * 0.8 * (1.0 - leaf)); a = max(a, damp * 0.5 * (0.7 + 0.5 * fine));
     a *= smoothstep(0.0, 0.1, 1.0 - v) * smoothstep(0.0, 0.04, v);
-    r = 0.95;
+    r = mix(0.95, 0.55, damp * 0.5);
   } else if (band < 1.5) {
     float prof = smoothstep(0.1, 0.4, v) * smoothstep(0.9, 0.6, v);
     a = prof * (0.1 + 0.2 * smoothstep(0.3, 0.75, gr)) * (0.6 + 0.8 * fine);
@@ -221,10 +224,17 @@ void surf(vec2 uv){
     vec3 fresh = mix(L(0.19, 0.185, 0.18), L(0.26, 0.25, 0.235), fine) * (0.85 + 0.3 * big);
     col = mix(fresh, L(0.02, 0.02, 0.022), seam * 0.9); a = body;
     r = mix(0.82, 0.3, seam);
-  } else {
+  } else if (band < 3.5) {
     float d = length(vec2((u - 0.5) * 2.0, (v - 0.5) * 2.0)) + (gr - 0.5) * 0.55 + (fine - 0.5) * 0.12;
     a = smoothstep(0.78, 0.2, d) * 0.62 * smoothstep(0.0, 0.1, min(min(u, 1.0 - u), min(v, 1.0 - v)));
     col = mix(L(0.045, 0.04, 0.035), L(0.08, 0.075, 0.07), smoothstep(0.7, 0.1, d)); r = 0.3 + 0.3 * smoothstep(0.1, 0.7, d);
+  } else {
+    vec2 q = vec2(u, v) + (vec2(gr, big) - 0.5) * 0.06;
+    vec4 c1 = vor(q * 3.0, vec2(3.0), 107.0), c2 = vor(q * 7.0 + 0.4, vec2(7.0), 108.0);
+    float l1 = smoothstep(0.03, 0.006, c1.y - c1.x) * step(0.25, c1.z), l2 = smoothstep(0.035, 0.008, c2.y - c2.x) * step(0.62, c2.z);
+    float edge = smoothstep(0.0, 0.18, min(min(u, 1.0 - u), min(v, 1.0 - v))) * smoothstep(0.15, 0.55, 1.0 - length(vec2(u, v) - 0.5) * 1.3);
+    a = max(l1, l2 * 0.8) * edge * (0.65 + 0.35 * fine) * 0.9;
+    col = L(0.025, 0.025, 0.026); r = 0.32;
   }
   emit(col, a, 0.5, 1.0, r, 0.0);
 }`;

@@ -310,13 +310,13 @@ function between(P, cum, sa, sb) {
 
 
 // ---- street wear ---------------------------------------------------------------------------------------------------
-// Thin alpha decals over the road and sidewalk (materials/outdoor.js `wear`: four bands in one texture), so a street is
+// Thin alpha decals over the road and sidewalk (materials/outdoor.js `wear`: five bands in one texture), so a street is
 // not one clean sheet: grit and leaves along the kerb and at the foot of the walls, tyre tracks, repaired patches of
 // asphalt with their sealed seams, oil stains, manhole covers. Everything is placed by distance along the whole way
 // (s0 + s) and by numbers drawn from the way's own length and width, never from the piece, so the two cells that
 // draw one place draw the same thing. `style.wear` says how much of each kind (0 = none).
-const WEAR_BAND = [0, 0.25, 0.5, 0.75], LIFT_WEAR = 0.02, WEAR_TILE = 4, WEAR_STEP = 2.5;
-const wearV = (band, t) => WEAR_BAND[band] + (0.08 + 0.84 * t) * 0.25;
+const WEAR_BAND = [0, 0.2, 0.4, 0.6, 0.8], LIFT_WEAR = 0.02, WEAR_TILE = 4, WEAR_STEP = 2.5;
+const wearV = (band, t) => WEAR_BAND[band] + (0.08 + 0.84 * t) * 0.2;
 const hash32 = (...v) => { let h = 2166136261; for (const x of v) { h = Math.imul(h ^ (Math.round(x) | 0), 16777619); h ^= h >>> 15; } return h >>> 0; };
 
 /** A plan quad [p0, p1, p2, p3] with a uv at each corner, laid on the ground (the uv is affine over the quad). */
@@ -337,24 +337,24 @@ function triUp(soup, a, b, c, ua, ub, uc) {
  * is split every WEAR_STEP metres and the points are put on the drawn ground, which the thin band follows to a centimetre.
  */
 function wearBand(soup, A, B, cum, s0, band, tile, lift) {
-  const v0 = wearV(band, 0), v1 = wearV(band, 1);
+  const v0 = wearV(band, 0) * WEAR_TILE, v1 = wearV(band, 1) * WEAR_TILE; // uv of a ground material is in metres of its tile: the texture repeats every WEAR_TILE m
   for (let i = 0; i + 1 < A.length; i++) {
     const len = cum[i + 1] - cum[i], n = Math.max(1, Math.ceil(len / WEAR_STEP));
     const pt = (P0, P1, f) => { const x = P0[0] + (P1[0] - P0[0]) * f, z = P0[1] + (P1[1] - P0[1]) * f; return [x, meshHeight(tile, x, z) + lift, z]; };
     for (let k = 0; k < n; k++) {
-      const f0 = k / n, f1 = (k + 1) / n, u0 = (s0 + cum[i] + len * f0) / WEAR_TILE, u1 = (s0 + cum[i] + len * f1) / WEAR_TILE;
+      const f0 = k / n, f1 = (k + 1) / n, u0 = s0 + cum[i] + len * f0, u1 = s0 + cum[i] + len * f1;
       const a = pt(A[i], A[i + 1], f0), b = pt(A[i], A[i + 1], f1), c = pt(B[i], B[i + 1], f1), d = pt(B[i], B[i + 1], f0);
       triUp(soup, a, b, c, [u0, v0], [u1, v0], [u1, v1]); triUp(soup, a, c, d, [u0, v0], [u1, v1], [u0, v1]);
     }
   }
 }
 /** A rectangle centred at metre `s` along the piece, `len` along and `w` across, `off` metres left of the centre line, uv spanning the band's own square. */
-function wearSpot(soup, P, cum, s, off, len, w, band, tile, lift) {
+function wearSpot(soup, P, cum, s, off, len, w, band, tile, lift, rot = 0) {
   const a = along(P, cum, s - 0.4), b = along(P, cum, s + 0.4), c = along(P, cum, s), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
   const ex = (b[0] - a[0]) / l, ez = (b[1] - a[1]) / l, nx = ez, nz = -ex; // left of the direction of travel
-  const pt = (du, dv) => [c[0] + ex * du + nx * (off + dv), c[1] + ez * du + nz * (off + dv)];
+  const cs = Math.cos(rot), sn = Math.sin(rot), pt = (du, dv) => { const a = du * cs - dv * sn, b = du * sn + dv * cs; return [c[0] + ex * a + nx * (off + b), c[1] + ez * a + nz * (off + b)]; }; // rotated about the spot's centre
   const u0 = 0.04, u1 = 0.96;
-  layUV(soup, [pt(-len / 2, -w / 2), pt(len / 2, -w / 2), pt(len / 2, w / 2), pt(-len / 2, w / 2)], [[u0, wearV(band, 0)], [u1, wearV(band, 0)], [u1, wearV(band, 1)], [u0, wearV(band, 1)]], tile, lift);
+  layUV(soup, [pt(-len / 2, -w / 2), pt(len / 2, -w / 2), pt(len / 2, w / 2), pt(-len / 2, w / 2)], [[u0 * WEAR_TILE, wearV(band, 0) * WEAR_TILE], [u1 * WEAR_TILE, wearV(band, 0) * WEAR_TILE], [u1 * WEAR_TILE, wearV(band, 1) * WEAR_TILE], [u0 * WEAR_TILE, wearV(band, 1) * WEAR_TILE]], tile, lift);
 }
 const IRON_TINT = linear(0x2b2c2d), IRON_LIGHT = linear(0x4a4a48);
 function wearRoad(soups, road, P, cum, strips, tile, style) {
@@ -388,16 +388,40 @@ function wearRoad(soups, road, P, cum, strips, tile, style) {
     const d = r.range(0.6, 1.5), off = (r() < 0.5 ? -1 : 1) * Math.min(hw * 0.5, hw - 0.9) * r.range(0.6, 1.1) + r.range(-0.2, 0.2);
     if (sAbs > 2 && sAbs < len - 2) wearSpot(wsoup, P, cum, s, off, d * 1.1, d, 3, tile, lift + 0.003);
   });
-  if (W('manholes') > 0) slot(38, 3, (r, s, sAbs) => {
-    if (r() > 0.7 * W('manholes') || sAbs < 3 || sAbs > len - 3) return;
-    const off = r.range(-0.35, 0.35) * hw, c = along(P, cum, s), a0 = along(P, cum, s - 0.4), b0 = along(P, cum, s + 0.4), l = Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) || 1;
-    const x = c[0] + ((b0[1] - a0[1]) / l) * off, z = c[1] - ((b0[0] - a0[0]) / l) * off, iron = soupOf(soups, SOUP.iron);
-    for (const [rad, top, tint] of [[0.32, 0.026, IRON_TINT], [0.2, 0.034, IRON_LIGHT], [0.1, 0.04, IRON_TINT]]) {
-      const ring = []; let hi = -1e9, lo = 1e9;
-      for (let k = 0; k < 14; k++) { const an = (k / 14) * Math.PI * 2, px = x + Math.cos(an) * rad, pz = z + Math.sin(an) * rad, h = meshHeight(tile, px, pz); ring.push(px, pz); hi = Math.max(hi, h); lo = Math.min(lo, h); }
-      prism(iron, ring, lo - 0.02, hi + LIFT_ROAD + top, tint, true);
-    }
+  const iron = soupOf(soups, SOUP.iron);
+  /** A plate on the road: `ring` flat [x, z, ...] points, standing `top` above the road, the iron's own tint. */
+  const plate = (ring, top, tint) => { let hi = -1e9, lo = 1e9; for (let k = 0; k < ring.length; k += 2) { const h = meshHeight(tile, ring[k], ring[k + 1]); hi = Math.max(hi, h); lo = Math.min(lo, h); } prism(iron, ring, lo - 0.02, hi + LIFT_ROAD + top, tint, true); };
+  /** An oriented rectangle: centre (x, z), `a` along the axis at angle `ang`, `b` across it. */
+  const rect = (x, z, ang, a, b) => { const c = Math.cos(ang), s_ = Math.sin(ang), out = []; for (const [p, q] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) out.push(x + c * p * a / 2 - s_ * q * b / 2, z + s_ * p * a / 2 + c * q * b / 2); return out; };
+  const heading = (s) => { const a0 = along(P, cum, s - 0.4), b0 = along(P, cum, s + 0.4); return Math.atan2(b0[1] - a0[1], b0[0] - a0[0]); };
+  const at = (s, off) => { const c = along(P, cum, s), h = heading(s); return [c[0] + Math.sin(h) * off, c[1] - Math.cos(h) * off, h]; }; // off metres left of the centre line
+  if (W('cracks') > 0 && road.surface === 1) slot(12, 5, (r, s, sAbs) => { // a network of cracks sealed with tar, at its own angle
+    if (r() > 0.6 * W('cracks') || sAbs < 2 || sAbs > len - 2) return;
+    const l = r.range(2.2, 6), w = Math.min(r.range(1.5, 3.6), hw * 1.8), off = r.range(-(hw - w / 2), hw - w / 2) * 0.9;
+    wearSpot(wsoup, P, cum, s, off, l, w, 4, tile, lift + 0.0015, r.range(-0.6, 0.6));
   });
+  if (W('covers') > 0) {
+    slot(38, 3, (r, s, sAbs) => { // a round manhole cover, its size and place its own
+      if (r() > 0.7 * W('covers') * W('manholes') || sAbs < 3 || sAbs > len - 3) return;
+      const off = r.range(-0.35, 0.35) * hw, k = r.range(0.85, 1.15), [x, z] = at(s, off);
+      for (const [rad, top, tint] of [[0.32, 0.026, IRON_TINT], [0.2, 0.034, IRON_LIGHT], [0.1, 0.04, IRON_TINT]]) {
+        const ring = []; for (let q = 0; q < 14; q++) { const an = (q / 14) * Math.PI * 2; ring.push(x + Math.cos(an) * rad * k, z + Math.sin(an) * rad * k); }
+        plate(ring, top, tint);
+      }
+    });
+    slot(53, 6, (r, s, sAbs) => { // a square valve cover, turned any way, with a raised cross
+      if (r() > 0.5 * W('covers') || sAbs < 3 || sAbs > len - 3) return;
+      const off = r.range(-0.55, 0.55) * hw, sz = r.range(0.26, 0.38), [x, z, h] = at(s, off), ang = h + r.range(-0.5, 0.5);
+      plate(rect(x, z, ang, sz, sz), 0.022, IRON_TINT); plate(rect(x, z, ang, sz * 0.8, 0.045), 0.03, IRON_LIGHT); plate(rect(x, z, ang, 0.045, sz * 0.8), 0.03, IRON_LIGHT);
+    });
+    slot(30, 7, (r, s, sAbs) => { // a kerb-side drain grate on the low side of the road
+      if (r() > 0.8 * W('covers') || sAbs < 3 || sAbs > len - 3) return;
+      const [lx, lz] = at(s, hw - 0.3), [rx, rz] = at(s, -(hw - 0.3)), side = meshHeight(tile, lx, lz) <= meshHeight(tile, rx, rz) ? 1 : -1;
+      const [x, z, h] = at(s + r.range(-0.4, 0.4), side * (hw - 0.3)), L_ = r.range(0.5, 0.65), B = 0.34;
+      plate(rect(x, z, h, L_, B), 0.014, IRON_TINT);
+      for (let k = 0; k < 4; k++) { const dz = (k - 1.5) * (B / 4.2), cx = x - Math.sin(h) * dz, cz = z + Math.cos(h) * dz; plate(rect(cx, cz, h, L_ * 0.92, 0.035), 0.024, IRON_LIGHT); }
+    });
+  }
 }
 
 export function roadRibbons(soups, road, tile, style, others = null) {

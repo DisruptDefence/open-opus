@@ -85,7 +85,7 @@
       }
     },
     "kerb": 0.14, "kerbColor": "#8a8680", "treadColor": "#9a968e", "season": "summer",
-    "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6 },
+    "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6, "cracks": 0.8, "covers": 1 },
     "sidewalk": { "width": 1.6, "surface": "concrete", "slab": 1.5, "color": "#a8a39a" },
     "dressing": { "signs": 0.45, "lanterns": 0.5, "boxes": 0.3, "pots": 0.3, "flowers": ["#c8323c", "#d9507a", "#e8c23a", "#f2f0ea"] },
     "detail": {

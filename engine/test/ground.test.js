@@ -129,9 +129,9 @@ test('street wear: decals on a street, none off it, the same either side of a ce
   assert.ok(wa && wa.pos.length > 0, 'a street gets wear'); const moments = (sp) => { let A = 0, U = 0, V = 0; for (let i = 0, t = 0; i < sp.pos.length; i += 9, t++) { const T = [0, 3, 6].map((k) => [sp.pos[i + k], 0, sp.pos[i + k + 2]]), a = area2d(T); A += a; U += a * (sp.uv[t * 6] + sp.uv[t * 6 + 2] + sp.uv[t * 6 + 4]) / 3; V += a * (sp.uv[t * 6 + 1] + sp.uv[t * 6 + 3] + sp.uv[t * 6 + 5]) / 3; } return [A, U, V]; };
   for (const [x, y] of moments(wa).map((v, i) => [v, moments(wb)[i]])) assert.ok(Math.abs(x - y) < 1e-6 * Math.max(1, Math.abs(x)), 'both pieces draw the same wear: same area, same texture coordinates');
   for (const k of ['metal|tv', 'paint_white|tn']) if (a.map.get(k) || b.map.get(k)) assert.deepEqual(key(a.map.get(k)), key(b.map.get(k)));
-  for (let i = 0; i < wa.uv.length; i += 2) { const v = wa.uv[i + 1] % 1; assert.ok(wa.uv[i + 1] >= 0 && wa.uv[i + 1] <= 1 && v >= 0, 'v is within the wear texture'); }
+  for (let i = 0; i < wa.uv.length; i += 2) { const v = wa.uv[i + 1] % 1; assert.ok(wa.uv[i + 1] >= 0 && wa.uv[i + 1] <= 4 && v >= 0, 'v is within the wear texture (metres of its 4 m tile)'); }
   for (let i = 0; i < wa.pos.length; i += 3) assert.ok(Math.abs(wa.pos[i + 1] - (wa.pos[i] * 0.02)) < 0.3 && wa.pos[i + 1] > wa.pos[i] * 0.02 - 0.01, 'on the ground');
-  const off = make(A, resolveStyle({ wear: { gutter: 0, tracks: 0, patches: 0, oil: 0, manholes: 0 } }));
+  const off = make(A, resolveStyle({ wear: { gutter: 0, tracks: 0, patches: 0, oil: 0, manholes: 0, cracks: 0, covers: 0 } }));
   const has = (m, k) => !!(m.map.get(k) && m.map.get(k).pos.length);
   assert.ok(!has(off, 'wear|n') && !has(off, 'metal|tv'), 'all kinds can be switched off');
   const foot = make(road({ pts: [0, 0, 100, 0], len: 230, kind: 'footway', cls: 8, width: 2.6, surface: 4 }));
@@ -225,4 +225,22 @@ test('every soup with vertex colours has a colour for every vertex, and the side
   for (const [key, sp] of s.map) if (/\|[a-z]*v/.test(key)) assert.equal(sp.col.length, sp.pos.length, `${key} has a colour per vertex`);
   const w = s.map.get(SOUP.slab), g = parseColor('#808080'); assert.ok(w.pos.length > 0);
   for (let i = 0; i < w.col.length; i += 3) if (w.nrm[i + 1] > 0.9) assert.ok(Math.abs(w.col[i] - g[0]) < 1e-9, 'tinted with the style colour');
+});
+
+test('asphalt cracks sealed with tar, a damp strip at the kerb, and three kinds of cover: seeded, never a row of identical stamps', () => {
+  const tile = tileOf((x, z) => 0.05 * z, { n: 161, minX: -100, minZ: -50 }), r = road({ pts: [-100, 0, 300, 0], len: 400, s0: 0, sidewalk: 'both', width: 6 });
+  const mk = (st) => { const s = createSoups(); roadRibbons(s, r, tile, st); return s; };
+  const on = mk(STYLE), wear = on.map.get('wear|n'), iron = on.map.get('metal|tv');
+  const bands = new Set(); for (let i = 1; i < wear.uv.length; i += 2) bands.add(Math.floor((wear.uv[i] / 4) * 5 + 1e-9));
+  assert.ok(bands.has(4) && bands.has(2) && bands.has(0), `cracks (band 4), patches and the kerb strip are all drawn: ${[...bands]}`);
+  const off = mk(resolveStyle({ wear: { cracks: 0 } })).map.get('wear|n'), has4 = (sp) => { for (let i = 1; i < sp.uv.length; i += 2) if (Math.floor((sp.uv[i] / 4) * 5 + 1e-9) === 4) return true; return false; };
+  assert.ok(has4(wear) && !has4(off), 'cracks: 0 draws none');
+  // the grates stand at the kerb on the low side (z < 0: the ground rises with z), and nothing else is that near the kerb
+  const nearKerb = []; for (let i = 0; i < iron.pos.length; i += 3) if (Math.abs(iron.pos[i + 2]) > 2.2) nearKerb.push(iron.pos[i + 2]);
+  assert.ok(nearKerb.length > 0 && nearKerb.every((z) => z < 0), 'drain grates on the low side only');
+  // covers differ: the sizes of the round ones and the angles of the square ones are drawn, not repeated
+  const xs = new Set(); for (let i = 0; i < iron.pos.length; i += 9) xs.add(Math.round((iron.pos[i + 2] % 1) * 1000)); assert.ok(xs.size > 30, 'positions and sizes vary');
+  const gaps = []; const centres = []; for (let i = 0; i < iron.pos.length; i += 9) if (iron.nrm[i + 1] > 0.9 && iron.pos[i + 2] < -2.2) centres.push(iron.pos[i]);
+  centres.sort((a, b) => a - b); for (let i = 1; i < centres.length; i++) if (centres[i] - centres[i - 1] > 5) gaps.push(Math.round(centres[i] - centres[i - 1])); assert.ok(new Set(gaps).size > 1, 'the spacing of the grates varies');
+  const none = mk(resolveStyle({ wear: { covers: 0 } })).map.get('metal|tv'); assert.ok(!none || none.pos.length === 0, 'covers: 0 draws none');
 });
