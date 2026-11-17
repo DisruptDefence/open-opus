@@ -17,6 +17,16 @@ export function gapSum(views, keys, { threshold = MATERIAL_THRESHOLD, skipMateri
   }
   return { sum: s, n };
 }
+/**
+ * The same sum over only the (view, measure) pairs that BOTH sets of views have (a region that appears or vanishes between rounds, such as a
+ * ground the rules stop finding on a lawn, would otherwise change the sum without any change in the picture). Returns { a, b, n }.
+ */
+export function gapSumCommon(viewsA, viewsB, keys, { threshold = MATERIAL_THRESHOLD, skipMaterial = false } = {}) {
+  const pairs = (views) => { const m = new Map(); for (const v of views) { const ref = v.reference && v.reference.values, rd = v.render && v.render.flat; if (!ref || !rd) continue; if (skipMaterial && v.material && v.material.mismatch > threshold) continue; for (const k of keys) if (Number.isFinite(ref[k]) && Number.isFinite(rd[k])) m.set(v.id + '|' + k, Math.abs(rd[k] - ref[k]) / METRIC[k].matters); } return m; };
+  const A = pairs(viewsA), B = pairs(viewsB); let a = 0, b = 0, n = 0;
+  for (const [k, x] of A) if (B.has(k)) { a += x; b += B.get(k); n++; }
+  return { a, b, n };
+}
 /** The summed "light" gap of a measure: every light measure the rules act on, over all views. */
 export const lightGap = (views) => gapSum(views, LIGHT_ACTED).sum;
 
@@ -30,7 +40,7 @@ export const changedKeys = (a, b) => Object.keys(TARGETS).filter((k) => JSON.str
 export function guard(previous, current, currentLook, { threshold = MATERIAL_THRESHOLD } = {}) {
   return changedKeys(previous.look || {}, currentLook).map((key) => {
     const opt = { threshold, skipMaterial: key === 'saturation' };
-    const b = gapSum(previous.views, TARGETS[key], opt).sum, a = gapSum(current.views, TARGETS[key], opt).sum;
+    const { a: b, b: a } = gapSumCommon(previous.views, current.views, TARGETS[key], opt);
     return { key, before: +b.toFixed(3), after: +a.toFixed(3), grew: a > b * GROW + 1e-9 };
   });
 }

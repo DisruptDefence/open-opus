@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { measureImage, regions, labField, MASK, usable, textureOf } from '../lib/measure.mjs';
 import { emd, mad, median, kmeans3w } from '../lib/stats.mjs';
 import { noiseFloors, framingMatch, materialMismatch, materialSentence, groupOf, METRICS, referenceItems, referenceOf, flat } from '../lib/compare.mjs';
-import { guard, applyGuard, gapSum, lightGap, changedKeys } from '../lib/guard.mjs';
+import { guard, applyGuard, gapSum, gapSumCommon, lightGap, changedKeys } from '../lib/guard.mjs';
 import { splitGaps, gapsDocument, infoSigns, buildReport } from '../lib/report.mjs';
 import { dropReason, rankCandidates, yearOf, MEDIUM_WORDS, SUBJECT_WORDS } from '../lib/rank.mjs';
 import { propose } from '../lib/proposal.mjs';
@@ -137,6 +137,11 @@ test('C guard: a changed key whose targeted gap grew is reverted and marked; one
 test('C guard: a key that did not change is not judged; the light gap is the sum of normalised gaps', () => {
   const l = resolveLook({}); assert.deepEqual(guard({ look: l, views: [mview(40)] }, { views: [mview(60)] }, l), []);
   assert.ok(Math.abs(gapSum([mview(46)], ['walls.L', 'ground.L']).sum - (4 / 4 + 4 / 4)) < 1e-9); assert.ok(lightGap([mview(46)]) > 1);
+});
+test('C a region that vanishes between rounds does not change the sum: only pairs present in both rounds are compared', () => {
+  const a = mview(40), b = mview(44); b.render.flat['ground.L'] = null; // the ground is no longer found in the later round
+  const c = gapSumCommon([a], [b], ['walls.L', 'ground.L']); assert.equal(c.n, 1); assert.equal(c.a, 10 / 4); assert.equal(c.b, 6 / 4);
+  const l0 = resolveLook({ exposure: 1 }), l1 = { ...l0, exposure: 1.2 }; assert.equal(guard({ look: l0, views: [a] }, { views: [b] }, l1)[0].grew, false, 'the walls got closer; the lost ground is not counted as a gain');
 });
 test('C report --previous: reverts the worsened key in proposal.json, lists it as frozen, and writes both gap lists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lm-')), look0 = resolveLook({ curve: 0.3 }), look1 = { ...look0, curve: 0.4 };
