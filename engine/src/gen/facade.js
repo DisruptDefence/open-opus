@@ -91,6 +91,8 @@ function look(b, style) {
   // the shopfront colour comes from its own stream, so the draws of `r` (door bay, awning) stay where they were
   const q = rng(((b.id | 0) ^ 0x2b7e1516) >>> 0);
   Object.assign(out, dressingLook(b, style)); // lk.dr, lk.hasBoxes, lk.dcolors: its own stream, lk.r untouched
+  out.glassT = mixTint(out.frameC, [1, 1, 1], 0.6); // the glazing bars in the sheet take a muted frame colour
+  out.wst = rng(((b.id | 0) ^ 0x7a31c5e1) >>> 0); // the room behind each window: its own stream, one draw per opening in drawing order
   out.shopC = q() < 0.5 ? out.awnC : (q() < 0.5 ? out.frameC : out.trim);
   return out;
 }
@@ -141,6 +143,20 @@ function pickWeighted(table, r) {
   let x = r * total; for (const k in table) if (table[k] > 0) { x -= table[k]; if (x <= 0) return k; }
   return null;
 }
+/** The state of the room behind a window = the row of the window sheet. The sheet is 8 x 4 tiles and a mesh's uv counts tiles (the material
+ *  repeats 1/8 x 1/4): row r is v r .. r + 1, a quarter of the sheet; v 0 is the bottom (the sill) of the pane, v up. */
+export const WINDOW_STATES = ['dark', 'curtains', 'blind', 'lit'], DEFAULT_STATES = { dark: 3, curtains: 3, blind: 2, lit: 0.6 };
+/** One draw of the building's window stream -> a row 0..3 by the weights of style.window.states (neutral default). */
+function stateRow(wd, r) {
+  const w = wd.states || DEFAULT_STATES; let total = 0; for (const k of WINDOW_STATES) total += w[k] > 0 ? w[k] : 0;
+  const x = r() * total; if (!(total > 0)) return 0;
+  let a = x; for (let i = 0; i < 4; i++) { const v = w[WINDOW_STATES[i]] > 0 ? w[WINDOW_STATES[i]] : 0; if (v > 0) { a -= v; if (a <= 0) return i; } }
+  return 3;
+}
+/** Glass uv of a panel in a row: u panel .. panel + 1, v row .. row + 1 (a quarter of the sheet). */
+const glassUV = (panel, row) => [panel, row, panel + 1, row + 1];
+/** Which of the two shop displays (sheet columns 1 and 7) a shop bay shows: a hash of the building and the bay, no stream drawn. */
+const shopPanel = (id, k) => (Math.imul(((id | 0) ^ 0x3c6ef372) + k * 40503, 2654435761) >>> 16) & 1 ? 7 : 1;
 /** One type per storey of a building (seeded), `blind` mixed in per bay by its share of the weights. */
 function storeyType(wd, cls, id, s) {
   const mix = (wd.mix && (wd.mix[cls] || wd.mix.upper)) || {}, r = rng(((id | 0) * 2654435761 + s * 40503 + 17) >>> 0), plain = {}; let blind = 0, all = 0;
@@ -180,10 +196,10 @@ function spandrels(w, f, o, tint) {
   for (let i = m; i < p.length - 1; i++) facing(w, f.at(o.u1, o.yTop, 0), f.at(p[i][0], p[i][1], 0), f.at(p[i + 1][0], p[i + 1][1], 0), tint, hint);
 }
 /** The glass of an arched opening: the rectangle up to the springing and the segment above it, uv = the panel over the whole height. */
-function archGlass(G, f, o, d, panel) {
-  const w = o.u1 - o.u0, h = o.yTop - o.ys, uv = (u, y) => [panel + (u - o.u0) / w, (y - o.ys) / h], P = (u, y) => f.at(u, y, d), hint = [f.nx, 0, f.nz];
+function archGlass(G, f, o, d, panel, row, tint) {
+  const w = o.u1 - o.u0, h = o.yTop - o.ys, uv = (u, y) => [panel + (u - o.u0) / w, row + (y - o.ys) / h], P = (u, y) => f.at(u, y, d), hint = [f.nx, 0, f.nz];
   const ring = [[o.u0, o.ys], [o.u1, o.ys], ...o.arc.pts.slice().reverse()], cu = (o.u0 + o.u1) / 2, cy = (o.ys + o.yh) / 2, C = P(cu, cy);
-  for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; facingUV(G, P(a[0], a[1]), P(b[0], b[1]), C, null, hint, uv(a[0], a[1]), uv(b[0], b[1]), uv(cu, cy)); }
+  for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; facingUV(G, P(a[0], a[1]), P(b[0], b[1]), C, tint || null, hint, uv(a[0], a[1]), uv(b[0], b[1]), uv(cu, cy)); }
 }
 /** The inside of an arched head and the painted ring round it. */
 function archReveal(W, T, f, o, r, tint, trim) {
@@ -217,7 +233,7 @@ function roundel(soups, f, rd, y0, lk, tint) {
   const G = soups.get(SOUP.window), T = soups.get(SOUP.trim), n = 12, hint = [f.nx, 0, f.nz], P = (a, k, d) => f.at(rd.c + Math.cos(a) * k, rd.y + Math.sin(a) * k, d), C = f.at(rd.c, rd.y, 0.04);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2, b = ((i + 1) / n) * Math.PI * 2, uvOf = (ang) => [6 + 0.5 + Math.cos(ang) * 0.45, 0.5 + Math.sin(ang) * 0.45];
-    facingUV(G, P(a, rd.rad, 0.04), P(b, rd.rad, 0.04), C, null, hint, uvOf(a), uvOf(b), [6.5, 0.5]);
+    facingUV(G, P(a, rd.rad, 0.04), P(b, rd.rad, 0.04), C, null, hint, uvOf(a), uvOf(b), [6.5, (rd.row || 0) + 0.5]);
     const A = P(a, rd.rad, 0.05), B = P(b, rd.rad, 0.05), A2 = P(a, rd.rad + 0.09, 0.05), B2 = P(b, rd.rad + 0.09, 0.05); facing(T, A, B, B2, lk.trim, hint); facing(T, A, B2, A2, lk.trim, hint);
   }
   void tint; void y0;
@@ -227,6 +243,53 @@ function roundel(soups, f, rd, y0, lk, tint) {
 function border(T, f, o, d, w, tint) {
   rect(T, f, o.u0, o.u0 + w, o.ys, o.yh, d, tint); rect(T, f, o.u1 - w, o.u1, o.ys, o.yh, d, tint);
   rect(T, f, o.u0 + w, o.u1 - w, o.yh - w, o.yh, d, tint); rect(T, f, o.u0 + w, o.u1 - w, o.ys, o.ys + w, d, tint);
+}
+
+// ---- the modelled window: a frame with depth, a sloped stone sill, a lintel or a painted surround -----------------------
+const FRAME_W = 0.07, FRAME_PROUD = 0.06, MULLION_W = 0.05, SASH_STEP = 0.02;
+/** The outer frame (0.07 wide, 0.06 proud of the glass at depth d), and the mullion of a casement or the meeting rail of a sash. */
+function windowFrame(T, f, o, d, col) {
+  const d1 = d + FRAME_PROUD, top = o.yh, uc = (o.u0 + o.u1) / 2, sash = String(o.glaze || '').startsWith('sash'), vert = o.glaze === 'casement' || o.glaze === 'french';
+  const gt = o.yTop ?? o.yh, mid = o.ys + (gt - o.ys) / 2, w = FRAME_W, hint = [f.nx, 0, f.nz];
+  if (o.arc) { // arched head: front faces only (the sides of the frame are in the shadow of the reveal)
+    rect(T, f, o.u0, o.u0 + w, o.ys, top, d1, col); rect(T, f, o.u1 - w, o.u1, o.ys, top, d1, col); rect(T, f, o.u0 + w, o.u1 - w, o.ys, o.ys + w, d1, col);
+    const p = o.arc.pts;
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i], b = p[i + 1], la = Math.hypot(o.arc.uc - a[0], o.arc.cy - a[1]), lb = Math.hypot(o.arc.uc - b[0], o.arc.cy - b[1]);
+      const A = f.at(a[0], a[1], d1), B = f.at(b[0], b[1], d1), A2 = f.at(a[0] + (o.arc.uc - a[0]) / la * w, a[1] + (o.arc.cy - a[1]) / la * w, d1), B2 = f.at(b[0] + (o.arc.uc - b[0]) / lb * w, b[1] + (o.arc.cy - b[1]) / lb * w, d1);
+      facing(T, A, B, B2, col, hint); facing(T, A, B2, A2, col, hint);
+    }
+    if (sash) rect(T, f, o.u0 + w, o.u1 - w, mid - MULLION_W / 2, mid + MULLION_W / 2, d1 + SASH_STEP, col);
+    else if (vert) rect(T, f, uc - MULLION_W / 2, uc + MULLION_W / 2, o.ys + w, top, d1 - 0.01, col);
+    return;
+  }
+  if (sash) { // the upper sash stands 0.02 in front of the lower one
+    const dU = d1 + SASH_STEP;
+    slab(T, f, o.u0, o.u0 + w, o.ys, mid, d, d1, col, 'fr'); slab(T, f, o.u0, o.u0 + w, mid, top, d, dU, col, 'fr');
+    slab(T, f, o.u1 - w, o.u1, o.ys, mid, d, d1, col, 'fl'); slab(T, f, o.u1 - w, o.u1, mid, top, d, dU, col, 'fl');
+    slab(T, f, o.u0 + w, o.u1 - w, top - w, top, d, dU, col, 'fb'); slab(T, f, o.u0 + w, o.u1 - w, o.ys, o.ys + w, d, d1, col, 'ft');
+    slab(T, f, o.u0 + w, o.u1 - w, mid - MULLION_W / 2, mid + MULLION_W / 2, d, dU, col, 'fb');
+    return;
+  }
+  slab(T, f, o.u0, o.u0 + w, o.ys, top, d, d1, col, 'fr'); slab(T, f, o.u1 - w, o.u1, o.ys, top, d, d1, col, 'fl');
+  slab(T, f, o.u0 + w, o.u1 - w, top - w, top, d, d1, col, 'fb'); slab(T, f, o.u0 + w, o.u1 - w, o.ys, o.ys + w, d, d1, col, 'ft');
+  if (vert) slab(T, f, uc - MULLION_W / 2, uc + MULLION_W / 2, o.ys + w, top - w, d, d1 - 0.01, col, 'flr');
+}
+/** A stone sill: 0.06 thick, 0.07 out, 0.05 wider each side than the opening, the top sloping down and out. */
+function stoneSill(T, f, o, tint) {
+  const u0 = o.u0 - 0.05, u1 = o.u1 + 0.05, yt = o.ys, yb = o.ys - 0.06, yl = yt - 0.015, out = 0.07;
+  quad(T, f.at(u0, yb, out), f.at(u1, yb, out), f.at(u1, yl, out), f.at(u0, yl, out), tint);          // the nose
+  quad(T, f.at(u0, yl, out), f.at(u1, yl, out), f.at(u1, yt, 0), f.at(u0, yt, 0), tint);              // the slope
+  quad(T, f.at(u0, yb, 0), f.at(u1, yb, 0), f.at(u1, yb, out), f.at(u0, yb, out), tint);              // the underside
+  quad(T, f.at(u0, yb, 0), f.at(u0, yb, out), f.at(u0, yl, out), f.at(u0, yt, 0), tint);              // the ends
+  quad(T, f.at(u1, yb, out), f.at(u1, yb, 0), f.at(u1, yt, 0), f.at(u1, yl, out), tint);
+}
+/** Over a window of stone or brick a lintel block 0.24 high reaching 0.12 past the opening each side; over a rendered one a painted surround. */
+function windowHead(T, f, o, stoneWall, depth, tint) {
+  if (stoneWall) { if (!o.arc) slab(T, f, o.u0 - 0.12, o.u1 + 0.12, o.yh, o.yh + 0.24, 0, depth, tint, 'flrb'); return; }
+  const w = 0.1, p = 0.03, top = (o.yTop ?? o.yh) + w;
+  slab(T, f, o.u0 - w, o.u0, o.ys, o.arc ? o.yh : top, 0, p, tint, 'fl'); slab(T, f, o.u1, o.u1 + w, o.ys, o.arc ? o.yh : top, 0, p, tint, 'fr');
+  if (!o.arc) slab(T, f, o.u0, o.u1, o.yh, top, 0, p, tint, 'f');
 }
 
 function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
@@ -270,7 +333,7 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
       const c = centre(k), isDoor = ground && doors.has(k);
       if (ground && front && b.groundFloor === 1 && !isDoor) { // a shop window
         const hw = by.width / 2 - gfl.shopPier / 2, top = y0 + sh - gfl.fascia - 0.12;
-        ops.push({ kind: 'shop', u0: c - hw, u1: c + hw, ys: y0 + gfl.shopSill, yh: top, r: 0.16 });
+        ops.push({ kind: 'shop', u0: c - hw, u1: c + hw, ys: y0 + gfl.shopSill, yh: top, r: 0.16, panel: shopPanel(b.id, k) });
       } else if (isDoor) {
         const dw = b.groundFloor === 2 ? 2.6 : door.w, dh = b.groundFloor === 2 ? Math.min(2.4, sh - 0.3) : door.h;
         ops.push({ kind: 'door', u0: c - dw / 2, u1: c + dw / 2, ys: y0, yh: y0 + dh, r: lk.recess, big: b.groundFloor === 2 });
@@ -278,8 +341,8 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         const cls = ground ? 'ground' : st.n >= 3 && s === st.n - 1 ? 'top' : 'upper', ty = types[cls] || (types[cls] = storeyType(wd, cls, b.id, s));
         const name = ty.blindShare > 0 && ty.r() < ty.blindShare ? 'blind' : ty.name, t = wd.types[name] || wd.types.casement || {};
         const w = Math.min((t.w || lk.ww) * (0.94 + 0.12 * lk.wsc), by.width - 0.55), sl = t.sill ?? sill, h = Math.min(t.h || wh, sh - sl - 0.3), ys = y0 + sl;
-        if (t.kind === 'round') { roundels.push({ c, y: y0 + sh * 0.5, rad: Math.min(t.d || 0.7, sh * 0.35, by.width * 0.3) / 2 }); continue; }
-        const o = { kind: 'win', u0: c - w / 2, u1: c + w / 2, ys, yh: ys + h, r: t.reveal ?? reveal0, sillTop: true, panel: GLAZE_PANEL[t.glaze] ?? 0, blind: name === 'blind' };
+        if (t.kind === 'round') { roundels.push({ row: stateRow(wd, lk.wst), c, y: y0 + sh * 0.5, rad: Math.min(t.d || 0.7, sh * 0.35, by.width * 0.3) / 2 }); continue; }
+        const o = { kind: 'win', u0: c - w / 2, u1: c + w / 2, ys, yh: ys + h, r: t.reveal ?? reveal0 * (stone ? (wd.stoneReveal || 1) : 1), sillTop: true, panel: GLAZE_PANEL[t.glaze] ?? 0, blind: name === 'blind', glaze: t.glaze, row: stateRow(wd, lk.wst) };
         if (t.head === 'segmental' || t.head === 'round') {
           const rise = t.head === 'round' ? Math.min(w / 2, h * 0.45) : Math.min(w * 0.22, h * 0.25);
           if (h - rise > 0.5) { o.yTop = ys + h; o.yh = ys + h - rise; o.arc = arcPoints(o.u0, o.u1, o.yh, rise, t.head === 'round' ? 10 : 6); o.round = t.head === 'round'; }
@@ -293,15 +356,15 @@ function nearEdge(soups, b, e, groundAt, style, roofInfo, lk, seq) {
         reveal(W, f, o, o.r, inner);
         if (o.arc) archReveal(W, T, f, o, o.r, inner, lk.trim);
         if (o.blind) { const fill = shade(tint, 0.8); if (o.arc) archGlassWall(W, f, o, -o.r, fill); else rect(W, f, o.u0, o.u1, o.ys, o.yh, -o.r, fill); }
-        else if (o.arc) archGlass(G, f, o, -o.r, o.panel);
-        else rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [o.panel, 0, o.panel + 1, 1]);
-        if (!o.blind && !o.arc && lk.frameC[1] < 0.6) border(T, f, o, -o.r + 0.04, 0.06, lk.frameC);
-        slab(T, f, o.u0 - 0.08, o.u1 + 0.08, o.ys - 0.07, o.ys, 0, 0.08, lk.trim, 'ftb');
-        if (!o.arc) slab(T, f, o.u0 - 0.1, o.u1 + 0.1, o.yh, o.yh + 0.22, 0, lk.headDepth, lk.trim, 'fb');
+        else if (o.arc) archGlass(G, f, o, -o.r, o.panel, o.row, lk.glassT);
+        else rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, lk.glassT, glassUV(o.panel, o.row));
+        if (!o.blind) windowFrame(T, f, o, -o.r, lk.frameC);
+        stoneSill(T, f, o, lk.trim);
+        if (!o.blind || !o.arc) windowHead(T, f, o, stone, lk.headDepth, lk.trim);
         if (lk.shutters && !o.blind) { const sw = 0.45 * (o.u1 - o.u0), Sh = soups.get(SOUP.shutter); rect(Sh, f, o.u0 - sw, o.u0, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); rect(Sh, f, o.u1, o.u1 + sw, o.ys, o.yTop ?? o.yh, 0.03, lk.shutC); }
       } else if (o.kind === 'shop') {
         reveal(W, f, o, o.r, inner);
-        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [1, 0, 2, 1]); border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
+        rect(G, f, o.u0, o.u1, o.ys, o.yh, -o.r, null, [o.panel, 0, o.panel + 1, 4]); // a shop pane uses the whole height of its column border(T, f, o, -o.r + 0.04, 0.08, lk.shopC);
         const pw = o.u1 - o.u0, nl = Math.max(2, Math.round(pw / 1.1)), yt = o.yh - 0.5;
         if (pw > 1.7) for (let k = 1; k < nl; k++) { const um = o.u0 + k * pw / nl; rect(T, f, um - 0.035, um + 0.035, o.ys + 0.08, o.yh - 0.08, -o.r + 0.04, lk.shopC); }
         if (o.yh - o.ys > 1.9) rect(T, f, o.u0 + 0.08, o.u1 - 0.08, yt - 0.03, yt + 0.03, -o.r + 0.04, lk.shopC);
@@ -351,7 +414,9 @@ function dormers(soups, b, style, info, lk) {
     for (let k = by.n > 2 ? lk.r.int(step) : 0; k < by.n; k += step) {
       const c = by.start + (k + 0.5) * by.width, u0 = c - hw, u1 = c + hw, ub = 0.1;
       // front: window set in a painted surround, and the gable above it
-      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, null, [0, 0, 1, 1]);
+      rect(G, f, u0 + ub, u1 - ub, yb + 0.1, yt - 0.1, d0 - 0.04, lk.glassT, glassUV(0, stateRow(style.window, lk.wst)));
+      { const g0 = u0 + ub, g1 = u1 - ub, y0 = yb + 0.1, y1 = yt - 0.1, fw = 0.05, fd = d0 - 0.04 + 0.03; // a 0.05 frame standing 0.03 proud of the glass
+        rect(T, f, g0, g0 + fw, y0, y1, fd, lk.frameC); rect(T, f, g1 - fw, g1, y0, y1, fd, lk.frameC); rect(T, f, g0 + fw, g1 - fw, y1 - fw, y1, fd, lk.frameC); rect(T, f, g0 + fw, g1 - fw, y0, y0 + fw, fd, lk.frameC); }
       rect(T, f, u0, u0 + ub, yb, yt, d0, lk.trim); rect(T, f, u1 - ub, u1, yb, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yt - 0.1, yt, d0, lk.trim); rect(T, f, u0 + ub, u1 - ub, yb, yb + 0.1, d0, lk.trim);
       tri(T, f.at(u0, yt, d0), f.at(u1, yt, d0), f.at(c, yt + rise, d0), lk.trim);
       // cheeks and roof
