@@ -1217,3 +1217,12 @@ weathering, stains and decals placed with intent; interiors; vehicles; statues a
 get their massing, not their ornament: the Château's dormers, finials and brickwork are an artist's or a
 licensed model's work, through `models/` of the format); real façade textures (no open street-level imagery
 allows it); people. Each is either artist's work or a licensed asset; none is blocked by the engine.
+
+### Windows note (windows2)
+
+Modelled windows: the window sheet is 8 columns x 4 rows (1024 x 1024 at `high`, a pane 128 x 256 px; a mesh's glass uv counts tiles, row r is v r..r+1,
+v up). The row is the room behind the glass (dark, curtains, blind lowered 55 %, lit), drawn per window from a stream of its own
+(`style.window.states`). Frames, mullions or meeting rails, sloped stone sills, lintels or painted surrounds are geometry in `SOUP.trim` (at most 38
+triangles added per window); the sheet keeps only the glazing bars and the reflection. Shop panes use columns 1 and 7 over the whole height of the
+sheet. Known gaps: goods in shop windows are simple silhouettes; no shutters of their own colour logic changes; glass has no extra environment
+reflection (the material library gives `envMapIntensity` to transparent materials only).

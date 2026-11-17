@@ -49,12 +49,13 @@
     "bayWindows": { "odd": 0.15,
       "types": { "sash6": { "shutters": 0.4 }, "sash2": { "shutters": 0.35 }, "sash1": { "shutters": 0.3 }, "hooded": { "shutters": 0.35 }, "french": { "shutters": 0.6 } },
       "classes": { "ground": { "shop": 2, "arched": 1.4, "segmental": 1.6 }, "upper": { "dormer": 1.6, "oeil": 0.6 } } },
-    "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.18, "shutters": 0.2,
+    "window": { "bay": [2.5, 3.1], "width": 1.05, "height": 1.75, "sill": 0.85, "reveal": 0.24, "stoneReveal": 1.3, "shutters": 0.2,
+                "states": { "dark": 3, "curtains": 3, "blind": 2, "lit": 0.6 },
                 "panes": [2, 4],
                 "types": {
                   "sash66": { "w": 1.0, "h": 1.75, "glaze": "sash66" }, "sash22": { "w": 0.95, "h": 1.65, "glaze": "sash22" },
                   "arched": { "w": 0.95, "h": 2.15, "glaze": "sash66", "head": "segmental" },
-                  "arch_round": { "w": 0.95, "h": 2.3, "glaze": "sash22", "head": "round", "reveal": 0.2 },
+                  "arch_round": { "w": 0.95, "h": 2.3, "glaze": "sash22", "head": "round", "reveal": 0.26 },
                   "casement": { "w": 1.05, "h": 1.7, "glaze": "casement" }, "attic": { "w": 0.85, "h": 1.15, "glaze": "sash22" } },
                 "mix": {
                   "ground": { "sash66": 3, "arched": 2, "casement": 1, "blind": 0.2 },
