@@ -245,6 +245,24 @@ test('hold freezes or slows the game and release gives it back', async () => {
   assert.equal(world.held(), null); assert.equal(world.state(), 'complete');
 });
 
+test('world.phone: raising it is told once as phone:raised (to the host and the engine), a weapon gets real frames under a pause, release lowers it', async () => {
+  const { world, run, engine } = openHeadlessWorld(source());
+  assert.equal(world.phone.raised(), false);
+  assert.throws(() => world.phone.setRaised(true), /still loading/);
+  await world.ready();
+  world.start({ at: { x: 20, z: 18, heading: 0 } }); run(0.2);
+  const seen = [], inner = [], real = [];
+  world.on('phone:raised', (e) => seen.push(e)); engine().G.events.on('phone:raised', (e) => inner.push(e.raised));
+  engine().G.weapon.realFrame = (r) => real.push(r);
+  world.hold('pause'); world.phone.setRaised(true); world.phone.setRaised(true);
+  assert.deepEqual(seen, [{ raised: true }], 'one event per change'); assert.deepEqual(inner, [true]); assert.equal(world.phone.raised(), true);
+  const n = real.length; run(0.5);
+  assert.ok(real.length > n, 'the weapon is given real frames while the game is paused');
+  world.release();
+  assert.equal(world.phone.raised(), false); assert.deepEqual(seen.map((e) => e.raised), [true, false]);
+  assert.ok(Object.isFrozen(world) && typeof world.phone.setRaised === 'function');
+});
+
 test('a mission plays from start to complete through the world API only', async () => {
   const { world, keys, run } = openHeadlessWorld(source());
   await world.ready();

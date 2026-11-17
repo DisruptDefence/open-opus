@@ -25,6 +25,7 @@ interface WorldApi {
   setHoldMode(mode: 'pause' | 'slow'): void;
   held(): 'pause' | 'slow' | null;              // null also when the game ended under the hold
   release(): void;
+  phone: { setRaised(raised: boolean): void; raised(): boolean };   // the phone host says whether the phone is up; release() lowers it. Additive
 
   // what is where (game metres; +x east, −z grid north, y up)
   snapshot(): {
@@ -100,6 +101,7 @@ Every heading that crosses the door is in degrees clockwise from grid north. The
 | `shot` | `{ ammo }` | The player fired |
 | `say` | `{ text, channel }` | A `say` command was shown |
 | `hold` | `{ mode }` (`null` on release) | A hold began, changed mode (`setHoldMode`) or ended, including when play ended under it |
+| `phone:raised` | `{ raised }` | The phone host raised or lowered the phone (`world.phone.setRaised`), once per change; `release()` lowers it. The pistol's view model moves behind the phone on it |
 | `photo` | `{ on }` | Photo mode began or ended |
 | `chunk` | `{ ce, cn, live }` | A scene chunk (numbered as in `SCENE-FORMAT.md` 3.1) became live or was released. Reported from `ready()` onwards: the chunks round the start are loaded before it and are not announced |
 | `error` | `{ module, message }` | A part of the engine threw inside a frame (`module`: `threats`, `player`, `render`, `hook`, `clock` …). Said once per module and kept: the frame loop never stops, the failing part loses its own update, nothing is switched off. Additive; a host that ignores it sees the same engine |

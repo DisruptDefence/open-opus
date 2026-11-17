@@ -37,6 +37,7 @@ export function createPhoneHost(world, screen, { mount = document.body, storage 
   const sync = () => {
     const open = core.open;
     mount.classList.toggle('opus-phone-open', open);
+    if (world.phone) world.phone.setRaised(open); // the world says the phone is up (a weapon in view keeps its place behind it)
     for (const b of bar.querySelectorAll('[data-m]')) b.classList.toggle('on', b.dataset.m === core.mode());
     clearTimeout(hideTimer);
     if (open) { frame.hidden = false; requestAnimationFrame(() => frame.classList.add('on')); }

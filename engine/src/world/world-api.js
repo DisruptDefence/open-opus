@@ -40,7 +40,12 @@ export function createWorldApi(engine, emit) {
   // The view tilts down to the phone and back in real time, on the engine's frame: the clock is stopped under a hold.
   let pitchBefore = null, tilt = null;
   const lookTo = (target) => { tilt = { from: G.player.pitch, to: target, t: 0 }; };
+  // The phone's raised state (world.phone). A weapon whose view model reacts to it listens to the engine event `phone:raised`
+  // and moves on `realFrame(real)`, which runs every frame, because under a pause the simulation (and weapon.update) does not.
+  let phoneUp = false;
+  const setPhone = (on) => { on = !!on; if (on === phoneUp) return; phoneUp = on; G.events.emit('phone:raised', { raised: on }); emit('phone:raised', { raised: on }); };
   engine.onFrame((real) => {
+    if (G.weapon && G.weapon.realFrame) G.weapon.realFrame(real);
     if (!tilt) return;
     tilt.t = Math.min(1, tilt.t + real / TILT_S);
     const e = tilt.t * tilt.t * (3 - 2 * tilt.t);
@@ -61,7 +66,7 @@ export function createWorldApi(engine, emit) {
   }
   function release() {
     if (!G.hold.mode) return;
-    letGo();
+    letGo(); setPhone(false);
     if (G.game.state === 'playing') {
       if (pitchBefore != null) lookTo(pitchBefore);
       G.hud.show(true); G.input.setGameplay(true); G.input.requestLock();
@@ -139,6 +144,7 @@ export function createWorldApi(engine, emit) {
 
     canHold, hold, release,
     held: () => G.hold.mode,
+    phone: { setRaised: setPhone, raised: () => phoneUp },
     setHoldMode(mode) { if (G.hold.mode) { applyMode(mode === 'slow' ? 'slow' : 'pause'); emit('hold', { mode: G.hold.mode }); } },
 
     snapshot() {
