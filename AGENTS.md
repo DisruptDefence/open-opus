@@ -103,7 +103,7 @@ Everything else waits: more scenes, brand and menus, scenario tooling, the refer
   owning its own paths; never edit a path another agent owns. Say which paths you own before you start.
 - **Verify by running, not by reading.** Unit tests for pure modules (`cd engine && node --test`; for the phone
   `node --test "phone/test/*.test.js"` and `python3 -m unittest phone/local/test_gateway.py`; for the look-matching
-  tool `node --test "tools/lookmatch/test/*.test.js"`). For anything visible,
+  tool `node --test "tools/lookmatch/test/*.test.js" "tools/lookmatch/facts/test/*.test.js"`). For anything visible,
   load it in a headless browser, take a screenshot and look at it before you say it works.
 - **A fix has a test** that fails without it. Test behaviour, not names.
 - **One heavy job at a time** on a shared machine (test suites, builds, headless browsers).

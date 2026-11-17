@@ -85,7 +85,7 @@ function look(b, style) {
   const frameK = n(style.frames), doorK = n(style.doors), trimK = n(style.trim), awnK = n(style.awnings), shutK = n(style.doors);
   const w = style.window, trim = paletteColor(style.trim, trimK);
   const out = {
-    r, trim, frameC: paletteColor(style.frames, frameK), doorC: paletteColor(style.doors, doorK), awnC: paletteColor(style.awnings, awnK), shutC: paletteColor(style.doors, shutK),
+    r, trim, frameC: b.frameColor || paletteColor(style.frames, frameK), doorC: b.doorColor || paletteColor(style.doors, doorK), awnC: paletteColor(style.awnings, awnK), shutC: paletteColor(style.doors, shutK),
     shutters: r() < (w.shutters || 0), ww: w.width * (0.9 + 0.2 * r()), wsc: 0.9 + 0.2 * r(),
     stringCourse: r() < 0.85, headDepth: 0.03 + 0.04 * r(), recess: 0.2 + 0.1 * r(), inShadow: shade(b.tint, 0.72),
   };

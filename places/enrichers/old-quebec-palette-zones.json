@@ -1,0 +1,973 @@
+{
+ "format": "opus-facade-facts/1",
+ "note": "Colours and materials read from open-licensed photographs: numbers only (sRGB hex of de-lit cluster medians, shares), no pixel of any photograph. Sources below. See tools/lookmatch/README.md, section \"facts\".",
+ "zones": [
+  {
+   "id": "1-upper-street",
+   "centre": [
+    46.810624,
+    -71.209265
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "stone",
+     "colour": "#cfc3b4",
+     "share": 0.425,
+     "photographs": 3
+    },
+    {
+     "material": "painted_white",
+     "colour": "#dcdddb",
+     "share": 0.223,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#9d9a93",
+     "share": 0.222,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#7a756f",
+     "share": 0.13,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [],
+   "photographs": 4,
+   "confidence": "medium",
+   "unclassifiedShare": 0.306,
+   "photos": [
+    "c113926114",
+    "c39879762",
+    "c84050750",
+    "c86981824"
+   ]
+  },
+  {
+   "id": "2-place-darmes",
+   "centre": [
+    46.812823,
+    -71.206031
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#dcdddd",
+     "share": 1,
+     "photographs": 6
+    }
+   ],
+   "accents": [
+    {
+     "colour": "#d5455b",
+     "share": 0.546,
+     "photographs": 4
+    },
+    {
+     "colour": "#f7819d",
+     "share": 0.454,
+     "photographs": 4
+    }
+   ],
+   "roofs": [],
+   "photographs": 6,
+   "confidence": "high",
+   "unclassifiedShare": 0.697,
+   "photos": [
+    "c116796491",
+    "c116801088",
+    "c124718437",
+    "c84155181",
+    "c84155183",
+    "c84155184"
+   ]
+  },
+  {
+   "id": "3-porte-saint-louis",
+   "centre": [
+    46.809743,
+    -71.210807
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#eff1f4",
+     "share": 0.531,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#939b9e",
+     "share": 0.365,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#6e7978",
+     "share": 0.103,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [
+    {
+     "material": "copper",
+     "colour": "#eafdfd",
+     "share": 1,
+     "photographs": 1,
+     "confidence": "low"
+    }
+   ],
+   "photographs": 4,
+   "confidence": "medium",
+   "unclassifiedShare": 0.564,
+   "photos": [
+    "c28382165",
+    "c86983271",
+    "c86983430",
+    "c86983431"
+   ]
+  },
+  {
+   "id": "4-terrasse",
+   "centre": [
+    46.811289,
+    -71.204343
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#d9dde1",
+     "share": 0.374,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#72726d",
+     "share": 0.323,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#969795",
+     "share": 0.302,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [
+    {
+     "material": "metal",
+     "colour": "#79858b",
+     "share": 1,
+     "photographs": 1,
+     "confidence": "low"
+    }
+   ],
+   "photographs": 6,
+   "confidence": "low",
+   "unclassifiedShare": 0.783,
+   "photos": [
+    "c116235562",
+    "c116847591",
+    "c155711737",
+    "c167686198",
+    "c28314120",
+    "c89136228"
+   ]
+  },
+  {
+   "id": "5-lower-street",
+   "centre": [
+    46.812222,
+    -71.203571
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "stone",
+     "colour": "#b6b0a2",
+     "share": 0.44,
+     "photographs": 6
+    },
+    {
+     "material": "stone",
+     "colour": "#7b7772",
+     "share": 0.166,
+     "photographs": 4
+    },
+    {
+     "material": "brick",
+     "colour": "#a05e3d",
+     "share": 0.11,
+     "photographs": 2
+    },
+    {
+     "material": "render",
+     "colour": "#e1b16c",
+     "share": 0.098,
+     "photographs": 3
+    },
+    {
+     "material": "brick",
+     "colour": "#6b4744",
+     "share": 0.097,
+     "photographs": 2
+    },
+    {
+     "material": "painted_white",
+     "colour": "#dbdde1",
+     "share": 0.089,
+     "photographs": 2
+    }
+   ],
+   "accents": [
+    {
+     "colour": "#e3a23f",
+     "share": 0.761,
+     "photographs": 3
+    },
+    {
+     "colour": "#981e15",
+     "share": 0.239,
+     "photographs": 3
+    }
+   ],
+   "roofs": [],
+   "photographs": 6,
+   "confidence": "high",
+   "unclassifiedShare": 0.175,
+   "photos": [
+    "c124989723",
+    "c124989724",
+    "c124990943",
+    "c124990945",
+    "c155782605",
+    "c89478350"
+   ]
+  },
+  {
+   "id": "7-place-royale",
+   "centre": [
+    46.813032,
+    -71.202631
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "stone",
+     "colour": "#d0c8b2",
+     "share": 0.306,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#777874",
+     "share": 0.217,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#999a95",
+     "share": 0.2,
+     "photographs": 3
+    },
+    {
+     "material": "painted_white",
+     "colour": "#deddd5",
+     "share": 0.173,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#837652",
+     "share": 0.104,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [],
+   "photographs": 5,
+   "confidence": "medium",
+   "unclassifiedShare": 0.353,
+   "photos": [
+    "c128753805",
+    "c129606896",
+    "c34515799",
+    "c86671994",
+    "c86671995"
+   ]
+  },
+  {
+   "id": "8-frontenac",
+   "centre": [
+    46.812767,
+    -71.20519
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#dcdddd",
+     "share": 1,
+     "photographs": 6
+    }
+   ],
+   "accents": [
+    {
+     "colour": "#d5455b",
+     "share": 0.546,
+     "photographs": 4
+    },
+    {
+     "colour": "#f7819d",
+     "share": 0.454,
+     "photographs": 4
+    }
+   ],
+   "roofs": [],
+   "photographs": 6,
+   "confidence": "high",
+   "unclassifiedShare": 0.697,
+   "photos": [
+    "c116796491",
+    "c116801088",
+    "c124718437",
+    "c84155181",
+    "c84155183",
+    "c84155184"
+   ]
+  },
+  {
+   "id": "8-sett-street",
+   "centre": [
+    46.81282,
+    -71.202885
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "stone",
+     "colour": "#d0c8b2",
+     "share": 0.306,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#777874",
+     "share": 0.217,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#999a95",
+     "share": 0.2,
+     "photographs": 3
+    },
+    {
+     "material": "painted_white",
+     "colour": "#deddd5",
+     "share": 0.173,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#837652",
+     "share": 0.104,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [],
+   "photographs": 5,
+   "confidence": "medium",
+   "unclassifiedShare": 0.353,
+   "photos": [
+    "c128753805",
+    "c129606896",
+    "c34515799",
+    "c86671994",
+    "c86671995"
+   ]
+  },
+  {
+   "id": "9-terrasse",
+   "centre": [
+    46.810697,
+    -71.20426
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#d9dde1",
+     "share": 0.374,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#72726d",
+     "share": 0.323,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#969795",
+     "share": 0.302,
+     "photographs": 2
+    }
+   ],
+   "accents": [],
+   "roofs": [
+    {
+     "material": "metal",
+     "colour": "#79858b",
+     "share": 1,
+     "photographs": 1,
+     "confidence": "low"
+    }
+   ],
+   "photographs": 6,
+   "confidence": "low",
+   "unclassifiedShare": 0.783,
+   "photos": [
+    "c116235562",
+    "c116847591",
+    "c155711737",
+    "c167686198",
+    "c28314120",
+    "c89136228"
+   ]
+  },
+  {
+   "id": "10-sv-saint-louis-52",
+   "centre": [
+    46.81125,
+    -71.208207
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#dddddb",
+     "share": 0.45,
+     "photographs": 8
+    },
+    {
+     "material": "brick",
+     "colour": "#745a48",
+     "share": 0.124,
+     "photographs": 3
+    },
+    {
+     "material": "stone",
+     "colour": "#9c9e9c",
+     "share": 0.096,
+     "photographs": 2
+    },
+    {
+     "material": "render",
+     "colour": "#ab7b37",
+     "share": 0.09,
+     "photographs": 4
+    },
+    {
+     "material": "render",
+     "colour": "#bead92",
+     "share": 0.087,
+     "photographs": 2
+    },
+    {
+     "material": "stone",
+     "colour": "#706f70",
+     "share": 0.08,
+     "photographs": 2
+    },
+    {
+     "material": "brick",
+     "colour": "#9f4648",
+     "share": 0.074,
+     "photographs": 3
+    }
+   ],
+   "accents": [
+    {
+     "colour": "#cf878b",
+     "share": 0.689,
+     "photographs": 2
+    },
+    {
+     "colour": "#b1884c",
+     "share": 0.192,
+     "photographs": 5
+    },
+    {
+     "colour": "#802329",
+     "share": 0.085,
+     "photographs": 3
+    },
+    {
+     "colour": "#865a35",
+     "share": 0.034,
+     "photographs": 2
+    }
+   ],
+   "roofs": [
+    {
+     "material": "slate",
+     "colour": "#040508",
+     "share": 1,
+     "photographs": 1,
+     "confidence": "low"
+    }
+   ],
+   "photographs": 11,
+   "confidence": "high",
+   "unclassifiedShare": 0.449,
+   "photos": [
+    "c124712654",
+    "c124713072",
+    "c28308050",
+    "c39879666",
+    "c41979376",
+    "c50785808",
+    "c50786067",
+    "c50787082",
+    "c50787100",
+    "c50787198",
+    "c50788149"
+   ]
+  },
+  {
+   "id": "12-sv-saint-louis-38",
+   "centre": [
+    46.811626,
+    -71.20746
+   ],
+   "radius": 80,
+   "walls": [
+    {
+     "material": "painted_white",
+     "colour": "#dddddb",
+     "share": 0.468,
+     "photographs": 6
+    },
+    {
+     "material": "stone",
+     "colour": "#9c9e9c",
+     "share": 0.135,
+     "photographs": 2
+    },
+    {
+     "material": "render",
+     "colour": "#ab7b37",
+     "share": 0.127,
+     "photographs": 4
+    },
+    {
+     "material": "stone",
+     "colour": "#706f70",
+     "share": 0.113,
+     "photographs": 2
+    },
+    {
+     "material": "brick",
+     "colour": "#9f4648",
+     "share": 0.105,
+     "photographs": 3
+    },
+    {
+     "material": "render",
+     "colour": "#be9a69",
+     "share": 0.052,
+     "photographs": 2
+    }
+   ],
+   "accents": [
+    {
+     "colour": "#cf878b",
+     "share": 0.705,
+     "photographs": 2
+    },
+    {
+     "colour": "#ae864a",
+     "share": 0.207,
+     "photographs": 5
+    },
+    {
+     "colour": "#802329",
+     "share": 0.087,
+     "photographs": 3
+    }
+   ],
+   "roofs": [
+    {
+     "material": "slate",
+     "colour": "#040508",
+     "share": 1,
+     "photographs": 1,
+     "confidence": "low"
+    }
+   ],
+   "photographs": 8,
+   "confidence": "high",
+   "unclassifiedShare": 0.55,
+   "photos": [
+    "c124713072",
+    "c28308050",
+    "c39879666",
+    "c50785808",
+    "c50787082",
+    "c50787100",
+    "c50787198",
+    "c50788149"
+   ]
+  }
+ ],
+ "buildings": [],
+ "sources": [
+  {
+   "id": "c113926114",
+   "title": "Maisons en rangee Alexandre-Chauveau 13.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maisons_en_rangee_Alexandre-Chauveau_13.jpg"
+  },
+  {
+   "id": "c116235562",
+   "title": "Le Château Frontenac (46673934315).jpg",
+   "author": "Richard Eriksson from Toronto, Canada",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Le_Ch%C3%A2teau_Frontenac_(46673934315).jpg"
+  },
+  {
+   "id": "c116796491",
+   "title": "16-22, rue Sainte-Anne.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:16-22,_rue_Sainte-Anne.jpg"
+  },
+  {
+   "id": "c116801088",
+   "title": "Cathedral of the Holy Trinity - Quebec City 23.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Cathedral_of_the_Holy_Trinity_-_Quebec_City_23.jpg"
+  },
+  {
+   "id": "c116847591",
+   "title": "Chateau Frontenac 46.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Chateau_Frontenac_46.jpg"
+  },
+  {
+   "id": "c124712654",
+   "title": "52 - 54, rue Saint-Louis.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:52_-_54,_rue_Saint-Louis.jpg"
+  },
+  {
+   "id": "c124713072",
+   "title": "48-50, rue Saint-Louis - 01.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:48-50,_rue_Saint-Louis_-_01.jpg"
+  },
+  {
+   "id": "c124718437",
+   "title": "Rue des Carrieres - 01.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Rue_des_Carrieres_-_01.jpg"
+  },
+  {
+   "id": "c124989723",
+   "title": "Rue du Petit-Champlain 25.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Rue_du_Petit-Champlain_25.jpg"
+  },
+  {
+   "id": "c124989724",
+   "title": "Rue du Petit-Champlain 24.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Rue_du_Petit-Champlain_24.jpg"
+  },
+  {
+   "id": "c124990943",
+   "title": "35 - 37, rue du Petit-Champlain.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:35_-_37,_rue_du_Petit-Champlain.jpg"
+  },
+  {
+   "id": "c124990945",
+   "title": "37, rue du Petit-Champlain.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:37,_rue_du_Petit-Champlain.jpg"
+  },
+  {
+   "id": "c128753805",
+   "title": "Notre-Dame-des-Victoires 44.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Notre-Dame-des-Victoires_44.jpg"
+  },
+  {
+   "id": "c129606896",
+   "title": "Maison Louis-Beaudoin - 01.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Louis-Beaudoin_-_01.jpg"
+  },
+  {
+   "id": "c155711737",
+   "title": "Québec - consulat général des États-Unis 20241030-02.jpg",
+   "author": "Pymouss",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Qu%C3%A9bec_-_consulat_g%C3%A9n%C3%A9ral_des_%C3%89tats-Unis_20241030-02.jpg"
+  },
+  {
+   "id": "c155782605",
+   "title": "Québec - Maison Langlois 20241030.jpg",
+   "author": "Pymouss",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Qu%C3%A9bec_-_Maison_Langlois_20241030.jpg"
+  },
+  {
+   "id": "c167686198",
+   "title": "Château Frontenac 2017b.jpg",
+   "author": "Antony-22",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_Frontenac_2017b.jpg"
+  },
+  {
+   "id": "c28308050",
+   "title": "Maison François-Jacquet-Dit-Langevin 08.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Fran%C3%A7ois-Jacquet-Dit-Langevin_08.jpg"
+  },
+  {
+   "id": "c28314120",
+   "title": "Hotel Terrasse Dufferin.jpg",
+   "author": "Jean Gagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Hotel_Terrasse_Dufferin.jpg"
+  },
+  {
+   "id": "c28382165",
+   "title": "Québec - Fortifications - Porte Saint Louis.jpg",
+   "author": "Concierge.2C",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Qu%C3%A9bec_-_Fortifications_-_Porte_Saint_Louis.jpg"
+  },
+  {
+   "id": "c34515799",
+   "title": "Notre-Dame-des-Victoires 21.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Notre-Dame-des-Victoires_21.jpg"
+  },
+  {
+   "id": "c39879666",
+   "title": "Rainy Vieux-Québec (14767362525).jpg",
+   "author": "Tony Webster from Portland, Oregon, United States",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Rainy_Vieux-Qu%C3%A9bec_(14767362525).jpg"
+  },
+  {
+   "id": "c39879762",
+   "title": "Vieux-Quebec (14601988109).jpg",
+   "author": "Tony Webster from Portland, Oregon, United States",
+   "licence": "CC BY 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Vieux-Quebec_(14601988109).jpg"
+  },
+  {
+   "id": "c41979376",
+   "title": "52, rue Saint-Louis.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:52,_rue_Saint-Louis.jpg"
+  },
+  {
+   "id": "c50785808",
+   "title": "54, rue Saint-Louis.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:54,_rue_Saint-Louis.jpg"
+  },
+  {
+   "id": "c50786067",
+   "title": "52, rue Saint-Louis - 01.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:52,_rue_Saint-Louis_-_01.jpg"
+  },
+  {
+   "id": "c50787082",
+   "title": "Maison François-Jacquet-Dit-Langevin 17.JPG",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Fran%C3%A7ois-Jacquet-Dit-Langevin_17.JPG"
+  },
+  {
+   "id": "c50787100",
+   "title": "Maison François-Jacquet-Dit-Langevin 18.JPG",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Fran%C3%A7ois-Jacquet-Dit-Langevin_18.JPG"
+  },
+  {
+   "id": "c50787198",
+   "title": "Maison François-Jacquet-Dit-Langevin 19.JPG",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 3.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Fran%C3%A7ois-Jacquet-Dit-Langevin_19.JPG"
+  },
+  {
+   "id": "c50788149",
+   "title": "Maison François-Jacquet-Dit-Langevin 20.JPG",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Fran%C3%A7ois-Jacquet-Dit-Langevin_20.JPG"
+  },
+  {
+   "id": "c84050750",
+   "title": "57-59, rue Sainte-Ursule - 76, rue Saint-Louis - 11.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:57-59,_rue_Sainte-Ursule_-_76,_rue_Saint-Louis_-_11.jpg"
+  },
+  {
+   "id": "c84155181",
+   "title": "16-20, rue Sainte-Anne, Quebec 03.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:16-20,_rue_Sainte-Anne,_Quebec_03.jpg"
+  },
+  {
+   "id": "c84155183",
+   "title": "16-20, rue Sainte-Anne, Quebec 04.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:16-20,_rue_Sainte-Anne,_Quebec_04.jpg"
+  },
+  {
+   "id": "c84155184",
+   "title": "16-20, rue Sainte-Anne, Quebec 05.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:16-20,_rue_Sainte-Anne,_Quebec_05.jpg"
+  },
+  {
+   "id": "c86671994",
+   "title": "Maison La Gorgendiere - 02.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_La_Gorgendiere_-_02.jpg"
+  },
+  {
+   "id": "c86671995",
+   "title": "Maison La Gorgendiere - 01.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_La_Gorgendiere_-_01.jpg"
+  },
+  {
+   "id": "c86981824",
+   "title": "57-59, rue Sainte-Ursule - 76, rue Saint-Louis - 12.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:57-59,_rue_Sainte-Ursule_-_76,_rue_Saint-Louis_-_12.jpg"
+  },
+  {
+   "id": "c86983271",
+   "title": "Monument des heros de la guerre des Boers - 11.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Monument_des_heros_de_la_guerre_des_Boers_-_11.jpg"
+  },
+  {
+   "id": "c86983430",
+   "title": "Cercle de la Garnison de Quebec 29.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Cercle_de_la_Garnison_de_Quebec_29.jpg"
+  },
+  {
+   "id": "c86983431",
+   "title": "Cercle de la Garnison de Quebec 30.jpg",
+   "author": "Jeangagnon",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Cercle_de_la_Garnison_de_Quebec_30.jpg"
+  },
+  {
+   "id": "c89136228",
+   "title": "Quebec City (36866940760).jpg",
+   "author": "jockrutherford from Owen Sound, ON",
+   "licence": "CC BY-SA 2.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Quebec_City_(36866940760).jpg"
+  },
+  {
+   "id": "c89478350",
+   "title": "Maison Langlois 02.jpg",
+   "author": "Cephas",
+   "licence": "CC BY-SA 4.0",
+   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "url": "https://commons.wikimedia.org/wiki/File:Maison_Langlois_02.jpg"
+  }
+ ]
+}
