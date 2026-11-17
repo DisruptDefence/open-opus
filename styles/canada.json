@@ -76,6 +76,6 @@
     "cornice": { "depth": 0.15, "height": 0.2 }, "plinth": { "height": 0.4, "depth": 0.04, "color": "#a39d92" },
     "dormers": { "mansard": 1.0, "gabled": 0.2, "width": 1.0, "height": 1.4 },
     "chimneys": { "perBuilding": [0, 1], "width": 0.8, "depth": 0.6, "above": 1.0 },
-    "kerb": 0.15, "season": "summer"
+    "kerb": 0.15, "kerbColor": "#8d8a84", "treadColor": "#9a968e", "season": "summer"
   }
 }

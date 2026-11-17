@@ -46,10 +46,10 @@ export const SOUP = {
   door: 'door|v',           // uv 0..1 one door; tinted with the door colour
   shutter: 'wood|tvn',
   awning: 'tarp|vd',
-  kerb: 'stone|tn',
+  kerb: 'concrete|tvn',     // kerb stones and kerb faces: sawn grey, triplanar, tinted (style.kerbColor), no shadow
   paint: 'paint_white|tn',  // road markings
   wear: 'wear|n',           // street wear decals (gutter grit, tyre tracks, asphalt patches, oil): alpha-blended, uv = [along, across] in the wear texture's four bands
-  tread: 'stone|t',         // stair treads and stringers
+  tread: 'concrete|tv',     // stair treads, stringers and door steps: grey stone or concrete, tinted (style.treadColor)
   iron: 'metal|tv',         // lamp posts, rails, bollards: dark iron, tinted
   timber: 'wood|tv',
   lampGlass: 'glass_lamp|n',
@@ -115,7 +115,7 @@ export const DEFAULT_STYLE = {
   dormers: { mansard: 1.0, gabled: 0.25, width: 1.1, height: 1.4 },
   chimneys: { perBuilding: [0, 1], width: 0.8, depth: 0.6, above: 1.0 },
   sidewalk: { width: 1.6, surface: 'concrete' },
-  kerb: 0.14, season: 'summer',
+  kerb: 0.14, kerbColor: '#8d8a84', treadColor: '#9a968e', season: 'summer',
   // street wear (gen/ground.js): how much of each kind a street gets, 0 = none, 1 = the usual; all drawn near only
   wear: { gutter: 1, tracks: 1, patches: 1, oil: 1, manholes: 1 },
 };
@@ -146,3 +146,7 @@ export function paletteColor(list, index, fallback = [0.8, 0.8, 0.8]) {
   if (!Array.isArray(list) || !list.length) return fallback;
   return parseColor(list[((index | 0) % list.length + list.length) % list.length]) || fallback;
 }
+
+/** The tints of the kerb stones and of stair treads and door steps: the style's colours, linear; the defaults for an old scene without them. */
+export function kerbTint(style) { return parseColor(style && style.kerbColor) || parseColor(DEFAULT_STYLE.kerbColor); }
+export function treadTint(style) { return parseColor(style && style.treadColor) || parseColor(DEFAULT_STYLE.treadColor); }

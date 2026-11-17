@@ -84,7 +84,7 @@
         "finial": { "h": 3.2, "w": 0.28 }
       }
     },
-    "kerb": 0.14, "season": "summer",
+    "kerb": 0.14, "kerbColor": "#928e88", "treadColor": "#9a968e", "season": "summer",
     "wear": { "tracks": 0, "oil": 0.35, "patches": 0.6 },
     "detail": {
       "default": { "strength": 0.85, "normal": 1, "rough": 1, "ao": 0.8, "hue": 0.1, "base": 0.3, "far": 60 },
