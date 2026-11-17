@@ -103,7 +103,7 @@ function face(s, a, b, c, d, tint, hint) {
 }
 const FLOOR_SOUP = { timber: 'wood|tv', stone: 'paving|tv' };
 const FLOOR_TINT = { timber: [0.2, 0.115, 0.06], stone: [0.2, 0.19, 0.175] };
-const DIM = 0.6; // the hall is lit by what comes through the doorway only: its colours are laid darker than the street's
+const DIM = 0.45; // the hall is lit by what comes through the doorway only: its colours are laid darker than the street's
 
 function drawHall(soups, rec, f, V, kind, lk) {
   const { u0, u1, side: S, recess: r, depth: D, ys, yh, ceil } = rec, a = u0 - S, c = u1 + S, d1 = -r, d2 = -r - D;
